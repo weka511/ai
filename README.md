@@ -1,6 +1,6 @@
 # ai
 My struggle to understand Karl Friston on Active Inference
 
-File&Description
+File|Description
 -------------------|-------------------------------------------------
-ActiveInference.bib&Bibliography
+ActiveInference.bib|Bibliography
