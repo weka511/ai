@@ -274,3 +274,8 @@ TSWLatexianTemp*
 
 # Makeindex log files
 *.lpz
+
+# Jabref temporary files
+*.bib.sav.tmp
+ 
+
