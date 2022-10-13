@@ -23,25 +23,22 @@ from numpy.random      import default_rng
 from scipy.integrate   import odeint
 from matplotlib.pyplot import figure, show
 
-A = 0.2
-B = 0.2
-C = 5.7
 
 class Rossler:
     def __init__(self,
-                 A = 0.2,
-                 B = 0.2,
-                 C = 5.7):
-        self.A = A
-        self.B = B
-        self.C = C
+                 a = 0.2,
+                 b = 0.2,
+                 c = 5.7):
+        self.a = a
+        self.b = b
+        self.c = c
         self.d = 3
 
     def Velocity(self,t,ssp):
         x, y, z = ssp
         dxdt    = - y - z
-        dydt    = x + self.A * y
-        dzdt    = self.B + z * (x - self.C)
+        dydt    = x + self.a * y
+        dzdt    = self.b + z * (x - self.c)
         return array([dxdt, dydt, dzdt], float)
 
 class Lorentz:
@@ -71,10 +68,7 @@ class Population:
         self.sigma     = sigma
         self.rng       = rng
 
-    def Velocity(self,t,y,
-                 a        = A,
-                 b        = B,
-                 c        = C):
+    def Velocity(self,t,y):
 
         Average  = array([mean(y[i::self.stride])  for i in range(self.oscillator.d)])
         Noise    = rng.normal(size=len(y))
