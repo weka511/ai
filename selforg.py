@@ -17,7 +17,8 @@
 
 '''Self Organization and the emergence of macroscopic behaviour'''
 
-from numpy             import array, linspace
+from numpy             import array, linspace, mean, ones, zeros, zeros_like
+from numpy.random      import default_rng
 from scipy.integrate   import odeint
 from matplotlib.pyplot import figure, show
 
@@ -26,11 +27,16 @@ B = 0.2
 C = 5.7
 
 
-def Velocity(t,ssp,
-             a = A,
-             b = B,
-             c = C):
-    """
+def Velocity(t,y,
+             a        = A,
+             b        = B,
+             c        = C,
+             step     = 3,
+             speed    = ones(4),
+             coupling = 0.2,
+             sigma    = ones(4),
+             rng      = default_rng(42)):
+    '''
     Velocity function for the Rossler flow
 
     Inputs:
@@ -41,27 +47,43 @@ def Velocity(t,ssp,
 
     Outputs:
     vel: velocity at ssp. dx1 NumPy array: vel = [dx/dt, dy/dt, dz/dt]
-    """
+    '''
 
-    x, y, z = ssp
-    dxdt = - y - z
-    dydt = x + a * y
-    dzdt = b + z * (x - c)
 
-    return array([dxdt, dydt, dzdt], float)
+    v    = zeros_like(y)
+    average = zeros(3)
+    for i in range(step):
+        average[i] = mean(y[i::step])
+    noise = rng.normal(size=len(y))
+    for j,i in enumerate(range(0,len(y),step)):
+        v[i]   = speed[j]*(- y[i+1] - y[i+2] +coupling*average[0]) + sigma[j] * noise[i]
+        v[i+1] = speed[j]*(y[i] + a * y[i+1]+coupling*average[1]) + sigma[j] * noise[i+1]
+        v[i+2] = speed[j]*(b + y[i+2] * (y[i] - c)+coupling*average[2]) + sigma[j] * noise[i+2]
+
+    return v
+
 
 if __name__ == "__main__":
-    tInitial = 0  # Initial time
-    tFinal   = 100  # Final time
-    Nt       = 10000  # Number of time points to be used in the integration
-
-    sspSolution = odeint(Velocity, array([1, 0.0,0], float), linspace(tInitial, tFinal, Nt),
-                         args=(A,B,C),
-                         tfirst=True)
+    tInitial = 0
+    tFinal   = 10
+    Nt       = 1000
+    seed     = 42
+    N        = 16
+    rng      = default_rng(seed)
+    sspInit  = rng.normal(0,1,3*N)
+    step     = 3
+    speed    = ones(N)
+    coupling = 2.0
+    sigma    = 0.001*ones(N)
+    y        = odeint(Velocity, sspInit, linspace(tInitial, tFinal, Nt),
+                      args   = (A,B,C,step,speed,coupling,sigma,rng),
+                      tfirst = True)
 
     fig = figure(figsize=(6,6))
     ax  = fig.add_subplot(1,1,1,projection='3d')
-    ax.plot(sspSolution[:, 0], sspSolution[:, 1], sspSolution[:, 2])
+    m,n = y.shape
+    for i in range(0,n,3):
+        ax.plot(y[:, i], y[:, i+1], y[:, i+2])
     ax.set_xlabel('x')
     ax.set_ylabel('y')
     ax.set_zlabel('z')
