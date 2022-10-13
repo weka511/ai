@@ -17,7 +17,8 @@
 
 '''Self Organization and the emergence of macroscopic behaviour'''
 
-from numpy             import array, linspace, mean, ones, zeros, zeros_like
+from argparse          import ArgumentParser
+from numpy             import array, exp, linspace, mean, ones, zeros, zeros_like
 from numpy.random      import default_rng
 from scipy.integrate   import odeint
 from matplotlib.pyplot import figure, show
@@ -26,65 +27,102 @@ A = 0.2
 B = 0.2
 C = 5.7
 
+class Rossler:
+    def __init__(self,
+                 A = 0.2,
+                 B = 0.2,
+                 C = 5.7):
+        self.A = A
+        self.B = B
+        self.C = C
+        self.d = 3
 
-def Velocity(t,y,
-             a        = A,
-             b        = B,
-             c        = C,
-             step     = 3,
-             speed    = ones(4),
-             coupling = 0.2,
-             sigma    = ones(4),
-             rng      = default_rng(42)):
-    '''
-    Velocity function for the Rossler flow
+    def Velocity(self,t,ssp):
+        x, y, z = ssp
+        dxdt    = - y - z
+        dydt    = x + self.A * y
+        dzdt    = self.B + z * (x - self.C)
+        return array([dxdt, dydt, dzdt], float)
 
-    Inputs:
-    ssp: State space vector. dx1 NumPy array: ssp=[x, y, z]
-    t: Time. Has no effect on the function, we have it as an input so that our
-       ODE would be compatible for use with generic integrators from
-       scipy.integrate
+class Lorentz:
+    def __init__(self):
+        self.sigma = 10.0
+        self.rho   = 28.0
+        self.b     = 8.0/3.0
+        self.d     = 3
 
-    Outputs:
-    vel: velocity at ssp. dx1 NumPy array: vel = [dx/dt, dy/dt, dz/dt]
-    '''
+    def Velocity(self,t,ssp):
+        x, y, z = ssp
+        return array([self.sigma * (y-x),
+                  self.rho*x - y - x*z,
+                  x*y - self.b*z])
 
+class Population:
+    def __init__(self,oscillator,
+                 stride     = 3,
+                 speed    = ones(4),
+                 coupling = 0.2,
+                 sigma    = ones(4),
+                 rng      = default_rng(42)):
+        self.oscillator = oscillator
+        self.stride    = stride
+        self.speed     = speed
+        self.coupling  = coupling
+        self.sigma     = sigma
+        self.rng       = rng
 
-    v    = zeros_like(y)
-    average = zeros(3)
-    for i in range(step):
-        average[i] = mean(y[i::step])
-    noise = rng.normal(size=len(y))
-    for j,i in enumerate(range(0,len(y),step)):
-        v[i]   = speed[j]*(- y[i+1] - y[i+2] +coupling*average[0]) + sigma[j] * noise[i]
-        v[i+1] = speed[j]*(y[i] + a * y[i+1]+coupling*average[1]) + sigma[j] * noise[i+1]
-        v[i+2] = speed[j]*(b + y[i+2] * (y[i] - c)+coupling*average[2]) + sigma[j] * noise[i+2]
+    def Velocity(self,t,y,
+                 a        = A,
+                 b        = B,
+                 c        = C):
 
-    return v
+        Average  = array([mean(y[i::self.stride])  for i in range(self.oscillator.d)])
+        Noise    = rng.normal(size=len(y))
+        Velocity = zeros_like(y)
+        for j,i in enumerate(range(0,len(y),self.stride)):
+            vv = self.oscillator.Velocity(t,y[i:i+stride])
+            Velocity[i:i+stride] = self.speed[j]*(vv+self.coupling*Average) + self.sigma[j] * Noise[i]
+        return Velocity
 
 
 if __name__ == "__main__":
-    tInitial = 0
-    tFinal   = 10
-    Nt       = 1000
-    seed     = 42
-    N        = 16
-    rng      = default_rng(seed)
-    sspInit  = rng.normal(0,1,3*N)
-    step     = 3
-    speed    = ones(N)
-    coupling = 2.0
-    sigma    = 0.001*ones(N)
-    y        = odeint(Velocity, sspInit, linspace(tInitial, tFinal, Nt),
-                      args   = (A,B,C,step,speed,coupling,sigma,rng),
-                      tfirst = True)
+    parser   = ArgumentParser(__doc__)
+    parser.add_argument('oscillator',choices=['Lorentz','Rossler'])
+    parser.add_argument('--tFinal', type=float, default=5)
+    parser.add_argument('--Nt', type=int, default=1000)
+    parser.add_argument('--seed', type=int, default=42)
+    parser.add_argument('--N', type=int, default=16)
+    parser.add_argument('--coupling', type=float, default=2.0)
+    parser.add_argument('--show', default=False, action='store_true')
+    args = parser.parse_args()
+
+    t        = linspace(0, args.tFinal, args.Nt)
+
+    rng      = default_rng(args.seed)
+    sspInit  = rng.normal(0,1,3*args.N)
+    stride    = 3
+    speed    = exp(rng.normal(0,2**-3,args.N))
+
+    sigma    = 0.00*ones(args.N)
+    oscillator = Lorentz() if args.oscillator == 'Lorentz' else Rossler()
+    population = Population( oscillator,
+                             stride   = stride,
+                             speed    = speed,
+                             coupling = args.coupling,
+                             sigma    = sigma,
+                             rng      = rng)
+    y        = odeint(population.Velocity, sspInit, t,
+                        tfirst = True)
 
     fig = figure(figsize=(6,6))
-    ax  = fig.add_subplot(1,1,1,projection='3d')
+    ax  = fig.add_subplot(1,1,1)#,projection='3d')
     m,n = y.shape
     for i in range(0,n,3):
-        ax.plot(y[:, i], y[:, i+1], y[:, i+2])
-    ax.set_xlabel('x')
-    ax.set_ylabel('y')
-    ax.set_zlabel('z')
-    show()
+        ax.plot(t,y[:,i])
+    ax.set_title(args.oscillator)
+        # ax.plot(y[:, i], y[:, i+1], y[:, i+2])
+    # ax.set_xlabel('x')
+    # ax.set_ylabel('y')
+    # ax.set_zlabel('z')
+    if args.show:
+        show()
