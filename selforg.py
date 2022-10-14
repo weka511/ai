@@ -26,7 +26,7 @@ from numpy             import array, exp, linspace, mean, ones, zeros, zeros_lik
 from numpy.random      import default_rng
 from scipy.integrate   import odeint
 from matplotlib.pyplot import figure, show
-from RungeKutta        import RK4
+from rk4               import RK4
 
 class Rossler:
     def __init__(self,
