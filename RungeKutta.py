@@ -20,45 +20,39 @@
 from matplotlib.pyplot import subplot, plot, xlabel, ylabel, show
 from numpy             import array, linspace, size, zeros
 
-def RK4(velocityFunction, initialCondition, timeArray):
-    """
+def RK4(func, y0, t):
+    '''
     Runge-Kutta 4 Integrator.
     Inputs:
-    VelocityFunction: Function name to integrate
+    func: Function name to integrate
                       this function must have two inputs namely state space
                       vector and time. For example: velocity(ssp, t)
-    InitialCondition: Initial condition, 1xd NumPy array, where d is the
+    y0:   Initial condition, 1xd NumPy array, where d is the
                       dimension of the state space
-    TimeArray: 1 x Nt NumPy array which contains instances for the solution
+    t:    1 x Nt NumPy array which contains instances for the solution
                to be returned.
     Outputs:
-    SolutionArray: d x Nt NumPy array which contains numerical solution of the
+    y: d x Nt NumPy array which contains numerical solution of the
                    ODE.
-    """
-    #Generate the solution array to fill in:
-    SolutionArray =zeros((size(timeArray, 0),
-                             size(initialCondition, 0)))
-    #Assign the initial condition to the first element:
-    SolutionArray[0, :] = initialCondition
+    '''
+    y       = zeros((size(t, 0), size(y0, 0)))
+    y[0, :] = y0
 
-    for i in range(0,size(timeArray) - 1):
-        #Read time element:
-        deltat = timeArray[i + 1] - timeArray[i]
-        #Runge Kutta k's:
-        k1 = deltat * velocityFunction(SolutionArray[i], timeArray[i])
-        k2 = deltat * velocityFunction(SolutionArray[i] + 0.5 * k1, timeArray[i] + 0.5*deltat)
-        k3 = deltat * velocityFunction(SolutionArray[i] + 0.5 * k2, timeArray[i] + 0.5*deltat)
-        k4 = deltat * velocityFunction(SolutionArray[i] + k3, timeArray[i] + deltat)
-        #Next integration step:
-        SolutionArray[i + 1] = SolutionArray[i] + (k1 + 2*k2 +2*k3 +k4)/6
-    return SolutionArray
+    for i in range(0,size(t) - 1):
+        dt       = t[i + 1] - t[i]
+        k1       = dt * func(y[i], t[i])
+        k2       = dt * func(y[i] + 0.5 * k1, t[i] + 0.5*dt)
+        k3       = dt * func(y[i] + 0.5 * k2, t[i] + 0.5*dt)
+        k4       = dt * func(y[i] + k3, t[i] + dt)
+        y[i + 1] = y[i] + (k1 + 2*k2 +2*k3 +k4)/6
+    return y
 
-if __name__ == "__main__":
+if __name__ == '__main__':
 
     #In order to test our integration routine, we are going to define Harmonic
     #Oscillator equations in a 2D state space:
     def velocity(ssp, t):
-        """
+        '''
         State space velocity function for 1D Harmonic oscillator
 
         Inputs:
@@ -71,7 +65,7 @@ if __name__ == "__main__":
         Outputs:
         vel: Time derivative of ssp.
         vel = ds sp/dt = (v, - (k/m) x)
-        """
+        '''
         #Parameters:
         k = 1.0
         m = 1.0
