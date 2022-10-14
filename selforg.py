@@ -26,7 +26,7 @@ from numpy             import array, exp, linspace, mean, ones, zeros, zeros_lik
 from numpy.random      import default_rng
 from scipy.integrate   import odeint
 from matplotlib.pyplot import figure, show
-
+from RungeKutta        import RK4
 
 class Rossler:
     def __init__(self,
@@ -72,7 +72,7 @@ class Population:
         self.sigma      = sigma
         self.rng        = rng
 
-    def Velocity(self,t,y):
+    def Velocity(self,y,t):                     #FIXME
         Average  = self.get_average(y)
         Noise    = rng.normal(size=len(y))
         Velocity = zeros_like(y)
@@ -104,7 +104,7 @@ def parse_args():
     parser.add_argument('--seed',     type    = int,   default = None)
     parser.add_argument('--N',        type    = int,   default = 16)
     parser.add_argument('--coupling', type    = float, default = 2.0)
-    parser.add_argument('--sigma',    type    = float, default = 2**-18)
+    parser.add_argument('--sigma',    type    = float, default = 2)
     parser.add_argument('--show',                      default = False, action = 'store_true')
     parser.add_argument('--burnin',   type    = int,   default = 25)
     return parser.parse_args()
@@ -120,8 +120,9 @@ if __name__ == "__main__":
                             coupling = args.coupling,
                             sigma    = args.sigma * ones(args.N),
                             rng      = rng)
-    y        = odeint(population.Velocity,  rng.normal(30,8,oscillator.d*args.N), t,
-                        tfirst = True)
+    y = RK4(population.Velocity,  rng.normal(30,8,oscillator.d*args.N), t)
+    # y        = odeint(population.Velocity,  rng.normal(30,8,oscillator.d*args.N), t,
+                        # tfirst = True)
 
     fig = figure(figsize=(6,6))
     for i in range(3):
@@ -130,11 +131,10 @@ if __name__ == "__main__":
         m,n = y.shape
         for j in range(i,n,oscillator.d):
             ax.plot(t,y[:,j],linestyle='dotted')
+            ax.set_xlabel('t')
+            ax.set_ylabel('xyz'[i])
     fig.suptitle(args.oscillator)
     fig.savefig(f'selforg{args.oscillator}')
-        # ax.plot(y[:, i], y[:, i+1], y[:, i+2])
-    # ax.set_xlabel('x')
-    # ax.set_ylabel('y')
-    # ax.set_zlabel('z')
+
     if args.show:
         show()
