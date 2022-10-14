@@ -101,11 +101,12 @@ def parse_args():
     parser.add_argument('oscillator', choices = OscillatorFactory.Oscillators.keys())
     parser.add_argument('--tFinal',   type    = float, default = 5)
     parser.add_argument('--Nt',       type    = int,   default = 1000)
-    parser.add_argument('--seed',     type    = int,   default = 42)
+    parser.add_argument('--seed',     type    = int,   default = None)
     parser.add_argument('--N',        type    = int,   default = 16)
     parser.add_argument('--coupling', type    = float, default = 2.0)
-    parser.add_argument('--sigma',    type    = float, default = 0.00002)
+    parser.add_argument('--sigma',    type    = float, default = 2**-18)
     parser.add_argument('--show',                      default = False, action = 'store_true')
+    parser.add_argument('--burnin',   type    = int,   default = 25)
     return parser.parse_args()
 
 if __name__ == "__main__":
@@ -114,19 +115,18 @@ if __name__ == "__main__":
     oscillator = OscillatorFactory.Create(args.oscillator)
     t          = linspace(0, args.tFinal, args.Nt)
     rng        = default_rng(args.seed)
-
     population = Population(oscillator,
                             speed    = exp(rng.normal(0,2**-6,args.N)),
                             coupling = args.coupling,
                             sigma    = args.sigma * ones(args.N),
                             rng      = rng)
-    y        = odeint(population.Velocity,  rng.normal(0,8,oscillator.d*args.N), t,
+    y        = odeint(population.Velocity,  rng.normal(30,8,oscillator.d*args.N), t,
                         tfirst = True)
 
     fig = figure(figsize=(6,6))
     for i in range(3):
         ax  = fig.add_subplot(2,2,i+1)
-        ax.plot(t,mean( y[:,i::oscillator.d],axis=1),linestyle='solid')
+        ax.plot(t[args.burnin:],mean( y[args.burnin:,i::oscillator.d],axis=1),linestyle='solid')
         m,n = y.shape
         for j in range(i,n,oscillator.d):
             ax.plot(t,y[:,j],linestyle='dotted')
