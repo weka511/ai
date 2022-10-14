@@ -15,7 +15,11 @@
 # You should have received a copy of the GNU General Public License
 # along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.
 
-'''Self Organization and the emergence of macroscopic behaviour'''
+'''
+   Replication of Figure 2, Self Organization and the emergence of macroscopic behaviour,
+   from Friston & Ao, Free Energy, Value, and Attractor--
+   https://www.hindawi.com/journals/cmmm/2012/937860/)
+'''
 
 from argparse          import ArgumentParser
 from numpy             import array, exp, linspace, mean, ones, zeros, zeros_like
@@ -92,39 +96,42 @@ class OscillatorFactory:
     def Create(cls,name):
         return OscillatorFactory.Oscillators[name]
 
+def parse_args():
+    parser   = ArgumentParser(__doc__)
+    parser.add_argument('oscillator', choices = OscillatorFactory.Oscillators.keys())
+    parser.add_argument('--tFinal',   type    = float, default = 5)
+    parser.add_argument('--Nt',       type    = int,   default = 1000)
+    parser.add_argument('--seed',     type    = int,   default = 42)
+    parser.add_argument('--N',        type    = int,   default = 16)
+    parser.add_argument('--coupling', type    = float, default = 2.0)
+    parser.add_argument('--sigma',    type    = float, default = 0.00002)
+    parser.add_argument('--show',                      default = False, action = 'store_true')
+    return parser.parse_args()
+
 if __name__ == "__main__":
     OscillatorFactory.Register([Rossler(),Lorentz()])
-    parser   = ArgumentParser(__doc__)
-    parser.add_argument('oscillator', choices=OscillatorFactory.Oscillators.keys())
-    parser.add_argument('--tFinal',   type=float, default=5)
-    parser.add_argument('--Nt',       type=int,   default=1000)
-    parser.add_argument('--seed',     type=int,   default=42)
-    parser.add_argument('--N',        type=int,   default=16)
-    parser.add_argument('--coupling', type=float, default=2.0)
-    parser.add_argument('--show',                 default=False, action='store_true')
-    args = parser.parse_args()
+    args       = parse_args()
     oscillator = OscillatorFactory.Create(args.oscillator)
     t          = linspace(0, args.tFinal, args.Nt)
     rng        = default_rng(args.seed)
-    sspInit    = rng.normal(0,1,oscillator.d*args.N)
-    speed      = exp(rng.normal(0,2**-3,args.N))
-    sigma      = 0.00*ones(args.N)
 
-    population = Population( oscillator,
-                             speed    = speed,
-                             coupling = args.coupling,
-                             sigma    = sigma,
-                             rng      = rng)
-    y        = odeint(population.Velocity, sspInit, t,
+    population = Population(oscillator,
+                            speed    = exp(rng.normal(0,2**-6,args.N)),
+                            coupling = args.coupling,
+                            sigma    = args.sigma * ones(args.N),
+                            rng      = rng)
+    y        = odeint(population.Velocity,  rng.normal(0,8,oscillator.d*args.N), t,
                         tfirst = True)
 
     fig = figure(figsize=(6,6))
-    ax  = fig.add_subplot(1,1,1)#,projection='3d')
-    ax.plot(t,mean( y[:,0::oscillator.d],axis=1),linestyle='solid')
-    m,n = y.shape
-    for i in range(0,n,oscillator.d):
-        ax.plot(t,y[:,i],linestyle='dotted')
-    ax.set_title(args.oscillator)
+    for i in range(3):
+        ax  = fig.add_subplot(2,2,i+1)
+        ax.plot(t,mean( y[:,i::oscillator.d],axis=1),linestyle='solid')
+        m,n = y.shape
+        for j in range(i,n,oscillator.d):
+            ax.plot(t,y[:,j],linestyle='dotted')
+    fig.suptitle(args.oscillator)
+    fig.savefig(f'selforg{args.oscillator}')
         # ax.plot(y[:, i], y[:, i+1], y[:, i+2])
     # ax.set_xlabel('x')
     # ax.set_ylabel('y')
