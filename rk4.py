@@ -18,7 +18,7 @@
 '''Workhorse Runge-Kutta 4th order'''
 
 from matplotlib.pyplot import figure, show
-from numpy             import array, linspace, size, zeros
+from numpy             import array, linspace, size, zeros, zeros_like
 from numpy.linalg      import norm
 
 def RK4(func, y0, t):
@@ -64,39 +64,52 @@ class KuttaMerson:
         R  = 0.2 * norm(y1-y2)
         return y2,R
 
-    def solve(self, yInit, t,ytol=1e-8,maxIter=25):
+    def solve(self, yInit, t,
+              ytol    = 1e-12,
+              maxIter = 25):
         R      = float('inf')
         m      = 0
         n      = t.shape[0]
         y      = zeros((n, yInit.shape[0]))
         y[0,:] = yInit
-        for i in range(n-1):
-            stepping = False
-            for j in range(maxIter):
+        for i in range(n-1):   # Iterate over each t-step
+            errorWithinTolerance = False
+            for j in range(maxIter):    # Make several attempts to reduce step error below tolerance
                 if m>0 and R<ytol/2:
                     m-=1
-                h  = (t[i+1] - t[i])/2**m
-                y0 = y[i,:]
-                for k in range(2**m):
-                    t0 = t[i] + k*h
-                    y2,R = self.step(y0,h,t0)
-                    stepping = R<ytol
-                    if not stepping:
-                        m += 1
-                        break
-                    y0 = y2.copy()
-                if stepping:
+                h                       = (t[i+1] - t[i])/2**m
+                y0                      = y[i,:].copy()
+                y2,errorWithinTolerance = self.step1(y0,t[i],
+                                                     m    = m,
+                                                     h    = h,
+                                                     ytol = ytol)
+                if errorWithinTolerance:
                     y[i+1,:] = y2
                     break
-        if not stepping:
-            raise Exception('oops')
+                else:
+                    m+=1
+
+            if not errorWithinTolerance:
+                raise Exception(f'Failed to control error within {ytol} in {maxIter} Iterations')
         return y
 
-if __name__ == '__main__':
 
-    #In order to test our integration routine, we are going to define Harmonic
-    #Oscillator equations in a 2D state space:
-    def velocity(ssp, t):
+    def step1(self,y0,t0,
+              m    = 0,
+              h    = 0.1,
+              ytol = 1e-12):
+        for k in range(2**m):  # t-step is subdivided into 2**m steps, each of size h
+            y2,R                 = self.step(y0,h,t0 + k*h)
+            errorWithinTolerance = (R<ytol)
+            if not errorWithinTolerance:
+                return zeros_like(y0),errorWithinTolerance
+            y0 = y2.copy()
+        return y2,errorWithinTolerance
+
+if __name__ == '__main__':
+    def velocity(ssp, t,
+                 k = 1.0,
+                 m = 1.0):
         '''
         State space velocity function for 1D Harmonic oscillator
 
@@ -111,47 +124,37 @@ if __name__ == '__main__':
         vel: Time derivative of ssp.
         vel = ds sp/dt = (v, - (k/m) x)
         '''
-        #Parameters:
-        k = 1.0
-        m = 1.0
-        #Read inputs:
-        x, v = ssp  # Read x and v from ssp vector
-        #Construct velocity vector and return it:
-        vel =array([v, - (k / m) * x], float)
-        return vel
+        x, v = ssp
+        return array([v, - (k / m) * x], float)
 
-    #Generate an array of time points for which we will compute the solution:
     tInitial = 0
     tFinal   = 10
-    Nt       = 1000  # Number of points time points in the interval tInitial, tFinal
+    Nt       = 1000
     tArray =linspace(tInitial, tFinal, Nt)
 
-    #Initial condition for the Harmonic oscillator:
     ssp0 =array([1.0, 0], float)
 
-    #Compute the solution using Runge-Kutta routine:
     sspSolution = RK4(velocity, ssp0, tArray)
 
-    #from scipy.integrate import odeint
-    #sspSolution = odeint(velocity, ssp0, tArray)
     xSolution = sspSolution[:, 0]
     vSolution = sspSolution[:, 1]
 
     km = KuttaMerson(velocity)
-    y  = km.solve(ssp0, tArray)
+    y  = km.solve(ssp0, tArray,maxIter=12)
 
-    fig = figure()
+    fig = figure(figsize=(6,6))
     ax  = fig.add_subplot(2,2,1)
     ax.plot(tArray, xSolution)
     ax.set_ylabel('x(t)')
 
-    ax  = fig.add_subplot(2,2,2)
+    ax = fig.add_subplot(2,2,2)
     ax.plot(tArray, vSolution)
     ax.set_xlabel('t (s)')
     ax.set_ylabel('v(t)')
 
-    ax  = fig.add_subplot(2,2,3)
+    ax = fig.add_subplot(2,2,3)
     ax.plot(tArray, y[:,0])
-    ax  = fig.add_subplot(2,2,4)
+    ax.plot(tArray, y[:,1])
+    ax = fig.add_subplot(2,2,4)
     ax.plot( y[:,0], y[:,1])
     show()

@@ -26,7 +26,7 @@ from numpy             import array, exp, linspace, mean, ones, zeros, zeros_lik
 from numpy.random      import default_rng
 from scipy.integrate   import odeint
 from matplotlib.pyplot import figure, show
-from rk4               import RK4
+from rk4               import RK4, KuttaMerson
 
 class Rossler:
     def __init__(self,
@@ -121,6 +121,8 @@ if __name__ == "__main__":
                             sigma    = args.sigma * ones(args.N),
                             rng      = rng)
     y = RK4(population.Velocity,  rng.normal(30,8,oscillator.d*args.N), t)
+    # km = KuttaMerson(population.Velocity)
+    # y  = km.solve(rng.normal(30,8,oscillator.d*args.N), t,ytol=1e-4)
     # y        = odeint(population.Velocity,  rng.normal(30,8,oscillator.d*args.N), t,
                         # tfirst = True)
 
