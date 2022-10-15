@@ -130,13 +130,13 @@ if __name__ == "__main__":
     fig = figure(figsize=(6,6))
     for i in range(3):
         ax  = fig.add_subplot(2,2,i+1)
-        ax.plot(t[args.burnin:],mean( y[args.burnin:,i::oscillator.d],axis=1),linestyle='solid')
+        ax.plot(t[args.burnin:],mean( y[args.burnin:,i::oscillator.d],axis=1),linestyle='solid',linewidth=2)
         m,n = y.shape
         for j in range(i,n,oscillator.d):
             ax.plot(t,y[:,j],linestyle='dotted')
             ax.set_xlabel('t')
             ax.set_ylabel('xyz'[i])
-    fig.suptitle(args.oscillator)
+    fig.suptitle(fr'{args.oscillator}: N={args.N}, $\lambda$={args.coupling}, $\sigma=${args.sigma}')
     fig.savefig(f'selforg{args.oscillator}')
 
     if args.show:
