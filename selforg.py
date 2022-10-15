@@ -107,7 +107,7 @@ def parse_args():
     parser.add_argument('--coupling', type    = float, default = 2.0)
     parser.add_argument('--sigma',    type    = float, default = 2)
     parser.add_argument('--show',                      default = False, action = 'store_true')
-    parser.add_argument('--burnin',   type    = int,   default = 25)
+    parser.add_argument('--burnin',   type    = int,   default = 0)
     return parser.parse_args()
 
 if __name__ == "__main__":
@@ -136,6 +136,13 @@ if __name__ == "__main__":
             ax.plot(t,y[:,j],linestyle='dotted')
             ax.set_xlabel('t')
             ax.set_ylabel('xyz'[i])
+    ax  = fig.add_subplot(2,2,4,projection='3d')
+    ax.plot(mean( y[args.burnin:,0::oscillator.d],axis=1),
+            mean( y[args.burnin:,1::oscillator.d],axis=1),
+            mean( y[args.burnin:,2::oscillator.d],axis=1))
+    ax.set_xlabel('x')
+    ax.set_ylabel('y')
+    ax.set_zlabel('z')
     fig.suptitle(fr'{args.oscillator}: N={args.N}, $\lambda$={args.coupling}, $\sigma=${args.sigma}')
     fig.savefig(f'selforg{args.oscillator}')
 
