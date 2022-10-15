@@ -17,8 +17,9 @@
 
 '''Workhorse Runge-Kutta 4th order'''
 
-from matplotlib.pyplot import subplot, plot, xlabel, ylabel, show
+from matplotlib.pyplot import figure, show
 from numpy             import array, linspace, size, zeros
+from numpy.linalg      import norm
 
 def RK4(func, y0, t):
     '''
@@ -46,6 +47,50 @@ def RK4(func, y0, t):
         k4       = dt * func(y[i] + k3, t[i] + dt)
         y[i + 1] = y[i] + (k1 + 2*k2 +2*k3 +k4)/6
     return y
+
+class KuttaMerson:
+    def __init__(self,func):
+        self.func = func
+
+    def step(self,y0,h,t0):
+        '''https://encyclopediaofmath.org/wiki/Kutta-Merson_method '''
+        k1 = h * self.func(y0,                       t0)
+        k2 = h * self.func(y0+k1/3,                  t0 + h/3)
+        k3 = h * self.func(y0 + k1/6+k2/6,           t0 + h/3)
+        k4 = h * self.func(y0 + k1/8 + 3*k2/8,       t0 + h/2)
+        k5 = h * self.func(y0 + k1/2 -3*k3/2 + 2*k4, t0 + h)
+        y1 = y0 + k1/2 -3*k3/2 + 2*k4
+        y2 = y0 + k1/6         + 2*k4/3 + k5/6
+        R  = 0.2 * norm(y1-y2)
+        return y2,R
+
+    def solve(self, yInit, t,ytol=1e-8,maxIter=25):
+        R      = float('inf')
+        m      = 0
+        n      = t.shape[0]
+        y      = zeros((n, yInit.shape[0]))
+        y[0,:] = yInit
+        for i in range(n-1):
+            stepping = False
+            for j in range(maxIter):
+                if m>0 and R<ytol/2:
+                    m-=1
+                h  = (t[i+1] - t[i])/2**m
+                y0 = y[i,:]
+                for k in range(2**m):
+                    t0 = t[i] + k*h
+                    y2,R = self.step(y0,h,t0)
+                    stepping = R<ytol
+                    if not stepping:
+                        m += 1
+                        break
+                    y0 = y2.copy()
+                if stepping:
+                    y[i+1,:] = y2
+                    break
+        if not stepping:
+            raise Exception('oops')
+        return y
 
 if __name__ == '__main__':
 
@@ -92,17 +137,21 @@ if __name__ == '__main__':
     xSolution = sspSolution[:, 0]
     vSolution = sspSolution[:, 1]
 
-    print(xSolution[-1])
+    km = KuttaMerson(velocity)
+    y  = km.solve(ssp0, tArray)
 
+    fig = figure()
+    ax  = fig.add_subplot(2,2,1)
+    ax.plot(tArray, xSolution)
+    ax.set_ylabel('x(t)')
 
+    ax  = fig.add_subplot(2,2,2)
+    ax.plot(tArray, vSolution)
+    ax.set_xlabel('t (s)')
+    ax.set_ylabel('v(t)')
 
-    subplot(2, 1, 1)
-    plot(tArray, xSolution)
-    ylabel('x(t)')
-
-    subplot(2, 1, 2)
-    plot(tArray, vSolution)
-    xlabel('t (s)')
-    ylabel('v(t)')
-
+    ax  = fig.add_subplot(2,2,3)
+    ax.plot(tArray, y[:,0])
+    ax  = fig.add_subplot(2,2,4)
+    ax.plot( y[:,0], y[:,1])
     show()
