@@ -22,6 +22,7 @@
 '''
 
 from argparse          import ArgumentParser
+from euler             import euler
 from numpy             import array, exp, linspace, mean, ones, zeros, zeros_like
 from numpy.random      import default_rng
 from scipy.integrate   import odeint
@@ -120,7 +121,7 @@ if __name__ == "__main__":
                             coupling = args.coupling,
                             sigma    = args.sigma * ones(args.N),
                             rng      = rng)
-    y = RK4(population.Velocity,  rng.normal(30,8,oscillator.d*args.N), t)
+    y = euler(population.Velocity,  rng.normal(30,8,oscillator.d*args.N), t)
     # km = KuttaMerson(population.Velocity)
     # y  = km.solve(rng.normal(30,8,oscillator.d*args.N), t,ytol=1e-4)
     # y        = odeint(population.Velocity,  rng.normal(30,8,oscillator.d*args.N), t,
