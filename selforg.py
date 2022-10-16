@@ -26,7 +26,7 @@ from numpy             import array, exp, linspace, mean, ones, zeros, zeros_lik
 from numpy.random      import default_rng
 from scipy.integrate   import odeint
 from matplotlib.pyplot import figure, show
-from sde               import EulerMaruyama
+from sde               import EulerMaruyama, Wiener
 
 class Rossler:
     def __init__(self,
@@ -113,25 +113,30 @@ if __name__ == "__main__":
     args       = parse_args()
     oscillator = OscillatorFactory.Create(args.oscillator)
     t          = linspace(0, args.tFinal, args.Nt)
+    d          = 3*args.N
     rng        = default_rng(args.seed)
+    y0         = rng.normal(30,8,oscillator.d*args.N)
     population = Population(oscillator,
                             speed    = exp(rng.normal(0,2**-6,args.N)),
                             coupling = args.coupling,
                             sigma    = args.sigma * ones(args.N),
                             rng      = rng)
-    solver = EulerMaruyama(rng)
-    y      = solver.solve(population.Velocity, rng.normal(30,8,oscillator.d*args.N), t,
-                          b = lambda y,t:args.sigma * ones(3*args.N))
+    solver    = EulerMaruyama()
+    y         = solver.solve(population.Velocity, y0, t,
+                             b       = lambda y,t:args.sigma * ones(d),
+                             wiener  = Wiener(rng = rng,
+                                              d   = d))
 
-    fig = figure(figsize=(6,6))
+    fig       = figure(figsize=(12,6))
     for i in range(3):
         ax  = fig.add_subplot(2,2,i+1)
         ax.plot(t[args.burnin:],mean( y[args.burnin:,i::oscillator.d],axis=1),linestyle='solid',linewidth=2)
         m,n = y.shape
         for j in range(i,n,oscillator.d):
-            ax.plot(t,y[:,j],linestyle='dotted')
+            ax.plot(t[args.burnin:],y[args.burnin:,j],linestyle='dotted')
             ax.set_xlabel('t')
             ax.set_ylabel('xyz'[i])
+
     ax  = fig.add_subplot(2,2,4,projection='3d')
     ax.plot(mean( y[args.burnin:,0::oscillator.d],axis=1),
             mean( y[args.burnin:,1::oscillator.d],axis=1),

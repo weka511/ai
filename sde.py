@@ -23,29 +23,34 @@ from matplotlib.pyplot import figure, show
 from numpy             import arange, size, sqrt, zeros
 from numpy.random      import default_rng
 
+class Wiener:
+    '''This class represents a Wiener process'''
+    def __init__(self,
+                 d     = 1,
+                 sigma = 1,
+                 rng   = default_rng(None)):
+        self.rng   = rng
+        self.d     = d
+        self.sigma = sigma
+
+    def dW(self,dt):
+        return self.rng.normal(size  = self.d,
+                               loc   = 0.0,
+                               scale = sqrt(self.sigma*dt))
 class EulerMaruyama:
     '''Solve SDE using Euler-Mariuama method https://en.wikipedia.org/wiki/Euler%E2%80%93Maruyama_method'''
-    def __init__(self,rng = default_rng(None)):
-        self.rng   = rng
 
-    def dW(self,dt,size=1,p=[]):
-        sigma = p[0] if len(p)>0 else 1
-        return self.rng.normal(size  = size,
-                               loc   = 0.0,
-                               scale = sqrt(sigma*dt))
-
-    def solve(self,a, y0, t, b=lambda y,t:1,p=[]):
+    def solve(self,a, y0, t,
+              b      = lambda y,t:1,
+              wiener = Wiener()):
         d       = size(y0, 0)
         y       = zeros((size(t, 0), d))
         y[0, :] = y0
-
         for i in range(0,size(t) - 1):
             dt       = t[i + 1] - t[i]
-            y[i + 1] = y[i] + a(y[i], t[i]) * dt + b(y[i], t[i]) * self.dW(dt,size=d,p=[])
+            y[i + 1] = y[i] + a(y[i], t[i]) * dt + b(y[i], t[i]) * wiener.dW(dt)
 
         return y
-
-
 
 if __name__=='__main__':
     # Test code from https://en.wikipedia.org/wiki/Euler%E2%80%93Maruyama_method
