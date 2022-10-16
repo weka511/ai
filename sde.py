@@ -11,72 +11,55 @@
 '''Euler–Maruyama method'''
 
 from matplotlib.pyplot import figure, show
-from numpy             import arange, sqrt, zeros
+from numpy             import arange, size, sqrt, zeros
 from numpy.random      import normal
 
 
-class Model:
-    '''
-    Stochastic model constants.
-    '''
-    THETA = 0.7
-    MU    = 1.5
-    SIGMA = 0.06
+def euler_maruyama(a,b, y0, t,
+                   dW = lambda dt:normal(loc=0.0, scale=sqrt(dt))):
+    y       = zeros((size(t, 0), size(y0, 0)))
+    y[0, :] = y0
 
-def mu(y: float, _t: float) -> float:
-    '''
-    Implement the Ornstein–Uhlenbeck mu.
-    '''
-    return Model.THETA * (Model.MU - y)
+    for i in range(0,size(t) - 1):
+        dt       = t[i + 1] - t[i]
+        y[i + 1] = y[i] + a(y[i], t[i]) * dt + b(y[i], t[i]) * dW(dt)
 
-def sigma(_y: float, _t: float) -> float:
-    '''
-    Implement the Ornstein–Uhlenbeck sigma.
-    '''
-    return Model.SIGMA
+    return t,y
 
-def dW(delta_t: float) -> float:
-    '''
-    Sample a random number at each call.
-    '''
-    return normal(loc=0.0, scale=sqrt(delta_t))
 
-def run_simulation():
-    '''
-    Return the result of one full simulation.
-    '''
+
+if __name__=='__main__':
+    class Model:
+        '''
+        Stochastic model constants.
+        '''
+        THETA = 0.7
+        MU    = 1.5
+        SIGMA = 0.06
+
+    def mu(y: float, _t: float) -> float:
+        '''
+        Implement the Ornstein–Uhlenbeck mu.
+        '''
+        return Model.THETA * (Model.MU - y)
+
+    def sigma(_y: float, _t: float) -> float:
+        '''
+        Implement the Ornstein–Uhlenbeck sigma.
+        '''
+        return Model.SIGMA
+
     T_INIT = 3
     T_END  = 7
     N      = 1000  # Compute 1000 grid points
     DT     = float(T_END - T_INIT) / N
     TS = arange(T_INIT, T_END + DT, DT)
 
-    Y_INIT = 0
-
-    ys = zeros(N + 1)
-    ys[0] = Y_INIT
-    for i in range(1, TS.size):
-        t = T_INIT + (i - 1) * DT
-        y = ys[i - 1]
-        ys[i] = y + mu(y, t) * DT + sigma(y, t) * dW(DT)
-
-    return TS, ys
-
-def plot_simulations(num_sims: int) -> None:
-    '''
-    Plot several simulations in one image.
-    '''
     fig = figure()
     ax  = fig.add_subplot(1,1,1)
 
-    for _ in range(num_sims):
-        ax.plot(*run_simulation())
+    for _ in range(5):
+        t,y = euler_maruyama(mu,sigma, [0], TS, dW = lambda dt:normal(loc=0.0, scale=sqrt(dt)))
+        ax.plot(t,y[:,0])
 
-    ax.set_xlabel('time')
-    ax.set_ylabel('y')
-
-
-if __name__=='__main__':
-    NUM_SIMS = 5
-    plot_simulations(NUM_SIMS)
     show()
