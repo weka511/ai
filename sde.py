@@ -16,28 +16,25 @@
 # You should have received a copy of the GNU General Public License
 # along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.
 
-# Copyright <c) Wikipedia contributors 2015-2022
-# Creative Commons Attribution-ShareAlike 3.0 License
-# https://creativecommons.org/licenses/by-sa/3.0/
-# Wikipedia contributors, "Euler–Maruyama method," Wikipedia, The Free Encyclopedia, https://en.wikipedia.org/w/index.php?title=Euler%E2%80%93Maruyama_method&oldid=1104040790 (accessed October 15, 2022).
-#
-# I have made typographical changes to confirm to the style of my other code
 
-'''Euler–Maruyama method, based on https://en.wikipedia.org/w/index.php?title=Euler%E2%80%93Maruyama_method&oldid=1104040790 '''
+'''Euler–Maruyama method, based on https://en.wikipedia.org/wiki/Euler%E2%80%93Maruyama_method '''
 
 from matplotlib.pyplot import figure, show
 from numpy             import arange, size, sqrt, zeros
-from numpy.random      import normal
+from numpy.random      import default_rng
 
 class EulerMaruyama:
-    def __init__(self):
-        pass
+    '''Solve SDE using Euler-Mariuama method https://en.wikipedia.org/wiki/Euler%E2%80%93Maruyama_method'''
+    def __init__(self,rng = default_rng(None)):
+        self.rng   = rng
 
-    def dW(step0,dt,size=1,p=[]):
+    def dW(self,dt,size=1,p=[]):
         sigma = p[0] if len(p)>0 else 1
-        return normal(size=1,loc=0.0, scale=sqrt(sigma*dt))
+        return self.rng.normal(size  = size,
+                               loc   = 0.0,
+                               scale = sqrt(sigma*dt))
 
-    def solve(self,a,b, y0, t,p=[]):
+    def solve(self,a, y0, t, b=lambda y,t:1,p=[]):
         d       = size(y0, 0)
         y       = zeros((size(t, 0), d))
         y[0, :] = y0
@@ -46,11 +43,12 @@ class EulerMaruyama:
             dt       = t[i + 1] - t[i]
             y[i + 1] = y[i] + a(y[i], t[i]) * dt + b(y[i], t[i]) * self.dW(dt,size=d,p=[])
 
-        return t,y
+        return y
 
 
 
 if __name__=='__main__':
+    # Test code from https://en.wikipedia.org/wiki/Euler%E2%80%93Maruyama_method
     class Model:
         '''
         Stochastic model constants.
@@ -75,13 +73,13 @@ if __name__=='__main__':
     T_END  = 7
     N      = 1000  # Compute 1000 grid points
     DT     = float(T_END - T_INIT) / N
-    TS = arange(T_INIT, T_END + DT, DT)
-    euler_maruyama = EulerMaruyama()
-    fig = figure()
-    ax  = fig.add_subplot(1,1,1)
+    TS     = arange(T_INIT, T_END + DT, DT)
+    solver = EulerMaruyama()
+    fig    = figure()
+    ax    = fig.add_subplot(1,1,1)
 
     for _ in range(5):
-        t,y = euler_maruyama.solve(mu,sigma, [0], TS)
-        ax.plot(t,y[:,0])
+        y = solver.solve(mu, [0], TS, b=sigma)
+        ax.plot(TS,y[:,0])
 
     show()

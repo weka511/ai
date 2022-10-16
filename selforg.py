@@ -22,12 +22,11 @@
 '''
 
 from argparse          import ArgumentParser
-from euler             import euler
 from numpy             import array, exp, linspace, mean, ones, zeros, zeros_like
 from numpy.random      import default_rng
 from scipy.integrate   import odeint
 from matplotlib.pyplot import figure, show
-from rk4               import RK4, KuttaMerson
+from sde               import EulerMaruyama
 
 class Rossler:
     def __init__(self,
@@ -73,14 +72,13 @@ class Population:
         self.sigma      = sigma
         self.rng        = rng
 
-    def Velocity(self,y,t):                     #FIXME
+    def Velocity(self,y,t):
         Average  = self.get_average(y)
         Noise    = rng.normal(size=len(y))
         Velocity = zeros_like(y)
         for oscillator_id,i in enumerate(range(0,len(y),self.oscillator.d)):
             OscillatorVelocity              = self.oscillator.Velocity(t,y[i:i+self.oscillator.d])
-            VelocityWithCoupling            = self.speed[oscillator_id]*(OscillatorVelocity+self.coupling*Average)
-            Velocity[i:i+self.oscillator.d] = VelocityWithCoupling + self.sigma[oscillator_id] * Noise[i]
+            Velocity[i:i+self.oscillator.d] = self.speed[oscillator_id]*(OscillatorVelocity+self.coupling*Average)
         return Velocity
 
     def get_average(self,y):
@@ -121,11 +119,9 @@ if __name__ == "__main__":
                             coupling = args.coupling,
                             sigma    = args.sigma * ones(args.N),
                             rng      = rng)
-    y = euler(population.Velocity,  rng.normal(30,8,oscillator.d*args.N), t)
-    # km = KuttaMerson(population.Velocity)
-    # y  = km.solve(rng.normal(30,8,oscillator.d*args.N), t,ytol=1e-4)
-    # y        = odeint(population.Velocity,  rng.normal(30,8,oscillator.d*args.N), t,
-                        # tfirst = True)
+    solver = EulerMaruyama(rng)
+    y      = solver.solve(population.Velocity, rng.normal(30,8,oscillator.d*args.N), t,
+                          b = lambda y,t:args.sigma * ones(3*args.N))
 
     fig = figure(figsize=(6,6))
     for i in range(3):
