@@ -123,7 +123,7 @@ if __name__ == "__main__":
                             rng      = rng)
     solver    = EulerMaruyama()
     y         = solver.solve(population.Velocity, y0, t,
-                             b       = lambda y,t:args.sigma * y,
+                             b       = lambda y,t:args.sigma * y, #Magnitude of Gaussian proportional to y
                              wiener  = Wiener(rng = rng,
                                               d   = d))
 
