@@ -57,8 +57,8 @@ class Lorentz:
     def Velocity(self,t,ssp):
         x, y, z = ssp
         return array([self.sigma * (y-x),
-                  self.rho*x - y - x*z,
-                  x*y - self.b*z])
+                      self.rho*x - y - x*z,
+                      x*y - self.b*z])
 
 class Population:
     def __init__(self,oscillator,
@@ -123,7 +123,7 @@ if __name__ == "__main__":
                             rng      = rng)
     solver    = EulerMaruyama()
     y         = solver.solve(population.Velocity, y0, t,
-                             b       = lambda y,t:args.sigma * ones(d),
+                             b       = lambda y,t:args.sigma * y,
                              wiener  = Wiener(rng = rng,
                                               d   = d))
 

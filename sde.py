@@ -41,7 +41,7 @@ class EulerMaruyama:
     '''Solve SDE using Euler-Mariuama method https://en.wikipedia.org/wiki/Euler%E2%80%93Maruyama_method'''
 
     def solve(self,a, y0, t,
-              b      = lambda y,t:1,
+              b      = lambda y,t:y,
               wiener = Wiener()):
         d       = size(y0, 0)
         y       = zeros((size(t, 0), d))
