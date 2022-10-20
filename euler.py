@@ -53,7 +53,7 @@ if __name__ == '__main__':
 
     tInitial = 0
     tFinal   = 10
-    Nt       = 1000
+    Nt       = 5000
     tArray =linspace(tInitial, tFinal, Nt)
 
     ssp0 =array([1.0, 0], float)
@@ -73,4 +73,8 @@ if __name__ == '__main__':
     ax.set_xlabel('t (s)')
     ax.set_ylabel('v(t)')
 
+    ax  = fig.add_subplot(2,2,3)
+    ax.plot( xSolution, vSolution)
+    ax.set_xlabel('x(t)')
+    ax.set_ylabel('v(t)')
     show()
