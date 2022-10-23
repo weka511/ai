@@ -1,6 +1,6 @@
 # Active Inference
 
-My struggle to understand Karl Friston on Active Inference, focusing on [Life as we Know it](https://royalsocietypublishing.org/doi/10.1098/rsif.2013.0475)
+Code written to understand Karl Friston on Active Inference, focusing on [Life as we Know it](https://royalsocietypublishing.org/doi/10.1098/rsif.2013.0475)
 
 File|Description
 -------------------|---------------------------------------------------------------------------------------------------
