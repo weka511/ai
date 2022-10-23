@@ -103,7 +103,7 @@ def parse_args():
     parser.add_argument('--seed',     type    = int,   default = None)
     parser.add_argument('--N',        type    = int,   default = 16)
     parser.add_argument('--coupling', type    = float, default = 2.0)
-    parser.add_argument('--sigma',    type    = float, default = 2)
+    parser.add_argument('--sigma',    type    = float, default = 2.0)
     parser.add_argument('--show',                      default = False, action = 'store_true')
     parser.add_argument('--burnin',   type    = int,   default = 0)
     return parser.parse_args()
