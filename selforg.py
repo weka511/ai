@@ -67,6 +67,7 @@ class Lorentz(Oscillator):
                         x*y - self.b*z])
 
 class Population:
+     '''This class represents a coupled set of Oscillators'''
      def __init__(self,oscillator,
                   speed    = ones(4),
                   coupling = 0.2,
@@ -92,18 +93,25 @@ class Population:
 
 
 class OscillatorFactory:
+     '''This class is responsible for instantiating the appropriate Oscillator'''
      Oscillators = {}
+
      @classmethod
      def Register(cls,Oscillators):
           for oscillator in Oscillators:
                OscillatorFactory.Oscillators[oscillator.name] = oscillator
+
      @classmethod
      def Create(cls,name):
           return OscillatorFactory.Oscillators[name]
 
+     @classmethod
+     def Available(cls):
+          return OscillatorFactory.Oscillators.keys()
+
 def parse_args():
      parser   = ArgumentParser(__doc__)
-     parser.add_argument('oscillator', choices = OscillatorFactory.Oscillators.keys())
+     parser.add_argument('oscillator', choices = OscillatorFactory.Available())
      parser.add_argument('--tFinal',   type    = float, default = 5)
      parser.add_argument('--Nt',       type    = int,   default = 1000)
      parser.add_argument('--seed',     type    = int,   default = None)
