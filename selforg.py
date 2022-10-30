@@ -118,6 +118,7 @@ def parse_args():
      parser.add_argument('--N',        type    = int,   default = 16)
      parser.add_argument('--coupling', type    = float, default = 2.0)
      parser.add_argument('--sigma',    type    = float, default = 2.0)
+     parser.add_argument('--sigma0',   type    = float, default = 8.0)
      parser.add_argument('--show',                      default = False, action = 'store_true')
      parser.add_argument('--burnin',   type    = int,   default = 0)
      return parser.parse_args()
@@ -127,9 +128,9 @@ if __name__ == "__main__":
      args       = parse_args()
      oscillator = OscillatorFactory.Create(args.oscillator)
      t          = linspace(0, args.tFinal, args.Nt)
-     d          = 3*args.N
+     d          = 3 * args.N
      rng        = default_rng(args.seed)
-     y0         = rng.normal(30,8,oscillator.d*args.N)
+     y0         = rng.normal(30, args.sigma0, oscillator.d*args.N)
      population = Population(oscillator,
                              speed    = exp(rng.normal(0,2**-6,args.N)),
                              coupling = args.coupling,
