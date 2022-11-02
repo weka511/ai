@@ -1,0 +1,76 @@
+\documentclass[]{article}
+\usepackage{chronology}
+\usepackage{float}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{graphicx}
+\usepackage{url}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{tocloft}
+\usepackage{cancel}
+\usepackage{thmtools}
+\usepackage[toc,nonumberlist]{glossaries}
+\usepackage{glossaries-extra}
+\newcommand\numberthis{\addtocounter{equation}{1}\tag{\theequation}}
+\newtheorem{defn}{Definition}
+\newtheorem{thm}{Theorem}
+\newtheorem{lemma}[thm]{Lemma}
+\graphicspath{{figs/}}
+\widowpenalty10000
+\clubpenalty10000
+
+\makeglossaries
+%opening
+\title{Active inference}
+\author{Simon Crase}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+
+\end{abstract}
+
+\tableofcontents
+
+\section{Fokker-Planck}
+
+From \cite{friston_life_2013} the probability distribution over states is given by:
+\begin{align*}
+	\dot{p}(x\vert m) =& \nabla \cdot \Gamma \nabla p -\nabla \cdot(f p) \numberthis \label{eq:fokker:planck}
+\end{align*}
+So the equilibrium distribution satisfies:
+\begin{align*}
+	\nabla \cdot (\Gamma \nabla p -f p)=&0\\
+	\partial_i \big(\Gamma^{ij} \partial_j p -f_i p \big)=& 0
+\end{align*}
+%\begin{figure}[H]
+%	\caption{Timeline}
+%	\begin{subfigure}[b]{\textwidth}
+%		\caption{FEP}
+%		\begin{chronology}[3]{2006}{2022}{16cm}[\textwidth]
+%			\event{2006}{\color{blue}\cite{friston_free_2006}A Free Energy Principle for the brain}
+%			\event{2009}{\cite{friston_free-energy_2009}The free-energy principle: a rough guide to the brain}
+%			\event{2013}{\cite{friston_life_2013}Life as we Know it}
+%			\event{2021}{\cite{friston_interesting_2021}Some Interesting Observations on the Free Energy Principle}
+%			\event{2022}{\cite{friston_free_nodate}The free energy principle made simpler but not too simple}
+%		\end{chronology}
+%	\end{subfigure}
+%	\begin{subfigure}[b]{\textwidth}
+%		\caption{Fokker-Plank}
+%		\begin{chronology}[3]{2006}{2022}{16cm}[\textwidth]
+%			\event{2013}{\cite{friston_life_2013}Life as we Know it}
+%			\event{2022}{\cite{friston_free_nodate}The free energy principle made simpler but not too simple}
+%		\end{chronology}
+%	\end{subfigure}
+%\end{figure}
+% bibliography goes here
+
+\bibliographystyle{unsrt}
+\addcontentsline{toc}{section}{Bibliography}
+\bibliography{ActiveInference}
+
+\end{document}
