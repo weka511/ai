@@ -27,26 +27,48 @@
 \author{Simon Crase}
 
 \begin{document}
+	
+\newglossaryentry{gls:sde}{
+	name={stochastic differential equation},
+	description={
+	A stochastic differential equation is a differential equation whose coefficients are random numbers or random functions of the independent variable (or variables)}}
 
 \maketitle
 
 \begin{abstract}
-
+This document collects my derivations of equations from \cite{friston_life_2013}.
 \end{abstract}
 
 \tableofcontents
 
 \section{Fokker-Planck}
 
-From \cite{friston_life_2013} the probability distribution over states is given by:
+If $\vec{x}$ satisfies the \gls{gls:sde}
 \begin{align*}
-	\dot{p}(x\vert m) =& \nabla \cdot \Gamma \nabla p -\nabla \cdot(f p) \numberthis \label{eq:fokker:planck}
+	\dot{\vec{x}} =& f(\vec{x}) + \omega \numberthis \label{eq:dynamics}
+\end{align*}
+then \cite[(2.2)]{friston_life_2013} states, and  \cite[Chapter 33]{cvitanovic2005chaos} shows that the probability distribution over states is given by:
+\begin{align*}
+	\dot{p}(\vec{x}\vert m) =& \nabla \cdot \Gamma \nabla p -\nabla \cdot(f p) \numberthis \label{eq:fokker:planck}
 \end{align*}
 So the equilibrium distribution satisfies:
 \begin{align*}
 	\nabla \cdot (\Gamma \nabla p -f p)=&0\\
-	\partial_i \big(\Gamma^{ij} \partial_j p -f_i p \big)=& 0
+	\sum_{i,j}\partial_i \big(\Gamma_{ij} \partial_j p -f_i p \big)=& 0
 \end{align*}
+Define $G()$ such that:
+\begin{align*}
+	p(x\vert m) =& \exp \big(-G(x)\big)\\
+	\partial_i p =& - \exp \big(-G(x)\big) \partial_i G\\
+	=& - p \partial_i G
+\end{align*}
+Following \cite[(2.3)]{friston_life_2013}, define:
+\begin{align*}
+	f =& -(\Gamma + R) \cdot \nabla G\\
+	\Gamma \nabla p - f p =& \Gamma p \nabla G + (\Gamma + R) \cdot \nabla G p\\
+	=& R \cdot \nabla G p
+\end{align*}
+\cite{friston2012free}
 %\begin{figure}[H]
 %	\caption{Timeline}
 %	\begin{subfigure}[b]{\textwidth}
@@ -67,6 +89,11 @@ So the equilibrium distribution satisfies:
 %		\end{chronology}
 %	\end{subfigure}
 %\end{figure}
+
+\appendix
+
+\printglossaries
+
 % bibliography goes here
 
 \bibliographystyle{unsrt}
