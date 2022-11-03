@@ -33,6 +33,9 @@
 	description={
 	A stochastic differential equation is a differential equation whose coefficients are random numbers or random functions of the independent variable (or variables)}}
 
+\newglossaryentry{gls:helmholz}{
+	name={Helmholtz Decomposition},
+	description={The Helmholtz Decomposition Theorem, or the fundamental theorem of vector calculus, states that any well-behaved vector field can be decomposed into the sum of a longitudinal (diverging, non-curling, irrotational) vector field and a transverse (solenoidal, curling, rotational, non-diverging) vector field\cite{baird2012helmholtz}}}
 \maketitle
 
 \begin{abstract}
@@ -40,35 +43,58 @@ This document collects my derivations of equations from \cite{friston_life_2013}
 \end{abstract}
 
 \tableofcontents
-
+\listoftheorems
 \section{Fokker-Planck}
 
-If $\vec{x}$ satisfies the \gls{gls:sde}
-\begin{align*}
-	\dot{\vec{x}} =& f(\vec{x}) + \omega \numberthis \label{eq:dynamics}
-\end{align*}
-then \cite[(2.2)]{friston_life_2013} states, and  \cite[Chapter 33]{cvitanovic2005chaos} shows that the probability distribution over states is given by:
-\begin{align*}
-	\dot{p}(\vec{x}\vert m) =& \nabla \cdot \Gamma \nabla p -\nabla \cdot(f p) \numberthis \label{eq:fokker:planck}
-\end{align*}
-So the equilibrium distribution satisfies:
-\begin{align*}
-	\nabla \cdot (\Gamma \nabla p -f p)=&0\\
-	\sum_{i,j}\partial_i \big(\Gamma_{ij} \partial_j p -f_i p \big)=& 0
-\end{align*}
-Define $G()$ such that:
-\begin{align*}
-	p(x\vert m) =& \exp \big(-G(x)\big)\\
-	\partial_i p =& - \exp \big(-G(x)\big) \partial_i G\\
-	=& - p \partial_i G
-\end{align*}
-Following \cite[(2.3)]{friston_life_2013}, define:
-\begin{align*}
-	f =& -(\Gamma + R) \cdot \nabla G\\
-	\Gamma \nabla p - f p =& \Gamma p \nabla G + (\Gamma + R) \cdot \nabla G p\\
-	=& R \cdot \nabla G p
-\end{align*}
-\cite{friston2012free}
+\begin{thm}[Fokker-Planck equation]
+	If $\vec{x}$ satisfies the \gls{gls:sde}
+	\begin{align*}
+		\dot{\vec{x}} =& f(\vec{x}) + \omega \numberthis \label{eq:dynamics}
+	\end{align*}
+	then the probability distribution over states is given by:
+	\begin{align*}
+		\dot{p}(\vec{x}\vert m) =& \nabla \cdot \Gamma \nabla p -\nabla \cdot(f p) \numberthis \label{eq:fokker:planck}
+	\end{align*}
+	See \cite[(2.2)]{friston_life_2013} and  \cite[Chapter 33]{cvitanovic2005chaos}.
+\end{thm}
+
+\begin{proof}
+	TBP
+\end{proof}
+
+\cite{friston_life_2013,friston2012free}
+
+\begin{thm}[Equilibrium distribution for Fokker-Planck]
+	The equilibrium distribution for \eqref{eq:fokker:planck} is given by:
+	\begin{align*}
+		p(\vec{x}\vert m) =& \exp \big(-G(\vec{x})\big) \text{, where $G$ satisfies}\\
+		f =& -(\Gamma + R) \cdot \nabla G
+	\end{align*}
+	
+\end{thm}
+\begin{proof}
+The equilibrium distribution of \eqref{eq:fokker:planck} satisfies:
+	\begin{align*}
+		\dot{p}(\vec{x}\vert m) =&0 \text{, i.e.}\\
+		\nabla \cdot (\Gamma \nabla p -f p)=&0 \numberthis \label{eq:fokker:plank:eq}
+	\end{align*}
+	Since $	p(\vec{x}\vert m) \ge 0$, we can define $G()$ such that:
+	\begin{align*}
+		p(\vec{x}\vert m) =& \exp \big(-G(\vec{x})\big) \text{. Then}\\
+		\nabla p =& - \exp \big(-G(\vec{x})\big) \nabla G(\vec{x})\\
+		=& - p \nabla G(\vec{x}) \text{, whence \eqref{eq:fokker:plank:eq} becomes}\\
+		-\nabla \cdot [(\Gamma \nabla G +f)p]=&0\\
+		 [(\Gamma \nabla G +f)p] =& \nabla \times A
+	\end{align*}
+	Following \cite[(2.3)]{friston_life_2013} and \gls{gls:helmholz}, define:
+	\begin{align*}
+		f =& -(\Gamma + R) \cdot \nabla G\\
+		\Gamma \nabla p - f p =& \Gamma p \nabla G + (\Gamma + R) \cdot \nabla G p\\
+		=& R \cdot \nabla G p
+	\end{align*}
+\end{proof}
+
+
 %\begin{figure}[H]
 %	\caption{Timeline}
 %	\begin{subfigure}[b]{\textwidth}
