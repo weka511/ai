@@ -27,3 +27,9 @@ File  | Remarks |
 euler.py|Euler's method
 rk4.py|Workhorse Runge-Kutta 4th order
 sde.py|Euler–Maruyama method
+
+## Examples based on [Smith et al-A Step-by-Step Tutorial on Active Inference and its Application to Empirical Data](https://psyarxiv.com/b4jm6/)
+
+File  | Remarks |
+---------------|-------------------------------------------------------------------------------------------
+pomdp.py|POMDP example from Smith et al
