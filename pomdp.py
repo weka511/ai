@@ -20,7 +20,7 @@ POMDP example from
 [Smith et al-A Step-by-Step Tutorial on Active Inference and its Application to Empirical Data](https://psyarxiv.com/b4jm6/)
 '''
 
-from numpy import array
+from numpy import array, zeros
 
 # ---------------------------------------------------------------------
 # State factors
@@ -92,7 +92,37 @@ A = [
 
 # ---------------------------------------------------------------------
 
+# State transition matrices
+
+B = [array([[1,0],
+            [0,1]]),
+     array([[[1,1,1,1],
+            [0,0,0,0],
+            [0,0,0,0],
+            [0,0,0,0]],
+            [[0,0,0,0],
+             [1,1,1,1],
+             [0,0,0,0],
+             [0,0,0,0]],
+            [[0,0,0,0],
+             [0,0,0,0],
+             [1,1,1,1],
+             [0,0,0,0]],
+            [[0,0,0,0],
+             [0,0,0,0],
+             [0,0,0,0],
+             [1,1,1,1]]
+            ])]
+
 # ---------------------------------------------------------------------
+
+C = [zeros((3,3)),
+     zeros((4,3)),
+     array([[0,  0, 0],
+            [0, -1, -1],
+            [0, 4,  2]])]
+
+# preferences for outcomes
 
 if __name__=='__main__':
     print ('D')
@@ -102,3 +132,10 @@ if __name__=='__main__':
     print (A[0])
     print (A[1])
     print (A[2])
+    print ('B')
+    print(B[0])
+    print(B[1])
+    print ('C')
+    print(C[0])
+    print(C[1])
+    print(C[2])
