@@ -336,5 +336,9 @@ docs/_build/
 # PyBuilder
 target/
 
+feex*.png
+ActiveInference.pdf
+selforg*.png
+
  
 
