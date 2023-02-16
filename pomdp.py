@@ -16,17 +16,20 @@
 # along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.
 
 '''
-POMDP example from
-[Smith et al-A Step-by-Step Tutorial on Active Inference and its Application to Empirical Data](https://psyarxiv.com/b4jm6/)
+    POMDP example from
+    Ryan Smith et al-A Step-by-Step Tutorial on Active Inference and its Application to Empirical Data
+    https://psyarxiv.com/b4jm6/
+    and https://github.com/rssmith33/Active-Inference-Tutorial-Scripts/blob/main/Step_by_Step_AI_Guide.m
 '''
 
-from numpy import array, zeros
+from argparse import ArgumentParser
+from numpy    import array, zeros
 
 # ---------------------------------------------------------------------
 # State factors
 
 # 0. left-better_context/right_better context
-# 2. pre_choice/asking_for_hint/choosing_left_machine/choosing_right_machine
+# 1. pre_choice/asking_for_hint/choosing_left_machine/choosing_right_machine
 
 # ---------------------------------------------------------------------
 
@@ -116,14 +119,34 @@ B = [array([[1,0],
 
 # ---------------------------------------------------------------------
 
+# preferences for outcomes
+
 C = [zeros((3,3)),
      zeros((4,3)),
      array([[0,  0, 0],
             [0, -1, -1],
             [0, 4,  2]])]
 
-# preferences for outcomes
 
+
+# ---------------------------------------------------------------------
+
+# Allowable policies
+
+U = []
+
+# ---------------------------------------------------------------------
+
+# Deep policies
+
+V = []
+
+
+# ---------------------------------------------------------------------
+
+# Habits
+
+E = []
 if __name__=='__main__':
     print ('D')
     print (D[0])
