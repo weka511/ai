@@ -112,12 +112,12 @@ class OscillatorFactory:
 def parse_args():
      parser   = ArgumentParser(__doc__)
      parser.add_argument('oscillator', choices = OscillatorFactory.Available())
-     parser.add_argument('--tFinal',   type    = float, default = 5)
-     parser.add_argument('--Nt',       type    = int,   default = 1000)
+     parser.add_argument('--tFinal',   type    = float, default = 8)
+     parser.add_argument('--Nt',       type    = int,   default = 1024)
      parser.add_argument('--seed',     type    = int,   default = None)
      parser.add_argument('--N',        type    = int,   default = 16)
-     parser.add_argument('--coupling', type    = float, default = 2.0)
-     parser.add_argument('--sigma',    type    = float, default = 2.0)
+     parser.add_argument('--coupling', type    = float, default = 1.0)
+     parser.add_argument('--sigma',    type    = float, default = 1.0)
      parser.add_argument('--sigma0',   type    = float, default = 8.0)
      parser.add_argument('--show',                      default = False, action = 'store_true')
      parser.add_argument('--burnin',   type    = int,   default = 0)
@@ -159,7 +159,7 @@ if __name__ == "__main__":
      ax.set_xlabel('x')
      ax.set_ylabel('y')
      ax.set_zlabel('z')
-     fig.suptitle(fr'{args.oscillator}: N={args.N}, $\lambda$={args.coupling}, $\sigma=${args.sigma}')
+     fig.suptitle(fr'{args.oscillator}: N={args.N}, $\lambda$={args.coupling}, $\sigma=${args.sigma}, $\delta T=${args.tFinal/args.Nt}')
      fig.savefig(f'selforg{args.oscillator}')
 
      if args.show:
