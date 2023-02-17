@@ -25,10 +25,10 @@ def get_q(q0):
     return array([q0[0],1-q0[0]])
 
 def F(q0,p=array([0.8,0.2])):
-    q = get_q(q0)
+    q = q0/q0.sum()
     return (xlogy(q,q/p)).sum()
 
-result = minimize(F,0.5,
-                  bounds   = [(0,1)],
-                  callback = lambda x:print(get_q(x),F(get_q(x))))
-print (get_q(result.x))
+result = minimize(F,array([0.5,0.5]),
+                  bounds   = [(0,1),(0,1)],
+                  callback = lambda x:print(x,F(x)))
+print (result.x)
