@@ -15,28 +15,19 @@
 # You should have received a copy of the GNU General Public License
 # along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.
 
-'''Solve problem of Example 2 from Smith et al'''
+'''Solve problem of Exercise 2 from Smith et al'''
 
+from example2 import step1
 import numpy as np
 
-def softmax(x):
-    exps = np.exp(x)
-    return exps/exps.sum()
-
-
-
-def step1(D,B,A,o=[],s=[],log=np.log):
-    return np.array([softmax(0.5*log(D) + 0.5*log(np.dot(B,s[1]))+log(np.dot(A,o[0]))),
-                  softmax(0.5*log(D) +log(np.dot(A,np.array([0,0]))))])
-
 if __name__=='__main__':
-    D = np.array([0.75, 0.25])
+    D = np.array([0.5, 0.5])
 
-    A = np.array([[0.8, 0.2],
-               [0.2, 0.8]])
+    A = np.array([[0.9, 0.1],
+               [0.1, 0.9]])
 
-    B = np.array([[0,1],
-              [0,1]])
+    B = np.array([[1,0],
+              [1,0]])
 
     o1 = np.array([1,0])
 
@@ -47,4 +38,3 @@ if __name__=='__main__':
     s2 = np.array([0.5, 0.5])
 
     print (step1(D,B,A,o=[o1],s=[s1,s2],log=lambda x:np.log(x+0.01)))
-
