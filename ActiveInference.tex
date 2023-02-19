@@ -1,3 +1,21 @@
+% This document collects my derivations of equations relevant to Active Inference
+
+% Copyright (c) 2022 Simon Crase
+
+% This script is free software: you can redistribute it and/or modify
+% it under the terms of the GNU General Public License as published by
+% the Free Software Foundation, either version 3 of the License, or
+% (at your option) any later version.
+
+% This script is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+% GNU General Public License for more details.
+
+% You should have received a copy of the GNU General Public License
+% along with this script.  If not, see <https://www.gnu.org/licenses/>.
+
+
 \documentclass[]{article}
 \usepackage{chronology}
 \usepackage{float}
@@ -39,12 +57,47 @@
 \maketitle
 
 \begin{abstract}
-This document collects my derivations of equations from \cite{friston_life_2013}.
+This document collects my derivations of equations from KF's work.
 \end{abstract}
 
 \tableofcontents
 \listoftheorems
-\section{Fokker-Planck}
+
+\section{Introduction}
+
+\begin{figure}[H]
+	\caption{Timeline}
+	\begin{chronology}[3]{2003}{2022}{16cm}[\textwidth]
+		\event{2003}{\cite{beal2003variational}Variational algorithms for approximate Bayesian inference}
+		\event{2006}{\color{blue}\cite{friston_free_2006}A Free Energy Principle for the brain}
+		\event{2009}{\color{blue}\cite{friston_free-energy_2009}The free-energy principle: a rough guide to the brain}
+		\event{2013}{\color{blue}\cite{friston_life_2013}Life as we Know it}
+		\event{2016}{\color{blue}\cite{friston2016therefore}I am therefore I think}
+		\event{2017}{\cite{Blei2017}Variational inference: A review for statisticians}
+		\event{2021}{\color{blue}\cite{friston_interesting_2021}Some Interesting Observations on the Free Energy Principle}
+		\event{2022}{\color{blue}\cite{friston2022free}The free energy principle made simpler but not too simple}
+	\end{chronology}
+\end{figure}
+
+\begin{table}[H]
+	\begin{center}
+		\caption{Notation}
+		\begin{tabular}{|l|c|c|c|c|c|}\hline
+			&\cite{beal2003variational}&\cite{friston_life_2013}&\cite{friston2016therefore}&\cite{Blei2017}&\cite{friston2022free}\\ \hline
+			External State&x&$\Psi$&$\Psi$&z&$\eta$\\ \hline
+			Internal State&&$\lambda$&r&&$\mu$\\ \hline
+			Sensory State&y&s&s&x&s\\ \hline
+			Action State&&a&a&&a\\ \hline
+			Autonomous States&&&&& $\alpha(a,\mu)$\\\hline
+			Blanket States&&&&&$b(s,a)$\\ \hline
+			Particular States&&&&&$\pi(b,\mu)$\\ \hline
+			p&p&$p(\psi,s,a,\lambda\vert m)$&$p(\psi,s,a,r\vert m)$&p&p\\ \hline
+			Recognition Density&q&$q(\psi\vert \mu)$&$q(\psi\vert \mu)$&q&q\\ \hline
+		\end{tabular}
+	\end{center}
+\end{table}
+
+\section{Fokker-Planck Equation}
 
 \begin{thm}[Fokker-Planck equation]
 	If $\vec{x}$ satisfies the \gls{gls:sde}
@@ -59,7 +112,7 @@ This document collects my derivations of equations from \cite{friston_life_2013}
 \end{thm}
 
 \begin{proof}
-	TBP
+	\cite[Section 33.3]{cvitanovic2005chaos}
 \end{proof}
 
 \cite{friston_life_2013,friston2012free}
@@ -84,38 +137,48 @@ The equilibrium distribution of \eqref{eq:fokker:planck} satisfies:
 		\nabla p =& - \exp \big(-G(\vec{x})\big) \nabla G(\vec{x})\\
 		=& - p \nabla G(\vec{x}) \text{, whence \eqref{eq:fokker:plank:eq} becomes}\\
 		-\nabla \cdot [(\Gamma \nabla G +f)p]=&0\\
-		 [(\Gamma \nabla G +f)p] =& \nabla \times A
-	\end{align*}
-	Following \cite[(2.3)]{friston_life_2013} and \gls{gls:helmholz}, define:
-	\begin{align*}
-		f =& -(\Gamma + R) \cdot \nabla G\\
-		\Gamma \nabla p - f p =& \Gamma p \nabla G + (\Gamma + R) \cdot \nabla G p\\
-		=& R \cdot \nabla G p
+		 (\Gamma \nabla G +f)p =& \nabla \times \vec{A} \text{, for some $\vec{A}$}\\
+		 =& -p \vec{R} \cdot \nabla G \text{, for some $R$, whence}\\
+		 f =& -(\Gamma + R) \cdot \nabla G \text{, the \gls{gls:helmholz}-- \cite[(2.3)]{friston_life_2013}}
 	\end{align*}
 \end{proof}
 
+\section{Free Energy}
 
-%\begin{figure}[H]
-%	\caption{Timeline}
-%	\begin{subfigure}[b]{\textwidth}
-%		\caption{FEP}
-%		\begin{chronology}[3]{2006}{2022}{16cm}[\textwidth]
-%			\event{2006}{\color{blue}\cite{friston_free_2006}A Free Energy Principle for the brain}
-%			\event{2009}{\cite{friston_free-energy_2009}The free-energy principle: a rough guide to the brain}
-%			\event{2013}{\cite{friston_life_2013}Life as we Know it}
-%			\event{2021}{\cite{friston_interesting_2021}Some Interesting Observations on the Free Energy Principle}
-%			\event{2022}{\cite{friston_free_nodate}The free energy principle made simpler but not too simple}
-%		\end{chronology}
-%	\end{subfigure}
-%	\begin{subfigure}[b]{\textwidth}
-%		\caption{Fokker-Plank}
-%		\begin{chronology}[3]{2006}{2022}{16cm}[\textwidth]
-%			\event{2013}{\cite{friston_life_2013}Life as we Know it}
-%			\event{2022}{\cite{friston_free_nodate}The free energy principle made simpler but not too simple}
-%		\end{chronology}
-%	\end{subfigure}
-%\end{figure}
 
+From \cite{friston2016therefore}
+\begin{align*}
+	F(s,a,r) =& E_q\big[L(x)\big]-H\big[q(\Psi\vert r)\big] \text{, where}\\
+	L(x) =& -\ln{p(\psi,s,a,r)}\\
+	F(s,a,r) =&  E_q\big[ -\ln{p(\psi,s,a,r)} - \ln{q(\Psi\vert r)}\big]
+\end{align*}
+
+From \cite{friston2022free}
+
+\begin{align*}
+	F\big(\pi(\tau)\big) =& E_q\big[\ln q\big(\eta(\tau)\big) - \ln p\big(\eta(\tau)\big) - \ln p\big(\pi(\tau)\vert\eta(\tau)\big)\big] \numberthis \label{eq:free:energy}
+\end{align*}
+
+We can rearrange \eqref{eq:free:energy} in several different ways.
+\begin{align*}
+	F\big(\pi(\tau)\big) =& E_q\big[\ln q\big(\eta(\tau)\big) - \ln p\big(\eta(\tau)\big) - \ln p\big(\pi(\tau)\vert\eta(\tau)\big)\big]\\
+	=& E_q\big[\ln q\big(\eta(\tau)\big)\big] - E_q \bigg[\ln \big[p\big(\eta(\tau)\big)  p\big(\pi(\tau)\vert\eta(\tau)\big)\big]\bigg]\\
+	=& E_q\big[\ln q\big(\eta(\tau)\big)\big] - E_q \bigg[\ln \big[  p\big(\pi(\tau),\eta(\tau)\big)\big]\bigg]\\
+	=&-\underbrace{H(q\big(\eta(\tau)\big))}_\text{Entropy}  \underbrace{- E_q \bigg[\ln \big[  p\big(\pi(\tau),\eta(\tau)\big)\big]\bigg]}_\text{Identified with Expected Energy in \cite{friston2022free}}
+\end{align*}
+This agrees with the thermodynamic definition of Helmholtz Free Energy $U-TS$, where $U$ is the enthalpy and $S$ the entropy, if we set the temperature $T=1$.
+\begin{align*}
+	F\big(\pi(\tau)\big) =& E_q\big[\ln q\big(\eta(\tau)\big) - \ln p\big(\eta(\tau)\big) - \ln p\big(\pi(\tau)\vert\eta(\tau)\big)\big]\\
+	=& E_q\big[\ln \frac{q\big(\eta(\tau)\big)}{p\big(\eta(\tau)\big)}   \big] - E_q \bigg[\ln \big[  p\big(\pi(\tau)\vert\eta(\tau)\big)\big]\bigg]\\
+	=& D_{KL}\big(q\big(\eta(\tau)\big)\vert\vert p\big(\eta(\tau)\big)\big)- E_q \bigg[\ln \big[  p\big(\pi(\tau)\vert\eta(\tau)\big)\big]\bigg]\\
+	\ge&- E_q \bigg[\ln \big[  p\big(\pi(\tau)\vert\eta(\tau)\big)\big]\bigg]
+\end{align*}
+
+\begin{align*}
+	F\big(\pi(\tau)\big) =& E_q\big[\ln q\big(\eta(\tau)\big) - \ln p\big(\eta(\tau)\big) - \ln p\big(\pi(\tau)\vert\eta(\tau)\big)\big]\\
+	=& E_q\big[\ln q\big(\eta(\tau)\big)  - \ln p\big(\pi(\tau)\vert\eta(\tau)\big)\big] +  E_q\big[- \ln p\big(\eta(\tau)\big)\big]\\
+	=& D_{KL}\big(q\big(\eta(\tau)\big)\vert\vert p\big(\pi(\tau)\vert\eta(\tau)\big)\big)+  E_q\big[- \ln p\big(\eta(\tau)\big)\big]
+\end{align*}
 \appendix
 
 \printglossaries
