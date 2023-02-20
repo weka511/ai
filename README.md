@@ -20,8 +20,7 @@ figure2.py|Figure 2
 pomdp.py|POMDP example and library for solvers
 
 
-## Programs based on [A tutorial on the free-energy framework for modelling perception
-and learning, by Rafal Bogacz](https://www.sciencedirect.com/science/article/pii/S0022249615000759)
+## Programs based on [A tutorial on the free-energy framework for modelling perception and learning, by Rafal Bogacz](https://www.sciencedirect.com/science/article/pii/S0022249615000759)
 
  File  | Remarks |
 ---------------|-------------------------------------------------------------------------------------------
