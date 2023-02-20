@@ -27,7 +27,7 @@ if __name__=='__main__':
                [0.1, 0.9]])
 
     B = np.array([[1,0],
-              [1,0]])
+              [0,1]])
 
     o1 = np.array([1,0])
 
@@ -37,4 +37,5 @@ if __name__=='__main__':
 
     s2 = np.array([0.5, 0.5])
 
-    print (step1(D,B,A,o=[o1],s=[s1,s2],log=lambda x:np.log(x+0.01)))
+    for s in step1(D,B,A,o=[o1, np.array([0,0])],s=[s1,s2],log=lambda x:np.log(x+0.01)):
+        print (s)
