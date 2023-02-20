@@ -21,7 +21,7 @@
 '''
 
 from matplotlib.pyplot import figure, show
-from matplotlib import rc
+from matplotlib        import rc
 rc('text', usetex=True)
 
 def g(v):
@@ -77,5 +77,5 @@ ax.scatter(ts,epsilon_ps,
 ax.set_xlabel('Time')
 ax.legend()
 ax.set_title('Exercise 3')
-fig.savefig('feex3')
+fig.savefig('figs/feex3')
 show()

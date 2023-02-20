@@ -160,7 +160,7 @@ if __name__ == "__main__":
      ax.set_ylabel('y')
      ax.set_zlabel('z')
      fig.suptitle(fr'{args.oscillator}: N={args.N}, $\lambda$={args.coupling}, $\sigma=${args.sigma}, $\delta T=${args.tFinal/args.Nt}')
-     fig.savefig(f'selforg{args.oscillator}')
+     fig.savefig(f'figs/selforg{args.oscillator}')
 
      if args.show:
-         show()
+          show()

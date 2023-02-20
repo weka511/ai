@@ -21,6 +21,7 @@
 '''
 
 from math              import sqrt
+
 from matplotlib.pyplot import figure, show
 from matplotlib        import rc
 from random            import random
@@ -86,5 +87,5 @@ ax.set_xlabel('Trial')
 ax.set_ylabel(r'$\Sigma$')
 ax.set_title(r'Evolution of $\Sigma$')
 fig.suptitle('Exercise 5')
-fig.savefig('feex5')
+fig.savefig('figs/feex5')
 show()
