@@ -17,25 +17,35 @@
 
 '''Solve problem of Exercise 2 from Smith et al'''
 
-from example2 import step1
+from example2 import update
 import numpy as np
 
 if __name__=='__main__':
     D = np.array([0.5, 0.5])
 
-    A = np.array([[0.9, 0.1],
-               [0.1, 0.9]])
+    A = np.array([
+        [0.9, 0.1],
+        [0.1, 0.9]
+    ])
 
-    B = np.array([[1,0],
-              [0,1]])
+    B = np.array([
+        [1,0],
+        [0,1]
+    ])
 
     o1 = np.array([1,0])
 
-    o2 = np.array([0,1])
+    o2 = np.array([1,0])
 
     s1 = np.array([0.5, 0.5])
 
     s2 = np.array([0.5, 0.5])
 
-    for s in step1(D,B,A,o=[o1, np.array([0,0])],s=[s1,s2],log=lambda x:np.log(x+0.01)):
-        print (s)
+    for step in [1,2]:
+        s1,s2 = update(D,B,A,
+                       o    = [o1, o2],
+                       s    = [s1,s2],
+                       log  = lambda x:np.log(x+0.01),
+                       step = step)
+        print (s1)
+        print (s2)

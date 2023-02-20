@@ -25,10 +25,18 @@ def softmax(x):
 
 
 
-def step1(D,B,A,o=[],s=[],log=np.log):
-    s1 = softmax(0.5*log(D) + 0.5*log(np.dot(B,s[1]))+log(np.dot(A,o[0])))
-    s2 = softmax(0.5*log(np.dot(B,s1)) +log(np.dot(A,o[1])))
-    return np.array([s1, s2])
+def update(D,B,A,
+          o    = [],
+          s    = [],
+          log  = np.log,
+          step = 1):
+    def get_o(o,i):
+        return o[i] if i<step else np.array([0,0])
+
+    s1 = softmax(0.5*log(D) + 0.5*log(np.dot(B,s[1]))+log(np.dot(A,get_o(o,0))))
+    s2 = softmax(0.5*log(np.dot(B,s1)) +log(np.dot(A,get_o(o,1))))
+
+    return s1,s2
 
 if __name__=='__main__':
     D = np.array([0.75, 0.25])
@@ -48,6 +56,12 @@ if __name__=='__main__':
 
     s2 = np.array([0.5, 0.5])
 
-    for s in step1(D,B,A,o=[o1, np.array([0,0])],s=[s1,s2],log=lambda x:np.log(x+0.01)):
-        print (s)
+    for step in [1,2]:
+        s1,s2 = update(D,B,A,
+                       o    = [o1, o2],
+                       s    = [s1,s2],
+                       log  = lambda x:np.log(x+0.01),
+                       step = step)
+        print (s1)
+        print (s2)
 
