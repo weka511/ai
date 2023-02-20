@@ -17,8 +17,9 @@
 
 '''Solve problem of Exercise 2 from Smith et al'''
 
-from example2 import update
 import numpy as np
+
+from pomdp import update
 
 if __name__=='__main__':
     D = np.array([0.5, 0.5])
