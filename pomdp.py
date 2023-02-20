@@ -18,17 +18,18 @@
 '''
     POMDP example from
     Ryan Smith et al-A Step-by-Step Tutorial on Active Inference and its Application to Empirical Data
-    https://psyarxiv.com/b4jm6/
+    https://www.researchgate.net/publication/348153427_A_Step-by-Step_Tutorial_on_Active_Inference_and_its_Application_to_Empirical_Data
     and https://github.com/rssmith33/Active-Inference-Tutorial-Scripts/blob/main/Step_by_Step_AI_Guide.m
 '''
 
 from argparse import ArgumentParser
-from numpy    import array, zeros
+
+import numpy as np
 
 # ---------------------------------------------------------------------
 # State factors
 
-# 0. left-better_context/right_better context
+# 0. left-better_context/right_better_context
 # 1. pre_choice/asking_for_hint/choosing_left_machine/choosing_right_machine
 
 # ---------------------------------------------------------------------
@@ -36,8 +37,8 @@ from numpy    import array, zeros
 # Priors over initial states
 
 D = [
-    array([0.5, 0.5]),
-    array([1.0, 0, 0, 0])
+    np.array([0.5, 0.5]),       # left-better_context/right_better_context
+    np.array([1.0, 0, 0, 0])    # pre_choice/asking_for_hint/choosing_left_machine/choosing_right_machine
 ]
 
 # ---------------------------------------------------------------------
@@ -45,7 +46,7 @@ D = [
 # Observations
 
 A = [
-    array([
+    np.array([
         [[1,1],
          [0,0],
          [0,0]],
@@ -59,7 +60,7 @@ A = [
          [0,0],
          [0,0]]
         ]),
-    array([
+    np.array([
         [[1,1],
          [0,0],
          [0,0]],
@@ -73,7 +74,7 @@ A = [
          [0.8,0.2],
          [0.2,0.8]]
         ]),
-    array ([
+    np.array ([
         [[1,1],
          [0,0],
          [0,0],
@@ -97,9 +98,9 @@ A = [
 
 # State transition matrices
 
-B = [array([[1,0],
+B = [np.array([[1,0],
             [0,1]]),
-     array([[[1,1,1,1],
+     np.array([[[1,1,1,1],
             [0,0,0,0],
             [0,0,0,0],
             [0,0,0,0]],
@@ -121,9 +122,9 @@ B = [array([[1,0],
 
 # preferences for outcomes
 
-C = [zeros((3,3)),
-     zeros((4,3)),
-     array([[0,  0, 0],
+C = [np.zeros((3,3)),
+     np.zeros((4,3)),
+     np.array([[0,  0, 0],
             [0, -1, -1],
             [0, 4,  2]])]
 
