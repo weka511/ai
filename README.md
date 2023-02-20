@@ -9,7 +9,7 @@ ActiveInference.wpr|Project for Python Code
 example2.py|Example 2 from Smith et al
 exercise2.py|Exercise 2 from Smith et al
 figure2.py|Figure 2 from Smith et al
-pomdp.py|POMDP example from [Smith et al-A Step-by-Step Tutorial on Active Inference and its Application to Empirical Data](https://psyarxiv.com/b4jm6/)
+pomdp.py|POMDP example from [Smith et al-A Step-by-Step Tutorial on Active Inference and its Application to Empirical Data]https://www.researchgate.net/publication/348153427_A_Step-by-Step_Tutorial_on_Active_Inference_and_its_Application_to_Empirical_Data)
 selforg.py|Replication of Figure 2, Self Organization and the emergence of macroscopic behaviour, from Friston & Ao, [Free Energy, Value, and Attractor](https://www.hindawi.com/journals/cmmm/2012/937860/)
 
 ## Free Energy
