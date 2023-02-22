@@ -17,6 +17,7 @@ File|Description
 example2.py|Example 2
 exercise2.py|Exercise 2
 figure2.py|Figure 2
+message_passing.py|Ported from [Message_passing_example.m](https://github.com/rssmith33/Active-Inference-Tutorial-Scripts/blob/main/Message_passing_example.m)
 pomdp.py|POMDP example and library for solvers
 
 
