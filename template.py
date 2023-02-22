@@ -21,6 +21,8 @@
 # Standard library imports.
 
 from argparse import ArgumentParser
+from os.path  import join
+from pathlib  import Path
 
 # Related third party imports.
 
@@ -31,4 +33,15 @@ import numpy as np
 
 
 if __name__=='__main__':
-    pass
+    parser = ArgumentParser(__doc__)
+    parser.add_argument('--show', default=False, action='store_true')
+    parser.add_argument('--figs', default='.figs')
+    args = parser.parse_args()
+
+    fig = figure()
+    ax  = fig.add_subplot(1,1,1)
+
+    fig.savefig(join(args.figs,Path(__file__).stem))
+    if args.show:
+        show()
+
