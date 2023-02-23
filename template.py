@@ -34,8 +34,8 @@ import numpy as np
 
 if __name__=='__main__':
     parser = ArgumentParser(__doc__)
-    parser.add_argument('--show', default=False, action='store_true')
-    parser.add_argument('--figs', default='.figs')
+    parser.add_argument('--show', default=False, action='store_true', help='Controls whether plot will be displayed')
+    parser.add_argument('--figs', default='./figs',                   help = 'Location for storing plot files')
     args = parser.parse_args()
 
     fig = figure()
