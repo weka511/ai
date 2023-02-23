@@ -16,9 +16,10 @@
 # along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.
 
 '''
-   Message passing example: ported from
-   https://github.com/rssmith33/Active-Inference-Tutorial-Scripts/blob/main/Message_passing_example.m
+   Message passing example
 '''
+
+# ported from  https://github.com/rssmith33/Active-Inference-Tutorial-Scripts/blob/main/Message_passing_example.m
 
 from argparse import ArgumentParser
 from os.path  import join
@@ -31,8 +32,8 @@ from pomdp import softmax
 
 if __name__=='__main__':
     parser = ArgumentParser(__doc__)
-    parser.add_argument('--show', default=False, action='store_true')
-    parser.add_argument('--figs', default='./figs')
+    parser.add_argument('--show', default=False, action='store_true', help='Controls whether plot will be displayed')
+    parser.add_argument('--figs', default='./figs',                   help = 'Location for storing plot files')
     args = parser.parse_args()
 
     # Example 1: Fixed observations and message passing steps
@@ -60,9 +61,9 @@ if __name__=='__main__':
     T  = 2                     # number of timesteps
     N  = 16                    # number of iterations of message passing
 
-    Qs = np.array([[.5, .5] for _ in range(T)]) #  initialize posterior (Step 1)
+    Qs = np.tile(D,(T,1))              #  initialize posterior (Step 1)
 
-    o  = [[1, 0] for _ in range(T)] # fix observations (Step 2)
+    o  = [[1, 0] for _ in range(T)]    # fix observations (Step 2)
 
     qs = np.zeros((N+1,D.shape[0],T))  # Used for plotting, not for calculations
     for tau in range(T):
@@ -72,8 +73,7 @@ if __name__=='__main__':
     for i in range(N):
         for tau in range(T): # For each edge (hidden state) (Step 7)
             q = np.log(Qs[:,tau])
-            #compute messages sent by D and B (Steps 4) using the posterior
-            # computed in Step 6B
+            #compute messages sent by D and B (Steps 4) using the posterior computed in Step 6B
             if tau == 0:
                 lnD  = np.log(D);                # Message 1
                 lnBs = np.log(np.dot(B,Qs[:,tau+1]))  # Message 2
@@ -95,8 +95,8 @@ if __name__=='__main__':
 
     fig = figure()
     ax  = fig.add_subplot(1,1,1)
-    ax.plot(qs[:,:,0], label=['$q,\\tau=0$','$q,\\tau=0$'])
-    ax.plot(qs[:,:,1], label=['$q,\\tau=1$','$q,\\tau=1$'])
+    ax.plot(qs[:,:,0], label=['$q_0,\\tau=0$','$q_1,\\tau=0$'])
+    ax.plot(qs[:,:,1], label=['$q_0,\\tau=1$','$q_1,\\tau=1$'])
     ax.set_title('Example 1: Approximate posteriors (1 per edge per time point)')
     ax.set_xlabel('Message passing iterations')
     ax.legend()
