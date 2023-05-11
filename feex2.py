@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright (C) 2020-22 Greenweaves Software Limited
+# Copyright (C) 2020-23 Greenweaves Software Limited
 
 # This is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -24,37 +24,40 @@
 
 from matplotlib.pyplot import figure, show
 from matplotlib import rc
-from numpy      import array, linspace
+import numpy as np
 
 rc('text', usetex=True)
 
-vp       = 3
-dt       = 0.01
-Sigma_p  = 1
-Sigma_u  = 1
-u        = 2
+vp       = 3    # Mean of prior for food size
+Sigma_p  = 1    # Variance of prior
+Sigma_u  = 1    # Variance of sensory noise
+u        = 2    # Observed light intensity
 
 
-def new_phi(phi0,
-            N       = 500,
-            g       = lambda v:v**2,
-            g_prime = lambda v: 2*v):
+def generate_phi(phi0,
+            N = 500,
+            g = lambda v:v**2,
+            g_prime = lambda v: 2*v,
+            dt = 0.01):
+    '''Generate successive estimates for size of food item'''
     phi = phi0
     yield phi
     for i in range(N):
-        df = (vp-phi)/Sigma_p + (u-g(phi))*g_prime(phi)/Sigma_u
+        df = (vp - phi)/Sigma_p + (u - g(phi))*g_prime(phi)/Sigma_u
         phi += dt*df
         yield phi
 
-
-Ts   = linspace(0,5,num=501)
-Phis = array(list(new_phi(vp)))
+T0 = 0
+T1 = 5
+N = 500
+Ts = np.linspace(T0,T1,num=N+1)
+Phis = np.array(list(generate_phi(vp,N=N,dt=(T1-T0)/N)))
 
 fig = figure(figsize=(10,10))
 ax  = fig.add_subplot(1,1,1)
 ax.scatter(Ts,Phis,
-           s     = 1,
-           c     = 'xkcd:blue',
+           s = 1,
+           c = 'xkcd:blue',
            label = 'Most likely size of food item')
 ax.set_title('Exercise 2')
 ax.set_ylim(0,3)

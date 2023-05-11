@@ -30,15 +30,17 @@ def g(v):
 def g_prime(v):
     return 2*v
 
-v_p        = 3
-Sigma_p    = 1
-Sigma_u    = 1
-u          = 2
-phi        = v_p
-epsilon_p  = 0
-epsilon_u  = 0
+v_p        = 3   # Mean of prior for food size
+Sigma_p    = 1   # Variance of prior
+Sigma_u    = 1   # Variance of sensory noise
+u          = 2   # Observed light intensity
+
+phi        = v_p  # Estimate for food size
+epsilon_p  = 0    # prediction error food size
+epsilon_u  = 0    # prediction error sensory input
 dt         = 0.01
 
+ # Keep track of time, and of estimates for food size and prediction errors
 phis       = [phi]
 epsilon_us = [epsilon_u]
 epsilon_ps = [epsilon_p]
@@ -64,18 +66,18 @@ ax  = fig.add_subplot(1,1,1)
 ax.scatter(ts,phis,
            s     = 1,
            c     = 'xkcd:blue',
-           label = r'$\phi$')
+           label = r'$\phi$: food size')
 ax.scatter(ts,epsilon_us,
            s     = 1,
            c     ='xkcd:red',
-           label = r'$\epsilon_u$')
+           label = r'$\epsilon_u$: prediction error sensory input')
 ax.scatter(ts,epsilon_ps,
            s     = 1,
            c     = 'xkcd:green',
-           label = r'$\epsilon_p$')
+           label = r'$\epsilon_p$: prediction error food size')
 
 ax.set_xlabel('Time')
 ax.legend()
-ax.set_title('Exercise 3')
+ax.set_title('Exercise 3--Neural Implementation')
 fig.savefig('figs/feex3')
 show()

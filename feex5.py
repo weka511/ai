@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright (C) 2020-2022 Greenweaves Software Limited
+# Copyright (C) 2020-2023 Greenweaves Software Limited
 
 # This is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -30,9 +30,11 @@ rc('text', usetex=True)
 
 class Colours:
     def __init__(self):
-        self.XKCD = ['xkcd:purple','xkcd:green','xkcd:blue','xkcd:pink',
-                'xkcd:brown','xkcd:red','xkcd:light blue',
-                'xkcd:teal','xkcd:orange','xkcd:light green','xkcd:magenta','xkcd:yellow']
+        self.XKCD = [
+            'xkcd:purple','xkcd:green','xkcd:blue','xkcd:pink',
+            'xkcd:brown','xkcd:red','xkcd:light blue','xkcd:teal',
+            'xkcd:orange','xkcd:light green','xkcd:magenta','xkcd:yellow'
+        ]
 
     def __iter__(self):
         self.i = 0
@@ -57,7 +59,7 @@ Sigma = [1]
 fig = figure(figsize=(10,10))
 ax  = fig.add_subplot(2,1,1)
 colors = Colours()
-cc     = iter(colors)
+cc = iter(colors)
 
 for i in range(N):
     error = [1]

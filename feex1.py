@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
 # Copyright (C) 2020-2022 Greenweaves Software Limited
 
@@ -17,52 +18,57 @@
 
 '''
    Exercise 1, posterior probabilities, from A tutorial on the free-energy
-   framework for modelling perception and learning, by Rafal Bogacz
+   framework for modelling perception and learning, by Rafal Bogacz.
+   Write a computer program that computes the posterior proababilities of
+   sizes from 0.01 to 5, and ploats them.
 '''
 
-from scipy.stats       import norm
+
 from matplotlib.pyplot import figure, show
-from numpy             import argmax, linspace
-from scipy.integrate   import quad
+import numpy as np
+from scipy.integrate import quad
+from scipy.stats import norm
 
-
-def p_u_v(u,v,Sigma_u  = 1, g=lambda v:v**2):
+def p_u_v(u,v,Sigma_u=1, g=lambda v:v**2):
+    '''Likelihood'''
     return norm(g(v),Sigma_u).pdf(u)
 
-def p_v(v, vp = 3, Sigma_p  = 1):
+def p_v(v, vp=3, Sigma_p=1):
     '''Prior expectation of size'''
     return norm(vp, Sigma_p).pdf(v)
 
 def p_u(u):
+    '''Evidence'''
     return quad(lambda v:p_v(v)*p_u_v(u,v),0,5,epsabs=0.0001)[0]
 
 def get_posterior(v,u):
-    evidence      = p_u(u)
-    return p_v(v)*p_u_v(u,v)/evidence
+    '''Posterior probability'''
+    return p_v(v)*p_u_v(u,v)/p_u(u)
 
 def get_max_posterior(Posterior):
-    index_max = argmax(Posterior)
+    index_max = np.argmax(Posterior)
     return Sizes[index_max],Posterior[index_max]
 
-u             = 2
-Sizes         = linspace(0,5,num=500)
-evidence      = p_u(u)
-Posterior     = get_posterior(Sizes,u)
-x,y           = get_max_posterior(Posterior)
+if __name__ == '__main__':
+    u = 2   # Observed light intensity
+    Sizes = np.linspace(0,5,num=500)
+    evidence = p_u(u)
+    Posterior = get_posterior(Sizes,u)
+    x,y = get_max_posterior(Posterior)
 
-fig = figure(figsize=(10,10))
-ax  = fig.add_subplot(1,1,1)
-ax.scatter(Sizes,Posterior,
-           s     = 1,
-           c     = 'xkcd:blue',
-           label = 'Posterior probability')
-ax.set_xlabel('v')
-ax.set_ylabel('p(v|u)')
-ax.vlines(x,0,y,
-          colors     = 'xkcd:red',
-          linestyles = 'dotted',
-          label      = f'Max posterior={x:.2f}')
-ax.legend()
-ax.set_title('Exercise 1')
-fig.savefig('figs/feex1')
-show()
+    fig = figure(figsize=(10,10))
+    ax = fig.add_subplot(1,1,1)
+    ax.scatter(Sizes,Posterior,
+               s     = 1,
+               c     = 'xkcd:blue',
+               label = 'Posterior probability of sizes')
+    ax.set_xlabel('v')
+    ax.set_ylabel('p(v|u)')
+    ax.vlines(x,0,y,
+              colors     = 'xkcd:red',
+              linestyles = 'dotted',
+              label      = f'Max posterior={x:.2f}')
+    ax.legend()
+    ax.set_title('Bogacz, Exercise 1')
+    fig.savefig('figs/feex1')
+    show()
