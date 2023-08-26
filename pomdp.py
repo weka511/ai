@@ -24,14 +24,17 @@
 from argparse import ArgumentParser
 import numpy as np
 
-def softmax(x):
+def softmax(x,axis=0):
     '''
     The softmax function converts a vector of K real numbers into a probability
     distribution of K possible outcomes.
+
+    Parameters:
+        x     The vector
+        axis  Axis for summation: the default makes it agree with calculation on paage 27
     '''
     exps = np.exp(x)
-    return exps/exps.sum()
-
+    return exps/exps.sum(axis=axis)
 
 
 def update(D,B,A,
@@ -149,10 +152,10 @@ B = [np.array([[1,0],
 # preferences for outcomes
 
 C = [np.zeros((3,3)),
-     np.zeros((4,3)),
      np.array([[0,  0, 0],
                [0, -1, -1],
-               [0,  4,  2]])
+               [0,  4,  2]]),
+     np.zeros((4,3))
      ]
 
 
@@ -192,3 +195,4 @@ if __name__=='__main__':
     display ('U', U)
     display ('V', V)
     display ('E', E)
+    print (np.log(softmax(C[1])))
