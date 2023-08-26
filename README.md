@@ -19,7 +19,7 @@ exercise2.py|Exercise 2
 figure2.py|Figure 2
 message_passing.py|Ported from [Message_passing_example.m](https://github.com/rssmith33/Active-Inference-Tutorial-Scripts/blob/main/Message_passing_example.m)
 pomdp.py|POMDP example and library for solvers
-
+pomdp_driver.py|POMDP example
 
 ## Programs based on [A tutorial on the free-energy framework for modelling perception and learning, by Rafal Bogacz](https://www.sciencedirect.com/science/article/pii/S0022249615000759)
 
