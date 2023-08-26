@@ -21,10 +21,9 @@
 '''
 
 from math              import sqrt
-
+from random            import random
 from matplotlib.pyplot import figure, show
 from matplotlib        import rc
-from random            import random
 
 rc('text', usetex=True)
 
@@ -45,49 +44,45 @@ class Colours:
         self.i += 1
         return value
 
-phi_mean  = 5
-phi_sigma = 2
-phi_above = 5
+if __name__=='__main__':
+    phi_mean = 5
+    phi_sigma = 2
+    phi_above = 5
 
-dt    = 0.01
-MaxT  = 20
-N     = 1000
-LRate = 0.01
+    dt = 0.01
+    MaxT = 20
+    N = 1000
+    LRate = 0.01
+    Sigma = [1]
 
-Sigma = [1]
+    fig = figure(figsize=(10,10))
+    ax  = fig.add_subplot(2,1,1)
+    colors = Colours()
+    cc = iter(colors)
 
-fig = figure(figsize=(10,10))
-ax  = fig.add_subplot(2,1,1)
-colors = Colours()
-cc = iter(colors)
+    for i in range(N):
+        error = [1]   # prediction error
+        e     = [0]   # interneuron
+        phi = phi_mean + sqrt(phi_sigma)*random()
+        for j in range(int(MaxT/dt)):
+            error.append(error[-1]+dt*(phi-phi_above - e[-1]))
+            e.append(e[-1] + dt *(Sigma[-1] * error[-2] - e[-1]))
+        Sigma.append(Sigma[-1] + LRate *(error[-1]*error[-1]-1))
 
-for i in range(N):
-    error = [1]
-    e     = [0]
-    phi = phi_mean + sqrt(phi_sigma) * random()
-    for j in range(int(MaxT/dt)):
-        error.append(error[-1]+dt*(phi-phi_above - e[-1]))
-        e.append(e[-1] + dt *(Sigma[-1] * error[-2] - e[-1]))
+        if i%100==0:
+            c = next(colors)
+            ax.plot(error, linestyle = 'dotted', c = c, label = 'prediction error' if i==0 else None)
+            ax.plot(e, linestyle = 'dashed',  c = c,  label ='interneuron' if i==0 else None)
 
-    Sigma.append(Sigma[-1] + LRate *(error[-1]*error[-1]-1))
-    if i%100==0:
-        c = next(colors)
-        ax.plot(error,
-                linestyle = 'dotted',
-                c         = c,
-                label     = 'error' if i==0 else None)
-        ax.plot(e,
-                linestyle = 'dashed',
-                c         = c,
-                label     ='e' if i==0 else None)
-ax.set_title('Errors')
-ax.legend()
+    ax.set_title(f'Errors over {N} runs')
+    ax.legend()
 
-ax  = fig.add_subplot(2,1,2)
-ax.plot(Sigma)
-ax.set_xlabel('Trial')
-ax.set_ylabel(r'$\Sigma$')
-ax.set_title(r'Evolution of $\Sigma$')
-fig.suptitle('Exercise 5')
-fig.savefig('figs/feex5')
-show()
+    ax  = fig.add_subplot(2,1,2)
+    ax.plot(Sigma)
+    ax.set_xlabel('Trial')
+    ax.set_ylabel(r'$\Sigma$')
+    ax.set_title(r'Evolution of $\Sigma$')
+
+    fig.suptitle('Exercise 5: learn variance')
+    fig.savefig('figs/feex5')
+    show()
