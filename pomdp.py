@@ -18,15 +18,17 @@
 '''
     POMDP example from
     Ryan Smith et al-A Step-by-Step Tutorial on Active Inference and its Application to Empirical Data
-    https://www.researchgate.net/publication/348153427_A_Step-by-Step_Tutorial_on_Active_Inference_and_its_Application_to_Empirical_Data
-    and https://github.com/rssmith33/Active-Inference-Tutorial-Scripts/blob/main/Step_by_Step_AI_Guide.m
+    DOI:10.31234/osf.io/b4jm6
 '''
 
 from argparse import ArgumentParser
-
 import numpy as np
 
 def softmax(x):
+    '''
+    The softmax function converts a vector of K real numbers into a probability
+    distribution of K possible outcomes.
+    '''
     exps = np.exp(x)
     return exps/exps.sum()
 
@@ -44,6 +46,11 @@ def update(D,B,A,
     s2 = softmax(0.5*log(np.dot(B,s1)) +log(np.dot(A,get_o(o,1))))
 
     return s1,s2
+
+def display(name,matrices):
+    print (f'{name}')
+    for matrix in matrices:
+        print (f'{matrix}')
 
 # ---------------------------------------------------------------------
 # State factors
@@ -118,23 +125,23 @@ A = [
 # State transition matrices
 
 B = [np.array([[1,0],
-            [0,1]]),
+               [0,1]]),
      np.array([[[1,1,1,1],
-            [0,0,0,0],
-            [0,0,0,0],
-            [0,0,0,0]],
-            [[0,0,0,0],
-             [1,1,1,1],
-             [0,0,0,0],
-             [0,0,0,0]],
-            [[0,0,0,0],
-             [0,0,0,0],
-             [1,1,1,1],
-             [0,0,0,0]],
-            [[0,0,0,0],
-             [0,0,0,0],
-             [0,0,0,0],
-             [1,1,1,1]]
+                [0,0,0,0],
+                [0,0,0,0],
+                [0,0,0,0]],
+               [[0,0,0,0],
+                [1,1,1,1],
+                [0,0,0,0],
+                [0,0,0,0]],
+               [[0,0,0,0],
+                [0,0,0,0],
+                [1,1,1,1],
+                [0,0,0,0]],
+               [[0,0,0,0],
+                [0,0,0,0],
+                [0,0,0,0],
+                [1,1,1,1]]
             ])]
 
 # ---------------------------------------------------------------------
@@ -144,8 +151,9 @@ B = [np.array([[1,0],
 C = [np.zeros((3,3)),
      np.zeros((4,3)),
      np.array([[0,  0, 0],
-            [0, -1, -1],
-            [0, 4,  2]])]
+               [0, -1, -1],
+               [0,  4,  2]])
+     ]
 
 
 
@@ -153,32 +161,34 @@ C = [np.zeros((3,3)),
 
 # Allowable policies
 
-U = []
+U = [np.array([1,1,1,1]),
+     np.array([1,2,3,4])
+    ]
 
 # ---------------------------------------------------------------------
 
 # Deep policies
 
-V = []
+V = [np.array([[1, 1, 1, 1, 1],
+               [1, 1, 1, 1, 1]]),
+     np.array([[1, 2, 2, 3, 4],
+               [1, 3, 4, 1, 1]])
+    ]
 
 
 # ---------------------------------------------------------------------
 
 # Habits
 
-E = []
+E = np.ones((5))/5
+
+
+
 if __name__=='__main__':
-    print ('D')
-    print (D[0])
-    print (D[1])
-    print ('A')
-    print (A[0])
-    print (A[1])
-    print (A[2])
-    print ('B')
-    print(B[0])
-    print(B[1])
-    print ('C')
-    print(C[0])
-    print(C[1])
-    print(C[2])
+    display ('D', D)
+    display ('A', A)
+    display ('B', B)
+    display ('C', C)
+    display ('U', U)
+    display ('V', V)
+    display ('E', E)
