@@ -22,9 +22,10 @@
 '''
 
 from argparse import ArgumentParser
+from sys import float_info
 from unittest import TestCase, main
 import numpy as np
-from numpy.testing import assert_array_almost_equal
+from numpy.testing import assert_array_almost_equal, assert_array_equal
 
 def softmax(x,axis=0):
     '''
@@ -39,23 +40,53 @@ def softmax(x,axis=0):
     return exps/exps.sum(axis=axis)
 
 
-def update(D,B,A,
-          o    = [],
-          s    = [],
-          log  = np.log,
-          step = 1):
-    def get_o(o,i):
-        return o[i] if i<step else np.array([0,0])
+# def update(D,B,A,
+          # o    = [],
+          # s    = [],
+          # log  = np.log,
+          # step = 1):
+    # def get_o(o,i):
+        # return o[i] if i<step else np.array([0,0])
 
-    s1 = softmax(0.5*log(D) + 0.5*log(np.dot(B,s[1]))+log(np.dot(A,get_o(o,0))))
-    s2 = softmax(0.5*log(np.dot(B,s1)) +log(np.dot(A,get_o(o,1))))
+    # s1 = softmax(0.5*log(D) + 0.5*log(np.dot(B,s[1]))+log(np.dot(A,get_o(o,0))))
+    # s2 = softmax(0.5*log(np.dot(B,s1)) +log(np.dot(A,get_o(o,1))))
 
-    return s1,s2
+    # return s1,s2
 
+def create_posteriors(priors=np.array([0.5,0.5]),T=2):
+    Q = np.empty((T,priors.size))
+    for i in range(T):
+        Q[i,:] = priors
+    return Q
 
+def create_observations():
+    pass
+
+def generate_edges():
+    pass
+
+def create_messages(v):
+    pass
+
+def update_posterior():
+    pass
+
+def pass_messages(A,B,C,D,E,U,V,
+                  max_eps=0.1,
+                  T=2,
+                  N=16):
+    q = create_posteriors(priors=D,T=T)
+    o = create_observations()
+    for v in generate_edges():
+        eps = float_info.max
+        while eps > max_eps:
+            mus = create_messages(v)
+            # pass messages
+            q = update_posterior()
 
 class TestSoftMax(TestCase):
     def testC(self):
+        '''Example on page 26'''
         assert_array_almost_equal(np.array([[-1.1, -4.0,-2.1],
                                             [-1.1, -5.0, -3.2],
                                             [-1.1, -0.02, -0.2]]),
@@ -63,6 +94,12 @@ class TestSoftMax(TestCase):
                                                            [0, -1, -1],
                                                            [0,  4,  2]]))),
                                   decimal=1)
+
+    def test_create_posteriors(self):
+        assert_array_equal(np.array([[0.5,0.5],
+                                     [0.5,0.5],
+                                     [0.5,0.5]]),
+                           create_posteriors(T=3))
 
 if __name__=='__main__':
     main()
