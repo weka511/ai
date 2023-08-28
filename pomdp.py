@@ -22,7 +22,6 @@
 '''
 
 from argparse import ArgumentParser
-from sys import float_info
 from unittest import TestCase, main
 import numpy as np
 from numpy.testing import assert_array_almost_equal, assert_array_equal
@@ -67,7 +66,9 @@ def initialize_approximate_posteriors(priors=np.array([0.5,0.5]),T=2):
     return Q
 
 def create_observations():
-    pass
+    o = np.array([[1, 0],
+                  [1, 0]])
+    return o
 
 def generate_edges():
     pass
@@ -78,18 +79,33 @@ def create_messages(v):
 def update_posterior():
     pass
 
-def pass_messages(A,B,C,D,E,U,V,
-                  max_eps=0.1,
-                  T=2,
-                  N=16):
-    q = initialize_approximate_posteriors(priors=D,T=T)
+def infer(D=np.array([0.5,0.5]),
+          A=np.array([[.9,.1],
+                      [.1, .9]]),
+          B=np.array([[1,0],
+                      [0,1]]),
+          T=2,
+          N=16):
+
+    Q = initialize_approximate_posteriors(priors=D,T=T)
     o = create_observations()
-    for v in generate_edges():
-        eps = float_info.max
-        while eps > max_eps:
-            mus = create_messages(v)
-            # pass messages
-            q = update_posterior()
+    qs = np.empty((N,D.size,T))
+    for n in range(N):
+        for tau in range(T):
+            q = np.log(Q[tau,:])
+            if tau == 0:
+                lnD = np.log(D)
+                lnBs = np.log(B.T.dot(Q[tau+1,:]))
+            elif tau == T - 1:
+                lnBs = np.log(B.dot(Q[tau-1,:]))
+            lnAo = np.log(A.T.dot(o[tau,:]))
+            if tau == 0:
+                q = 0.5*lnD + 0.5*lnBs + lnAo
+            elif tau == T-1:
+                q = 0.5*lnBs + lnAo
+            Q[:,tau] = softmax(q)
+            qs[n,:,tau] =  Q[:,tau]
+    return qs
 
 class TestSoftMax(TestCase):
     def testC(self):
@@ -107,6 +123,9 @@ class TestSoftMax(TestCase):
                                      [0.5,0.5],
                                      [0.5,0.5]]),
                            initialize_approximate_posteriors(T=3))
+
+    def test_infer(self):
+        infer()
 
 if __name__=='__main__':
     main()

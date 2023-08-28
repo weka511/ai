@@ -22,8 +22,9 @@
 '''
 
 from argparse import ArgumentParser
+from matplotlib.pyplot import figure,rcParams,show
 import numpy as np
-import pomdp
+from pomdp import infer
 
 def display(name,matrices):
     print (f'{name}')
@@ -162,10 +163,21 @@ V = [
 
 E = np.ones((5))/5
 
-display ('D', D)
-display ('A', A)
-display ('B', B)
-display ('C', C)
-display ('U', U)
-display ('V', V)
-display ('E', E)
+rcParams['text.usetex'] = True
+qs = infer()
+fig = figure()
+ax = fig.add_subplot(1,1,1)
+_,m,T = qs.shape
+for i in range(m):
+    for tau in range(T):
+        ax.plot(qs[:,i,tau],label=fr'{i}, $\tau=${tau}')
+ax.legend()
+show()
+
+# display ('D', D)
+# display ('A', A)
+# display ('B', B)
+# display ('C', C)
+# display ('U', U)
+# display ('V', V)
+# display ('E', E)
