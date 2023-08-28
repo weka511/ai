@@ -86,7 +86,23 @@ def example1(D = np.array([0.5,0.5]),
                       [0,1]]),
           T = 2,
           N = 16):
+    '''
+    Example 1: Fixed observations and message passing steps
 
+    This function carries out marginal message passing on a graph with beliefs
+    about states at two time points. In this first example, both observations
+    are fixed from the start (i.e., there are no ts as in full active inference
+    models with sequentially presented observations) to provide the simplest
+    example possible. We also highlight where each of the message passing
+    steps described in the main text are carried out.
+
+    Parameters:
+        A   Likelihood mappind
+        B   Transitions
+        D   Priors
+        T   Number of timesteps
+        N   Number of iterations
+    '''
     Q = np.empty((T,D.size))
     for tau in range(T):
         Q[tau,:] = D
@@ -95,8 +111,10 @@ def example1(D = np.array([0.5,0.5]),
                   [1, 0]])
 
     qs = np.empty((N + 1,D.size,T))
+
     for tau in range(T):
         qs[0,:,tau] =  Q[tau,:]
+
     for n in range(N):
         for tau in range(T):
             q = np.log(Q[tau,:])
@@ -112,6 +130,7 @@ def example1(D = np.array([0.5,0.5]),
                 q = 0.5*lnBs + lnAo
             Q[:,tau] = softmax(q)
             qs[n+1,:,tau] =  Q[:,tau]
+
     return qs
 
 class TestSoftMax(TestCase):
