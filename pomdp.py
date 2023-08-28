@@ -53,10 +53,17 @@ def softmax(x,axis=0):
 
     # return s1,s2
 
-def create_posteriors(priors=np.array([0.5,0.5]),T=2):
+def initialize_approximate_posteriors(priors=np.array([0.5,0.5]),T=2):
+    '''
+    Initialize the values of approximate posteriors for all hidden variables
+
+    Variables:
+        priors
+        T        Number of time points
+    '''
     Q = np.empty((T,priors.size))
-    for i in range(T):
-        Q[i,:] = priors
+    for t in range(T):
+        Q[t,:] = priors
     return Q
 
 def create_observations():
@@ -75,7 +82,7 @@ def pass_messages(A,B,C,D,E,U,V,
                   max_eps=0.1,
                   T=2,
                   N=16):
-    q = create_posteriors(priors=D,T=T)
+    q = initialize_approximate_posteriors(priors=D,T=T)
     o = create_observations()
     for v in generate_edges():
         eps = float_info.max
@@ -95,11 +102,11 @@ class TestSoftMax(TestCase):
                                                            [0,  4,  2]]))),
                                   decimal=1)
 
-    def test_create_posteriors(self):
+    def test_initialize_approximate_posteriors(self):
         assert_array_equal(np.array([[0.5,0.5],
                                      [0.5,0.5],
                                      [0.5,0.5]]),
-                           create_posteriors(T=3))
+                           initialize_approximate_posteriors(T=3))
 
 if __name__=='__main__':
     main()
