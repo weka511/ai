@@ -79,13 +79,21 @@ def create_messages(v):
 def update_posterior():
     pass
 
+def get_delta(qs,n):
+    return (abs(qs[n+1,:,:] - qs[n,:,:])).max()
+
+def has_converged(qs,n,epsilon=0.001,burn_in=5):
+    return n>burn_in and get_delta(qs,n)<epsilon
+
 def example1(D = np.array([0.5,0.5]),
           A = np.array([[.9,.1],
                       [.1, .9]]),
           B = np.array([[1,0],
                       [0,1]]),
           T = 2,
-          N = 16):
+          N = 16,
+          epsilon = 0.001,
+          burn_in = 5):
     '''
     Example 1: Fixed observations and message passing steps
 
@@ -118,20 +126,34 @@ def example1(D = np.array([0.5,0.5]),
     for n in range(N):
         for tau in range(T):
             q = np.log(Q[tau,:])
+            # compute messages sent by D and B (Steps 4) using the posterior
+            # computed in Step 6B
             if tau == 0:
                 lnD = np.log(D)
                 lnBs = np.log(B.T.dot(Q[tau+1,:]))
             elif tau == T - 1:
                 lnBs = np.log(B.dot(Q[tau-1,:]))
-            lnAo = np.log(A.T.dot(o[tau,:]))
+
+            lnAo = np.log(A.T.dot(o[tau,:])) # likelihood (Message 3)
+
+            # Steps 5-6 (Pass messages and update the posterior)
+            # Since all terms are in log space, this is addition instead of
+            # multiplication. This corresponds to  equation 16 in the main
+            # text (within the softmax)
             if tau == 0:
                 q = 0.5*lnD + 0.5*lnBs + lnAo
             elif tau == T-1:
                 q = 0.5*lnBs + lnAo
-            Q[:,tau] = softmax(q)
+
+            Q[:,tau] = softmax(q)       #Normalize
             qs[n+1,:,tau] =  Q[:,tau]
 
-    return qs
+        if has_converged(qs,n,epsilon=epsilon,burn_in=burn_in):
+            return qs[0:n+2,:,:], get_delta(qs,n)
+
+    return qs, get_delta(qs,n)
+
+
 
 class TestSoftMax(TestCase):
     def testC(self):
@@ -150,8 +172,6 @@ class TestSoftMax(TestCase):
                                      [0.5,0.5]]),
                            initialize_approximate_posteriors(T=3))
 
-    def test_infer(self):
-        infer()
 
 if __name__=='__main__':
     main()

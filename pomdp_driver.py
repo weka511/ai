@@ -34,6 +34,8 @@ def parse_args():
     parser.add_argument('--show', default=False, action='store_true')
     parser.add_argument('--figs', default='./figs', help='Path to plot files (default: %(default)s)')
     parser.add_argument('--plot', default = None)
+    parser.add_argument('--epsilon', default=0.001, type=float)
+    parser.add_argument('--burn_in', default=5, type=int)
     return parser.parse_args()
 
 def get_plotfile_name(args):
@@ -47,7 +49,7 @@ if __name__ == '__main__':
     rcParams['text.usetex'] = True
     match args.action:
         case 1:
-            qs = example1()
+            qs,delta = example1(epsilon=args.epsilon,burn_in=args.burn_in)
             fig = figure()
             ax = fig.add_subplot(1,1,1)
             _,m,T = qs.shape
@@ -55,7 +57,9 @@ if __name__ == '__main__':
                 for tau in range(T):
                     ax.plot(qs[:,i,tau],label=fr'{i}, $\tau=${tau}')
             ax.legend()
-            ax.set_title('Example 1: Fixed observations and message passing steps')
+            ax.set_title(rf'Example 1: Fixed observations and message passing steps $\delta=${delta:.2e}')
+            ax.set_xlabel('Iterations')
+            ax.set_ylabel('Posterior')
             fig.savefig(join(args.figs,get_plotfile_name(args)))
 
     if args.show:
