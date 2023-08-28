@@ -79,17 +79,24 @@ def create_messages(v):
 def update_posterior():
     pass
 
-def infer(D=np.array([0.5,0.5]),
-          A=np.array([[.9,.1],
+def example1(D = np.array([0.5,0.5]),
+          A = np.array([[.9,.1],
                       [.1, .9]]),
-          B=np.array([[1,0],
+          B = np.array([[1,0],
                       [0,1]]),
-          T=2,
-          N=16):
+          T = 2,
+          N = 16):
 
-    Q = initialize_approximate_posteriors(priors=D,T=T)
-    o = create_observations()
-    qs = np.empty((N,D.size,T))
+    Q = np.empty((T,D.size))
+    for tau in range(T):
+        Q[tau,:] = D
+
+    o = np.array([[1, 0],
+                  [1, 0]])
+
+    qs = np.empty((N + 1,D.size,T))
+    for tau in range(T):
+        qs[0,:,tau] =  Q[tau,:]
     for n in range(N):
         for tau in range(T):
             q = np.log(Q[tau,:])
@@ -104,7 +111,7 @@ def infer(D=np.array([0.5,0.5]),
             elif tau == T-1:
                 q = 0.5*lnBs + lnAo
             Q[:,tau] = softmax(q)
-            qs[n,:,tau] =  Q[:,tau]
+            qs[n+1,:,tau] =  Q[:,tau]
     return qs
 
 class TestSoftMax(TestCase):

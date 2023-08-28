@@ -24,7 +24,7 @@
 from argparse import ArgumentParser
 from matplotlib.pyplot import figure,rcParams,show
 import numpy as np
-from pomdp import infer
+from pomdp import example1
 
 def display(name,matrices):
     print (f'{name}')
@@ -164,7 +164,7 @@ V = [
 E = np.ones((5))/5
 
 rcParams['text.usetex'] = True
-qs = infer()
+qs = example1()
 fig = figure()
 ax = fig.add_subplot(1,1,1)
 _,m,T = qs.shape
