@@ -70,12 +70,10 @@ class Population:
      def __init__(self,oscillator,
                   speed = np.ones(4),
                   coupling = 0.2,
-                  sigma = np.ones(4),
                   rng = np.random.default_rng(42)):
           self.oscillator = oscillator
           self.speed = speed
           self.coupling = coupling
-          self.sigma = sigma
           self.rng = rng
 
      def Velocity(self,y,t):
@@ -144,13 +142,11 @@ if __name__ == "__main__":
      population = Population(oscillator,
                              speed = np.exp(rng.normal(0,2**-6,args.N)),
                              coupling = args.coupling,
-                             sigma = args.sigma * np.ones(args.N),
                              rng = rng)
      solver = EulerMaruyama()
      y = solver.solve(population.Velocity, y0, t,
                       b = lambda y,t:args.sigma * y, #Magnitude of Gaussian proportional to y
-                      wiener = Wiener(rng = rng,
-                                      d = d))
+                      wiener = Wiener(rng = rng, d = d))
 
      fig = figure(figsize=(12,6))
      for i in range(3):
