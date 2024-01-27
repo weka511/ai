@@ -26,7 +26,7 @@ from os.path import join
 from pathlib import Path
 from matplotlib.pyplot import figure,rcParams,show
 import numpy as np
-from pomdp import example1
+from pomdp import example1, example2
 
 def parse_args():
     parser = ArgumentParser(description=__doc__)
@@ -51,16 +51,29 @@ if __name__ == '__main__':
         case 1:
             qs,delta = example1(epsilon=args.epsilon,burn_in=args.burn_in)
             fig = figure()
-            ax = fig.add_subplot(1,1,1)
+            ax1 = fig.add_subplot(1,1,1)
             _,m,T = qs.shape
             for i in range(m):
                 for tau in range(T):
-                    ax.plot(qs[:,i,tau],label=fr'{i}, $\tau=${tau}')
-            ax.legend()
-            ax.set_title(rf'Example 1: Fixed observations and message passing steps $\delta=${delta:.2e}')
-            ax.set_xlabel('Iterations')
-            ax.set_ylabel('Posterior')
+                    ax1.plot(qs[:,i,tau],label=fr'{i}, $\tau=${tau}')
+            ax1.legend()
+            ax1.set_title(rf'Example 1: Fixed observations and message passing steps $\delta=${delta:.2e}')
+            ax1.set_xlabel('Iterations')
+            ax1.set_ylabel('Posterior')
             fig.savefig(join(args.figs,get_plotfile_name(args)))
+
+        case 2:
+            xs = example2()
+            fig = figure()
+            ax2 = fig.add_subplot(1,1,1)
+            _,l,m,n = qs.shape
+            for i in range(l):
+                for j in range(m):
+                    for k in range(n):
+                        ax2.plot(xs[:,i,j,k])
+
+        case _:
+            print (f'Action {args.action} not implemented')
 
     if args.show:
         show()

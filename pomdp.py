@@ -154,6 +154,46 @@ def example1(D = np.array([0.5,0.5]),
     return qs, get_delta(qs,n)
 
 
+def example2(D = np.array([0.5,0.5]),
+          A = np.array([[.9,.1],
+                        [.1, .9]]),
+          B = np.array([[1,0],
+                        [0,1]]),
+          T = 2,
+          N = 16):
+    Q = np.empty((T,D.size))
+    for t in range(T):
+        Q[:,t] = D
+
+    o = np.array([[1, 0],
+                  [0, 0],
+                  [1, 0],
+                  [1, 0]])
+
+    epsilon = np.empty((len(D),N,T,T))
+    xn = np.empty((N,T,T,T))
+    for t in range(T):
+        for n in range(N):
+            for tau in range(T):
+                v = np.log(Q[:,t])
+                if tau == 0: # first time point
+                    lnD = np.log(D) #  past (Message 1)
+                    lnBs = np.log(B.T.dot(Q[:,tau+1]))
+                elif tau == T - 1: # last time point-- no contribution from future (only Message 1)
+                    lnBs  = np.log(B.dot(Q[:,tau-1]))
+
+                lnAo = np.log(A.T.dot(o[t,tau]))
+
+                if tau == 0:
+                    epsilon[:,n,t,tau] = 0.5*lnD + 0.5*lnBs + lnAo - v
+                elif tau == T-1:
+                    epsilon[:,n,t,tau] = 0.5*lnBs + lnAo - v
+
+                v += epsilon[:,n,t,tau]
+
+                Q[:,tau] = softmax(v)
+
+                xn[Ni,:,tau,t] = Qs[:,tau]
 
 class TestSoftMax(TestCase):
     def testC(self):
