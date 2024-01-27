@@ -108,18 +108,27 @@ class OscillatorFactory:
      def Available(cls):
           return OscillatorFactory.Oscillators.keys()
 
-def parse_args():
-     parser   = ArgumentParser(__doc__)
+def parse_args(tFinal = 8,
+               Nt = 1024,
+               seed = None,
+               N = 16,
+               coupling = 1.0,
+               sigma = 1.0,
+               sigma0 = 8.0,
+               burnin = 0,
+               loc = 30.0):
+     parser = ArgumentParser(__doc__)
      parser.add_argument('oscillator', choices = OscillatorFactory.Available())
-     parser.add_argument('--tFinal', type = float, default = 8)
-     parser.add_argument('--Nt', type = int,   default = 1024)
-     parser.add_argument('--seed', type = int,   default = None)
-     parser.add_argument('--N', type = int,   default = 16)
-     parser.add_argument('--coupling', type = float, default = 1.0)
-     parser.add_argument('--sigma', type = float, default = 1.0)
-     parser.add_argument('--sigma0', type = float, default = 8.0)
-     parser.add_argument('--show', default = False, action = 'store_true')
-     parser.add_argument('--burnin', type = int, default = 0)
+     parser.add_argument('--tFinal', type = float, default = tFinal, help= f'Final time for integration [{tFinal}]')
+     parser.add_argument('--Nt', type = int,   default = Nt, help= f'Number of time steps [{Nt}]')
+     parser.add_argument('--seed', type = int,   default = seed, help= f'Seed for random number generation [{seed}]')
+     parser.add_argument('--N', type = int,   default = N, help= f'Number of oscillator s[{N}]')
+     parser.add_argument('--coupling', type = float, default = coupling, help= f'Coupling coefficient for oscilltors [{coupling}]')
+     parser.add_argument('--sigma', type = float, default = sigma, help= f'[{sigma}]')
+     parser.add_argument('--sigma0', type = float, default = sigma0, help= f'[{sigma0}]')
+     parser.add_argument('--show', default = False, action = 'store_true', help= f'{[False]}')
+     parser.add_argument('--burnin', type = int, default = burnin, help= f'Burning-in time (omitted from plots)[{burnin}]')
+     parser.add_argument('--loc', type=float, default=loc, help= f'Mean for initial positions [{loc}]')
      return parser.parse_args()
 
 if __name__ == "__main__":
@@ -129,7 +138,9 @@ if __name__ == "__main__":
      t = np.linspace(0, args.tFinal, args.Nt)
      d = 3 * args.N
      rng = np.random.default_rng(args.seed)
-     y0 = rng.normal(30, args.sigma0, oscillator.d*args.N)
+     y0 = rng.normal(loc = args.loc,
+                     scale = args.sigma0,
+                     size = oscillator.d*args.N)
      population = Population(oscillator,
                              speed = np.exp(rng.normal(0,2**-6,args.N)),
                              coupling = args.coupling,
