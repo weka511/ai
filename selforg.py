@@ -29,20 +29,34 @@ from matplotlib.pyplot import figure, show
 from sde import EulerMaruyama, Wiener
 
 class Oscillator(ABC):
+     def __init__(self,name,d=3):
+          self.name = name
+          self.d = d
+
      @abstractmethod
      def Velocity(self,t,ssp):
           ...
 
+class Huyghens(Oscillator):
+     def __init__(self,omega2=1):
+          super().__init__('Huyghens',d=2)
+          assert omega2>0
+          self.omega2 = omega2
+
+     def Velocity(self,t,ssp):
+          x, y = ssp
+          return np.array(y,-self.omega2*np.sin(x))
+
 class Rossler(Oscillator):
+
      def __init__(self,
                   a = 0.2,
                   b = 0.2,
                   c = 5.7):
-          self.name = 'Rössler'
+          super().__init__('Rössler')
           self.a = a
           self.b = b
           self.c = c
-          self.d = 3
 
      def Velocity(self,t,ssp):
           x, y, z = ssp
@@ -53,11 +67,10 @@ class Rossler(Oscillator):
 
 class Lorentz(Oscillator):
      def __init__(self):
-          self.name = 'Lorentz'
+          super().__init__('Lorentz')
           self.sigma = 10.0
           self.rho   = 28.0
           self.b     = 8.0/3.0
-          self.d     = 3
 
      def Velocity(self,t,ssp):
           x, y, z = ssp
@@ -121,7 +134,7 @@ def parse_args(tFinal = 8,
      parser.add_argument('--Nt', type = int,   default = Nt, help= f'Number of time steps [{Nt}]')
      parser.add_argument('--seed', type = int,   default = seed, help= f'Seed for random number generation [{seed}]')
      parser.add_argument('--N', type = int,   default = N, help= f'Number of oscillator s[{N}]')
-     parser.add_argument('--coupling', type = float, default = coupling, help= f'Coupling coefficient for oscilltors [{coupling}]')
+     parser.add_argument('--coupling', type = float, default = coupling, help= f'Coupling coefficient for oscillators [{coupling}]')
      parser.add_argument('--sigma', type = float, default = sigma, help= f'Standard deviation for noise [{sigma}]')
      parser.add_argument('--sigma0', type = float, default = sigma0, help= f'Used to disperse starting points [{sigma0}]')
      parser.add_argument('--show', default = False, action = 'store_true', help= 'Set if plots are to be displayed')
@@ -130,11 +143,13 @@ def parse_args(tFinal = 8,
      return parser.parse_args()
 
 if __name__ == "__main__":
-     OscillatorFactory.Register([Rossler(),Lorentz()])
+     OscillatorFactory.Register([Rossler(),
+                                 Lorentz(),
+                                 Huyghens()])
      args = parse_args()
      oscillator = OscillatorFactory.Create(args.oscillator)
      t = np.linspace(0, args.tFinal, args.Nt)
-     d = 3 * args.N
+     d = oscillator.d * args.N
      rng = np.random.default_rng(args.seed)
      y0 = rng.normal(loc = args.loc,
                      scale = args.sigma0,
