@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Copyright (C) 2022-2023 Simon Crase  simon@greenweaves.nz
+# Copyright (C) 2022-2024 Simon Crase  simon@greenweaves.nz
 
 # This is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -20,15 +20,14 @@
 '''Euler–Maruyama method, based on https://en.wikipedia.org/wiki/Euler%E2%80%93Maruyama_method '''
 
 from matplotlib.pyplot import figure, show
-import numpy           as np
-from numpy.random      import default_rng
+import numpy as np
 
 class Wiener:
     '''This class represents a Wiener process'''
     def __init__(self,
                  d = 1,
                  sigma = 1,
-                 rng = default_rng(None)):
+                 rng = np.random.default_rng(None)):
         self.rng = rng
         self.d = d
         self.sigma = sigma
