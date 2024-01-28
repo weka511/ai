@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright (C) 2022 Simon Crase
+# Copyright (C) 2022-2024 Simon Crase
 
 # This is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -45,8 +45,8 @@ class Huyghens(Oscillator):
           self.omega2 = omega2
 
      def Velocity(self,t,ssp):
-          x, y = ssp
-          return np.array(y,-self.omega2*np.sin(x))
+          theta,v = ssp
+          return np.array([v, - self.omega2 * np.sin(theta)],float)
 
 class Rossler(Oscillator):
      '''Roessler Equation'''

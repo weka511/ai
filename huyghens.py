@@ -60,7 +60,7 @@ if __name__=='__main__':
     Nt = 5000
     tArray = np.linspace(tInitial, tFinal, Nt)
 
-    ssp0 =np.array([1.0, 5.0], float)
+    ssp0 =np.array([0.0, 1.0], float)
 
     sspSolution = euler(huyghens.Velocity, ssp0, tArray)
 
