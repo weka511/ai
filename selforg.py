@@ -38,6 +38,7 @@ class Oscillator(ABC):
           ...
 
 class Huyghens(Oscillator):
+     '''Simple Pendulum'''
      def __init__(self,omega2=1):
           super().__init__('Huyghens',d=2)
           assert omega2>0
@@ -48,7 +49,7 @@ class Huyghens(Oscillator):
           return np.array(y,-self.omega2*np.sin(x))
 
 class Rossler(Oscillator):
-
+     '''Roessler Equation'''
      def __init__(self,
                   a = 0.2,
                   b = 0.2,
@@ -66,6 +67,7 @@ class Rossler(Oscillator):
           return np.array([dxdt, dydt, dzdt], float)
 
 class Lorentz(Oscillator):
+     '''Lorenz Equation'''
      def __init__(self):
           super().__init__('Lorentz')
           self.sigma = 10.0
@@ -129,11 +131,11 @@ def parse_args(tFinal = 8,
                burnin = 0,
                loc = 30.0):
      parser = ArgumentParser(__doc__)
-     parser.add_argument('oscillator', choices = OscillatorFactory.Available())
+     parser.add_argument('oscillator', choices = OscillatorFactory.Available(), help='Type of oscillar (Population is homogeneous)')
      parser.add_argument('--tFinal', type = float, default = tFinal, help= f'Final time for integration [{tFinal}]')
      parser.add_argument('--Nt', type = int,   default = Nt, help= f'Number of time steps [{Nt}]')
      parser.add_argument('--seed', type = int,   default = seed, help= f'Seed for random number generation [{seed}]')
-     parser.add_argument('--N', type = int,   default = N, help= f'Number of oscillator s[{N}]')
+     parser.add_argument('--N', type = int,   default = N, help= f'Number of identical oscillators [{N}]')
      parser.add_argument('--coupling', type = float, default = coupling, help= f'Coupling coefficient for oscillators [{coupling}]')
      parser.add_argument('--sigma', type = float, default = sigma, help= f'Standard deviation for noise [{sigma}]')
      parser.add_argument('--sigma0', type = float, default = sigma0, help= f'Used to disperse starting points [{sigma0}]')

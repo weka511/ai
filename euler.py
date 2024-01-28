@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright (C) 2021-2023 Simon Crase  simon@greenweaves.nz
+# Copyright (C) 2021-2024 Simon Crase  simon@greenweaves.nz
 
 # This is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -18,20 +18,20 @@
 '''Solve ODE using Good Old Fashioned Euler'''
 
 from matplotlib.pyplot import figure, show
-import numpy           as np
+import numpy as np
 
 def euler(func, y0, t):
-    y       = np.zeros((np.size(t, 0), np.size(y0, 0)))
+    y = np.zeros((np.size(t, 0), np.size(y0, 0)))
     y[0, :] = y0
 
     for i in range(0,np.size(t) - 1):
-        dt       = t[i + 1] - t[i]
-        y[i + 1] = y[i] + dt * func(y[i], t[i])
+        dt = t[i + 1] - t[i]
+        y[i + 1] = y[i] + dt * func( t[i], y[i])
 
     return y
 
 if __name__ == '__main__':
-    def velocity(ssp, t,
+    def velocity(t,ssp,
                  k = 1.0,
                  m = 1.0):
         '''
