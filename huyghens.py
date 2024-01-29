@@ -26,9 +26,14 @@ from matplotlib.pyplot import figure, show
 from euler import euler
 from selforg import Huyghens
 
-def parse_args():
+def parse_args(tFinal = 10.0,
+               Nt = 5000,
+               V0 = 1.0):
     '''Define and parse command line arguments'''
     parser = ArgumentParser(description=__doc__)
+    parser.add_argument('--tFinal', type = float, default = tFinal, help= f'Final time for integration [{tFinal}]')
+    parser.add_argument('--Nt', type = int,   default = Nt, help= f'Number of time steps [{Nt}]')
+    parser.add_argument('--V0', type = float, default = V0, help= f'Initial Velocity [{V0}]')
     parser.add_argument('--show',  default=False, action='store_true', help='Show plots')
     return parser.parse_args()
 
@@ -55,13 +60,9 @@ if __name__=='__main__':
     start  = time()
     args = parse_args()
     huyghens = Huyghens()
-    tInitial = 0
-    tFinal = 10
-    Nt = 5000
-    tArray = np.linspace(tInitial, tFinal, Nt)
 
-    ssp0 =np.array([0.0, 1.0], float)
-
+    tArray = np.linspace(0.0, args.tFinal, args.Nt)
+    ssp0 = np.array([0.0, args.V0], float)
     sspSolution = euler(huyghens.Velocity, ssp0, tArray)
 
     xSolution = sspSolution[:, 0]
@@ -74,14 +75,14 @@ if __name__=='__main__':
 
     ax = fig.add_subplot(2,2,2)
     ax.plot(tArray, vSolution)
-    ax.set_xlabel('t (s)')
+    ax.set_xlabel('t(s)')
     ax.set_ylabel('v(t)')
 
     ax  = fig.add_subplot(2,2,3)
     ax.plot( xSolution, vSolution)
     ax.set_xlabel('x(t)')
     ax.set_ylabel('v(t)')
-
+    fig.suptitle(f'tFinal={args.tFinal}, Nt={args.Nt}, V0={args.V0}')
     fig.savefig(get_name_for_save())
     elapsed = time() - start
     minutes = int(elapsed/60)
