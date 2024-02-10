@@ -66,7 +66,7 @@ This document collects my derivations of equations from KF's work.
 \section{Introduction}
 
 \begin{figure}[H]
-	\caption{Timeline}
+	\caption{Timeline for Active Inference references}
 	\begin{chronology}[5]{2002}{2024}{18cm}[\textwidth]
 		\event{2003}{\cite{beal2003variational}Variational algorithms for approximate Bayesian inference}
 		\event{2006}{\color{blue}\cite{friston_free_2006}A Free Energy Principle for the brain}
@@ -82,7 +82,7 @@ This document collects my derivations of equations from KF's work.
 
 \begin{table}[H]
 	\begin{center}
-		\caption{Notation}
+		\caption{Notation for Active Inference references}
 		\begin{tabular}{|l|c|c|c|c|c|}\hline
 			&\cite{beal2003variational}&\cite{friston_life_2013}&\cite{friston2016therefore}&\cite{Blei2017}&\cite{friston2022free,Parr2022Active}\\ \hline
 			External State&x&$\Psi$&$\Psi$&z&$\eta$\\ \hline
@@ -122,7 +122,7 @@ This document collects my derivations of equations from KF's work.
 	The equilibrium distribution for \eqref{eq:fokker:planck} is given by:
 	\begin{align*}
 		p(\vec{x}\vert m) =& \exp \big(-G(\vec{x})\big) \text{, where $G$ satisfies}\\
-		f =& -(\Gamma + R) \cdot \nabla G
+		f =& -(\Gamma + R) \cdot \nabla G \numberthis \label{eq:f:Gamma:R}
 	\end{align*}
 	
 \end{thm}
@@ -132,18 +132,54 @@ The equilibrium distribution of \eqref{eq:fokker:planck} satisfies:
 		\dot{p}(\vec{x}\vert m) =&0 \text{, i.e.}\\
 		\nabla \cdot (\Gamma \nabla p -f p)=&0 \numberthis \label{eq:fokker:plank:eq}
 	\end{align*}
-	Since $	p(\vec{x}\vert m) \ge 0$, we can define $G()$ such that:
+	Since $	p(\vec{x}\vert m) > 0$, we can define:
 	\begin{align*}
+		G(x) =& - \ln{}p(\vec{x}\vert m) \text{, so}\\
 		p(\vec{x}\vert m) =& \exp \big(-G(\vec{x})\big) \text{. Then}\\
-		\nabla p =& - \exp \big(-G(\vec{x})\big) \nabla G(\vec{x})\\
-		=& - p \nabla G(\vec{x}) \text{, whence \eqref{eq:fokker:plank:eq} becomes}\\
+		\nabla p =& - \exp \big(-G(\vec{x})\big) \nabla G(\vec{x}) \numberthis \label{eq:grad:p}\\
+		=& - p \nabla G(\vec{x})
+	\end{align*}
+	 whence \eqref{eq:fokker:plank:eq} becomes
+	\begin{align*}
 		-\nabla \cdot [(\Gamma \nabla G +f)p]=&0\\
-		 (\Gamma \nabla G +f)p =& \nabla \times \vec{A} \text{, for some $\vec{A}$}\\
-		 =& -p \vec{R} \cdot \nabla G \text{, for some $R$, whence}\\
-		 f =& -(\Gamma + R) \cdot \nabla G \text{, the \gls{gls:helmholz}-- \cite[(2.3)]{friston_life_2013}}
+		(\Gamma \nabla G +f)p =& \nabla \times \vec{A} \text{, for some $\vec{A}$}\\
+		=& -p \vec{R} \cdot \nabla G \text{, for some $R$, whence}\\
+		f =& -(\Gamma + R) \cdot \nabla G \text{, the \gls{gls:helmholz}-- \cite[(2.3)]{friston_life_2013}}
 	\end{align*}
 \end{proof}
-
+\begin{proof}[Alternative proof using indices.]
+	\begin{align*}
+		\nabla\cdot\Gamma\nabla p - \nabla \cdot (\vec{f} p) =& \sum_{i,j}\partial_i\big[\Gamma_{ij}\partial_j p\big] - \sum_{i} \partial_i \big[f_i p\big]\\
+		=&\sum_{i,j}\big(\partial_i\Gamma_{ij}\big)\big(\partial_j p\big) + \sum_{i,j}\Gamma_{ij}\partial_i\big[\partial_j p\big]-\sum_{i} (\partial_i f_i)  p-  \sum_{i} f_i\partial_i  p  \text{. Rearrange terms}\\
+		=&\sum_{i,j}\big(\partial_i\Gamma_{ij}\big)\big(\partial_j p\big) -\sum_{i} (\partial_i f_i)  p + \sum_{i,j}\Gamma_{ij}\partial_i\big[\partial_j p\big]-  \sum_{i} f_i\partial_i  p \text{. Use \eqref{eq:grad:p}}\\
+		=&\sum_{i,j}\big(\partial_i\Gamma_{ij}\big)\big(-p \partial_j G\big) -\sum_{i} \big[\partial_i f_i\big]  p \\
+		&+ \sum_{i,j}\Gamma_{ij}\partial_i\big[\partial_j p\big]-  \sum_{i} f_i\partial_i  p  \numberthis \label{eq:alternative}
+	\end{align*} 
+	On substituting \eqref{eq:f:Gamma:R}, the first two terms of \eqref{eq:alternative} become:
+	\begin{align*}
+		\sum_{i,j}\big(\partial_i\Gamma_{ij}\big)\big(-p \partial_j G\big) -\sum_{i} \partial_i f_i\big]  p=&-p \sum_{i,j} \big(\partial_i\Gamma_{ij}\big)\big(\partial_j G\big) +\sum_{i,j} \bigg[\partial_i \big[ \big(\Gamma_{ij} +R_{ij}\big)\partial_j G \big] \bigg]  p\\
+		=&-\cancel{p \sum_{i,j} \big(\partial_i\Gamma_{ij}\big)\big(\partial_j G\big)} + p \sum_{i,j} \partial_i \big[ \big(\cancel{\Gamma_{ij}} +R_{ij}\big) \big]\partial_j G  \\&
+		+p \sum_{i,j} \bigg[ \big[ \big(\Gamma_{ij} +R_{ij}\big)\partial_i \partial_j G \big] \bigg]  \\
+		=&p\sum_{i,j} (\partial_i R_{ij})  (\partial_j G)  +p\sum_{i,j} \bigg[ \big[ \big(\Gamma_{ij} +R_{ij}\big)\partial_i \partial_j G \big] \bigg]   \numberthis \label{eg:altern:12}
+	\end{align*}
+	Differentiating \eqref{eq:grad:p}:
+	\begin{align*}
+		\partial_i \partial_j p =& - \partial_i \big(p \partial_j G\big)\\
+		=& -(\partial_i p) (\partial_j G) - p \partial_i \partial_j G\\
+		=&p \big(\partial_i G\big) \big(\partial_j G\big)  - p \partial_i \partial_j G
+	\end{align*}
+	The second two terms of \eqref{eq:alternative} become:
+	\begin{align*}
+		\sum_{i,j}\Gamma_{ij}\partial_i\big[\partial_j p\big]-  \sum_{i} f_i\partial_i  p =& p\sum_{i,j}\Gamma_{ij}\big[ \cancel{(\partial_j G)(\partial_j G)} -  \partial_i \partial_j G\big] -  p \sum_{i,j} \big[\big(\cancel{\Gamma_{ij}} + R_{ij}\big)\partial_j G\big] \partial_i  G \\
+		 =&   - p\sum_{i,j}\Gamma_{ij}\big[ \partial_i \partial_j G\big] -  p \sum_{i,j} \big[ R_{ij}\partial_j G\big] \partial_i  G\numberthis
+		 \label{eq:altern:34}
+	\end{align*}
+\end{proof}
+Substituting \eqref{eg:altern:12} and \eqref{eq:altern:34} in \eqref{eq:alternative}
+\begin{align*}
+	\nabla\cdot\Gamma\nabla p - \nabla \cdot (\vec{f} p) =& p\sum_{i,j} (\partial_i R_{ij})  (\partial_j G)  +p\sum_{i,j} \bigg[ \big[ \big(\cancel{\Gamma_{ij}} +R_{ij}\big)\partial_i \partial_j G \big] \bigg] \\
+	-& \cancel{ p\sum_{i,j}\Gamma_{ij}\big[ \partial_i \partial_j G\big]} -  p \sum_{i,j} \big[ R_{ij}\partial_j G\big] \partial_i  G
+\end{align*}
 \section{Free Energy}
 
 
