@@ -148,49 +148,29 @@ The equilibrium distribution of \eqref{eq:fokker:planck} satisfies:
 	\end{align*}
 \end{proof}
 \begin{proof}[Alternative proof using indices.]
-	\begin{lemma} \label{lemma:d2:p}
-		\begin{align*}
-			\partial_i \partial_j p 
-			=&p \big(\partial_i G\big) \big(\partial_j G\big)  - p \partial_i \partial_j G
-		\end{align*}
-	\end{lemma}
-	\begin{proof}
-		Differentiating \eqref{eq:grad:p}:
-		\begin{align*}
-			\partial_i \partial_j p =& - \partial_i \big(p \partial_j G\big)\\
-			=& -(\partial_i p) (\partial_j G) - p \partial_i \partial_j G\\
-			=&p \big(\partial_i G\big) \big(\partial_j G\big)  - p \partial_i \partial_j G 
-		\end{align*}
-	\end{proof}
+	
+	
+
+	
+	Equation \eqref{eq:f:Gamma:R} expands as 
 	\begin{align*}
-		\nabla\cdot\Gamma\nabla p - \nabla \cdot (\vec{f} p) =& \sum_{i,j}\partial_i\big[\Gamma_{ij}\partial_j p\big] - \sum_{i} \partial_i \big[f_i p\big]\\
-		=&\sum_{i,j}\big(\partial_i\Gamma_{ij}\big)\big(\partial_j p\big) + \sum_{i,j}\Gamma_{ij}\partial_i\big[\partial_j p\big]-\sum_{i} (\partial_i f_i)  p-  \sum_{i} f_i\partial_i  p  \text{. Rearrange terms}\\
-		=&\sum_{i,j}\big(\partial_i\Gamma_{ij}\big)\big(\partial_j p\big) -\sum_{i} (\partial_i f_i)  p + \sum_{i,j}\Gamma_{ij}\partial_i\big[\partial_j p\big]-  \sum_{i} f_i\partial_i  p \text{. Use \eqref{eq:grad:p}}\\
-		=&\sum_{i,j}\big(\partial_i\Gamma_{ij}\big)\big(-p \partial_j G\big) -\sum_{i} \big[\partial_i f_i\big]  p \\
-		&+ \sum_{i,j}\Gamma_{ij}\partial_i\big[\partial_j p\big]-  \sum_{i} f_i\partial_i  p  \numberthis \label{eq:alternative}
-	\end{align*} 
-	On substituting \eqref{eq:f:Gamma:R}, the first two terms of \eqref{eq:alternative} become:
+		f_i =& - \sum_{j}\big(\Gamma_{ij}+R_{ij}\big)\partial_j G \text{, whence}\\
+		\big(\Gamma\nabla p - \vec{f} p\big)_i =& \sum_{j}\big[\Gamma_{ij}\partial_j p\big] -  f_i p\\
+		=& \sum_{j}\big[\Gamma_{ij}\partial_j p\big] + p\sum_{j}\big(\Gamma_{ij}+R_{ij}\big)\partial_j G  \\
+		=& - \cancel{\sum_{j}\big[\Gamma_{ij}p\partial_j G\big]} + p\sum_{j}\big(\cancel{\Gamma_{ij}}+R_{ij}\big)\partial_j G \\
+		=& p\sum_{j}R_{ij}\partial_j G
+	\end{align*}
+	
 	\begin{align*}
-		\sum_{i,j}\big(\partial_i\Gamma_{ij}\big)\big(-p \partial_j G\big) -\sum_{i} \partial_i f_i\big]  p=&-p \sum_{i,j} \big(\partial_i\Gamma_{ij}\big)\big(\partial_j G\big) +\sum_{i,j} \bigg[\partial_i \big[ \big(\Gamma_{ij} +R_{ij}\big)\partial_j G \big] \bigg]  p\\
-		=&-\cancel{p \sum_{i,j} \big(\partial_i\Gamma_{ij}\big)\big(\partial_j G\big)} + p \sum_{i,j} \partial_i \big[ \big(\cancel{\Gamma_{ij}} +R_{ij}\big) \big]\partial_j G  \\&
-		+p \sum_{i,j} \bigg[ \big[ \big(\Gamma_{ij} +R_{ij}\big)\partial_i \partial_j G \big] \bigg]  \\
-		=&p\sum_{i,j} (\partial_i R_{ij})  (\partial_j G)  +p\sum_{i,j} \bigg[ \big[ \big(\Gamma_{ij} +R_{ij}\big)\partial_i \partial_j G \big] \bigg]  \\
-		=&p\sum_{i,j} (\partial_i R_{ij})  (\partial_j G)  +p\sum_{i,j} \Gamma_{ij}\partial_i \partial_j G  +\underbrace{ p\sum_{i,j} R_{ij}\partial_i \partial_j G}_{=0}  \\
-		=&p\sum_{i,j} (\partial_i R_{ij})  (\partial_j G)  +p\sum_{i,j} \Gamma_{ij}\partial_i \partial_j G  \numberthis\label{eg:altern:12}
+		\nabla \cdot \big(\Gamma\nabla p - \vec{f} p\big) =& \sum_{i,j} \partial_i \big[p R_{ij}\partial_j G\big]\\
+		=& \sum_{i,j} \big[(\partial_i p) R_{ij}\partial_j G + p (\partial_i  R_{ij})\partial_j G +\underbrace{ p R_{ij}(\partial_i \partial_j G)}_{=0}\big]\\
+		=& \sum_{i,j} \big[-\underbrace{p (\partial_i G) R_{ij}\partial_j G}_{=0} + p (\partial_i  R_{ij})\partial_j G \big]=0\\
+		=& p \sum_{i,j} (\partial_i  R_{ij})\partial_j G
 	\end{align*}
 
-	Applying Lemma \ref{lemma:d2:p}, the second two terms of \eqref{eq:alternative} become:
-	\begin{align*}
-		\sum_{i,j}\Gamma_{ij}\partial_i\big[\partial_j p\big]-  \sum_{i} f_i\partial_i  p =& p\sum_{i,j}\Gamma_{ij}\big[ \cancel{(\partial_j G)(\partial_j G)} -  \partial_i \partial_j G\big] -  p \sum_{i,j} \big[\big(\cancel{\Gamma_{ij}} + R_{ij}\big)\partial_j G\big] \partial_i  G \\
-		 =& - p\sum_{i,j}\Gamma_{ij}\big[ \partial_i \partial_j G\big] - \underbrace{ p \sum_{i,j}  R_{ij}\partial_j G \partial_i  G}_{=0}\\
-		 =& - p\sum_{i,j}\Gamma_{ij}\big[ \partial_i \partial_j G\big] \numberthis
-		 \label{eq:altern:34}
-	\end{align*}
+
 \end{proof}
-Substituting \eqref{eg:altern:12} and \eqref{eq:altern:34} in \eqref{eq:alternative}
-\begin{align*}
-	\nabla\cdot\Gamma\nabla p - \nabla \cdot (\vec{f} p) =&p\sum_{i,j} (\partial_i R_{ij})  (\partial_j G)  +\cancel{p\sum_{i,j} \Gamma_{ij}\partial_i \partial_j G} - \cancel{p\sum_{i,j}\Gamma_{ij}\big[ \partial_i \partial_j G\big]}
-\end{align*}
+
 \section{Free Energy}
 
 
