@@ -1,6 +1,6 @@
 % This document collects my derivations of equations relevant to Active Inference
 
-% Copyright (c) 2022 Simon Crase
+% Copyright (c) 2022-2024 Simon Crase
 
 % This script is free software: you can redistribute it and/or modify
 % it under the terms of the GNU General Public License as published by
@@ -122,7 +122,8 @@ This document collects my derivations of equations from KF's work.
 	The equilibrium distribution for \eqref{eq:fokker:planck} is given by:
 	\begin{align*}
 		p(\vec{x}\vert m) =& \exp \big(-G(\vec{x})\big) \text{, where $G$ satisfies}\\
-		f =& -(\Gamma + R) \cdot \nabla G \numberthis \label{eq:f:Gamma:R}
+		f =& -(\Gamma + R) \cdot \nabla G \text{, where} \numberthis \label{eq:f:Gamma:R}\\
+		\nabla.R =& 0 \text{ and R antisymmetric}
 	\end{align*}
 	
 \end{thm}
@@ -148,10 +149,6 @@ The equilibrium distribution of \eqref{eq:fokker:planck} satisfies:
 	\end{align*}
 \end{proof}
 \begin{proof}[Alternative proof using indices.]
-	
-	
-
-	
 	Equation \eqref{eq:f:Gamma:R} expands as 
 	\begin{align*}
 		f_i =& - \sum_{j}\big(\Gamma_{ij}+R_{ij}\big)\partial_j G \text{, whence}\\
@@ -160,14 +157,14 @@ The equilibrium distribution of \eqref{eq:fokker:planck} satisfies:
 		=& - \cancel{\sum_{j}\big[\Gamma_{ij}p\partial_j G\big]} + p\sum_{j}\big(\cancel{\Gamma_{ij}}+R_{ij}\big)\partial_j G \\
 		=& p\sum_{j}R_{ij}\partial_j G
 	\end{align*}
-	
+	Calculating the divergence:
 	\begin{align*}
 		\nabla \cdot \big(\Gamma\nabla p - \vec{f} p\big) =& \sum_{i,j} \partial_i \big[p R_{ij}\partial_j G\big]\\
 		=& \sum_{i,j} \big[(\partial_i p) R_{ij}\partial_j G + p (\partial_i  R_{ij})\partial_j G +\underbrace{ p R_{ij}(\partial_i \partial_j G)}_{=0}\big]\\
-		=& \sum_{i,j} \big[-\underbrace{p (\partial_i G) R_{ij}\partial_j G}_{=0} + p (\partial_i  R_{ij})\partial_j G \big]=0\\
-		=& p \sum_{i,j} (\partial_i  R_{ij})\partial_j G
+		=& \sum_{i,j} \big[-\underbrace{p (\partial_i G) R_{ij}\partial_j G}_{=0} + p (\partial_i  R_{ij})\partial_j G \big] \\
+		=& p \sum_{i,j} \underbrace{(\partial_i  R_{ij})}_{\nabla\cdot R=0}\partial_j G\\
+		=& 0
 	\end{align*}
-
 
 \end{proof}
 
