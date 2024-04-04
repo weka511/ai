@@ -17,21 +17,25 @@
 
 
 \documentclass[]{article}
-\usepackage{chronology}
-\usepackage{float}
-\usepackage{caption}
-\usepackage{subcaption}
-\usepackage{graphicx}
-\usepackage{url}
 \usepackage{amsmath}
 \usepackage{amssymb}
 \usepackage{amsthm}
-\usepackage{tocloft}
+\usepackage[toc,page]{appendix}
 \usepackage{cancel}
-\usepackage{thmtools}
+\usepackage{caption}
+\usepackage{chronology}
+\usepackage{float}
 \usepackage[toc,nonumberlist]{glossaries}
 \usepackage{glossaries-extra}
+\usepackage{graphicx}
+\usepackage{mathrsfs}
+\usepackage{mathtools}
+\usepackage{subcaption}
+\usepackage{thmtools}
+\usepackage{tocloft}
+\usepackage{url}
 \newcommand\numberthis{\addtocounter{equation}{1}\tag{\theequation}}
+\newcommand{\stcomp}[1]{\widetilde{#1}}
 \newtheorem{defn}{Definition}
 \newtheorem{thm}{Theorem}
 \newtheorem{lemma}[thm]{Lemma}
@@ -57,7 +61,7 @@
 \maketitle
 
 \begin{abstract}
-This document collects my derivations of equations from KF's work.
+This document collects my derivations of equations from Karl Fristons's work, specifically \cite{friston_free_2006,friston_free-energy_2009,friston_life_2013,friston2016therefore,friston_interesting_2021,friston2022free}. It is intended to help me understand the details of the Free Energy Principle.
 \end{abstract}
 
 \tableofcontents
@@ -92,8 +96,8 @@ This document collects my derivations of equations from KF's work.
 			Autonomous States&&&&& $\alpha(a,\mu)$\\\hline
 			Blanket States&&&&&$b(s,a)$\\ \hline
 			Particular States&&&&&$\pi(b,\mu)$\\ \hline
-			p&p&$p(\psi,s,a,\lambda\vert m)$&$p(\psi,s,a,r\vert m)$&p&p\\ \hline
-			Recognition Density&q&$q(\psi\vert \mu)$&$q(\psi\vert \mu)$&q&q\\ \hline
+			Ergodic Density&p&$p(\psi,s,a,\lambda\vert m)$&$p(\psi,s,a,r\vert m)$&p&p\\ \hline
+			Recognition Density or Variational Density&q&$q(\psi\vert \mu)$&$q(\psi\vert \mu)$&q&q\\ \hline
 		\end{tabular}
 	\end{center}
 \end{table}
@@ -204,7 +208,41 @@ This agrees with the thermodynamic definition of Helmholtz Free Energy $U-TS$, w
 	=& E_q\big[\ln q\big(\eta(\tau)\big)  - \ln p\big(\pi(\tau)\vert\eta(\tau)\big)\big] +  E_q\big[- \ln p\big(\eta(\tau)\big)\big]\\
 	=& D_{KL}\big(q\big(\eta(\tau)\big)\vert\vert p\big(\pi(\tau)\vert\eta(\tau)\big)\big)+  E_q\big[- \ln p\big(\eta(\tau)\big)\big]
 \end{align*}
-\appendix
+
+\begin{appendices}
+	\section{Boolean Algebra}
+	We define the symmetric difference of two sets:
+	\begin{align*}
+		A \triangle B \coloneqq& \big(A \setminus B\big) \bigcup \big(B \setminus  A\big)\\
+		=& \big(A \cap \stcomp{B}\big) \bigcup \big(B \cap \stcomp{A}\big) \numberthis \label{eq:synn:diff_regular:diff}\\
+	\end{align*}
+	We also have two useful distributive laws.
+	\begin{align*}
+		A \bigcup \big(B \cap C \big) =& \big(A \cup B\big) \bigcap  \big(A \cup C\big) \numberthis \label{eq:dist:cup:cap}\\
+		A \bigcap \big(B \cup C \big) =& \big(A \cap B\big) \bigcup  \big(A \cap C\big)	\numberthis \label{eq:dist:cap:cup}	
+	\end{align*}
+	Applying \eqref{eq:dist:cup:cap} to \eqref{eq:synn:diff_regular:diff}:
+	\begin{align*}
+		A \triangle B =&\big[\big(A \cap \stcomp{B}\big) \cup B\big] \bigcap \big[ \big(A \cap \stcomp{B}\big) \cup \stcomp A \big] \numberthis \label{eq:symm:diff:expanded}
+	\end{align*}
+	Splitting the two terms in \eqref{eq:symm:diff:expanded}, applying \eqref{eq:dist:cup:cap}, and canceling intersections with the universal set:
+	\begin{align*}
+		\big[\big(A \cap \stcomp{B}\big) \cup B\big] =& \big(A \cup B\big) \cancel{\bigcap \big(B \cup \stcomp{B}}\big)\\
+		\big[ \big(A \cap \stcomp{B}\big) \cup \stcomp A \big] =& \cancel{\big(A\cup\stcomp{A} \big) \bigcap} \big(\stcomp{B} \cup\stcomp{A}\big) \text{, so \eqref{eq:symm:diff:expanded} becomes}\\
+		A \triangle B =& \big(A \cap B\big) \bigcup \big(\stcomp{B} \cup\stcomp{A}\big) \numberthis \label{eq:symm:diff:without:diff}
+	\end{align*}
+
+	\begin{lemma}
+		\begin{align*}
+			\forall& A,B,C\\
+			A \triangle B =& \big(A\triangle C\big) \triangle \big(B\triangle C\big)\\
+		    \subseteq& \big(A\triangle C\big) \bigcup \big(B\triangle C\big)
+		\end{align*}
+	\end{lemma}
+	\begin{proof}
+		content...
+	\end{proof}
+\end{appendices}
 
 \printglossaries
 
