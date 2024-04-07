@@ -39,6 +39,7 @@
 \newtheorem{defn}{Definition}
 \newtheorem{thm}{Theorem}
 \newtheorem{lemma}[thm]{Lemma}
+\newtheorem{cor}[thm]{Corollary}
 \graphicspath{{figs/}}
 \widowpenalty10000
 \clubpenalty10000
@@ -51,13 +52,13 @@
 \begin{document}
 	
 \newglossaryentry{gls:sde}{
-	name={stochastic differential equation},
+	name={Stochastic Differential Equation},
 	description={
-	A stochastic differential equation is a differential equation whose coefficients are random numbers or random functions of the independent variable (or variables)}}
+	A differential equation whose coefficients are random numbers or random functions of the independent variable (or variables)\cite{vankampen2007stochastic}}}
 
 \newglossaryentry{gls:helmholz}{
 	name={Helmholtz Decomposition},
-	description={The Helmholtz Decomposition Theorem, or the fundamental theorem of vector calculus, states that any well-behaved vector field can be decomposed into the sum of a longitudinal (diverging, non-curling, irrotational) vector field and a transverse (solenoidal, curling, rotational, non-diverging) vector field\cite{baird2012helmholtz}}}
+	description={Any well-behaved vector field can be decomposed into the sum of a longitudinal (diverging, non-curling, irrotational) vector field and a transverse (solenoidal, curling, rotational, non-diverging) vector field\cite{baird2012helmholtz}}}
 \maketitle
 
 \begin{abstract}
@@ -214,14 +215,14 @@ This agrees with the thermodynamic definition of Helmholtz Free Energy $U-TS$, w
 	We define the symmetric difference of two sets:
 	\begin{align*}
 		A \triangle B \coloneqq& \big(A \setminus B\big) \bigcup \big(B \setminus  A\big)\\
-		=& \big(A \cap \stcomp{B}\big) \bigcup \big(B \cap \stcomp{A}\big) \numberthis \label{eq:synn:diff_regular:diff}\\
+		=& \big(A \cap \stcomp{B}\big) \bigcup \big(B \cap \stcomp{A}\big) \numberthis \label{eq:symm:diff_regular:diff}\\
 	\end{align*}
 	We also have two useful distributive laws.
 	\begin{align*}
 		A \bigcup \big(B \cap C \big) =& \big(A \cup B\big) \bigcap  \big(A \cup C\big) \numberthis \label{eq:dist:cup:cap}\\
 		A \bigcap \big(B \cup C \big) =& \big(A \cap B\big) \bigcup  \big(A \cap C\big)	\numberthis \label{eq:dist:cap:cup}	
 	\end{align*}
-	Applying \eqref{eq:dist:cup:cap} to \eqref{eq:synn:diff_regular:diff}:
+	Applying \eqref{eq:dist:cup:cap} to \eqref{eq:symm:diff_regular:diff}:
 	\begin{align*}
 		A \triangle B =&\big[\big(A \cap \stcomp{B}\big) \cup B\big] \bigcap \big[ \big(A \cap \stcomp{B}\big) \cup \stcomp A \big] \numberthis \label{eq:symm:diff:expanded}
 	\end{align*}
@@ -229,19 +230,62 @@ This agrees with the thermodynamic definition of Helmholtz Free Energy $U-TS$, w
 	\begin{align*}
 		\big[\big(A \cap \stcomp{B}\big) \cup B\big] =& \big(A \cup B\big) \cancel{\bigcap \big(B \cup \stcomp{B}}\big)\\
 		\big[ \big(A \cap \stcomp{B}\big) \cup \stcomp A \big] =& \cancel{\big(A\cup\stcomp{A} \big) \bigcap} \big(\stcomp{B} \cup\stcomp{A}\big) \text{, so \eqref{eq:symm:diff:expanded} becomes}\\
-		A \triangle B =& \big(A \cap B\big) \bigcup \big(\stcomp{B} \cup\stcomp{A}\big) \numberthis \label{eq:symm:diff:without:diff}
+		A \triangle B =& \big(A \cup B\big) \bigcap \big(\stcomp{B} \cup\stcomp{A}\big) \numberthis \label{eq:symm:diff:without:diff}
 	\end{align*}
 
-	\begin{lemma}
+	\begin{thm}
+		Sets form a semi-group with identity under $\triangle$.
+	\end{thm}
+	\begin{proof}
+		We need to show that:
+		\begin{align*}
+			A \triangle B =& B \triangle A \numberthis \label{eq:symm:diff:commutative}\\
+			\big(A \triangle B\big) \triangle C =& A \triangle \big(B \triangle C\big) \numberthis \label{eq:symm:diff:associative}
+		\end{align*}
+		Equation \eqref{eq:symm:diff:commutative} follows from the symmetry of \eqref{eq:symm:diff_regular:diff}.
+		
+		We split $A,\,B,\, and C$ into non-overlapping parts:
+		\begin{align*}
+			A =& S_A \cup S_{AB} \cup S_{AC} \cup S_{ABC} \\
+			B =& S_B \cup S_{BC} \cup S_{BA} \cup S_{BCA}\\
+			C =& S_C \cup S_{CA} \cup S_{CB} \cup S_{CAB}
+		\end{align*}
+		where
+		\begin{align*}
+			S_A =& A - B - C\\
+			S_{AB} =& A \cap B - C\\
+			S_{AC} =& A \cap C - C\\
+			S_{ABC} =& A \cap B \cap C 
+		\end{align*}
+		and the other terms are defined analogously.
+		
+		Now in \eqref{eq:symm:diff:associative}
+		\begin{align*}
+			A \setminus B =& \big[\big(S_A \cancel{\cup S_{AB}} \cup S_{AC} \cup \bcancel{S_{ABC}}\big) - \big(S_B \cup S_{BC} \cancel{\cup S_{BA}} \bcancel{\cup S_{BCA}}\big)\big]\\
+			=& \big[\big(S_A  \cup S_{AC}\big) - \big(S_B \cup S_{BC} \big)\big]\\
+			B \setminus A =& \big[\big(S_B  \cup S_{BC}\big) - \big(S_A \cup S_{AC} \big)\big]
+		\end{align*}
+	\end{proof}
+	\begin{thm}
 		\begin{align*}
 			\forall& A,B,C\\
-			A \triangle B =& \big(A\triangle C\big) \triangle \big(B\triangle C\big)\\
-		    \subseteq& \big(A\triangle C\big) \bigcup \big(B\triangle C\big)
+			A \triangle C =& \big(A\triangle B\big) \triangle \big(B\triangle C\big) \numberthis \label{eq:symm:diff:3}
 		\end{align*}
-	\end{lemma}
+	\end{thm}
 	\begin{proof}
-		content...
+		We begin by applying \eqref{eq:symm:diff:associative} to the RHS of \eqref{eq:symm:diff:3}.
+		\begin{align*}
+			\big(A\triangle B\big) \triangle \big(B\triangle C\big) =& A \triangle \big[B \triangle \big(B\triangle C\big)\big] \text{, then apply \eqref{eq:symm:diff:associative} again:}\\
+			=& A \triangle \underbrace{\big[\big(\underbrace{B \triangle B}_\text{$=\emptyset$}\big)\triangle C\big]}_\text{$=C$}\\
+			=&A \triangle C
+		\end{align*}
 	\end{proof}
+	\begin{cor}
+			\begin{align*}
+			\forall& A,B,C\\
+			A \triangle C \subseteq& \big(A\triangle B\big) \bigcup \big(B\triangle C\big)
+		\end{align*}
+	\end{cor}
 \end{appendices}
 
 \printglossaries
