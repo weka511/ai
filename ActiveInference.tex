@@ -57,6 +57,8 @@
 \author{Simon Crase}
 
 \begin{document}
+
+\newabbreviation{gls:kl}{KL}{Kullbak-Leibler}
 	
 \newglossaryentry{gls:sde}{
 	name={Stochastic Differential Equation},
@@ -67,7 +69,7 @@
 	name={Helmholtz Decomposition},
 	description={Any well-behaved vector field can be decomposed into the sum of a longitudinal (diverging, non-curling, irrotational) vector field and a transverse (solenoidal, curling, rotational, non-diverging) vector field\cite{baird2012helmholtz}}}
 
-\newglossaryentry{gls:kl}{
+\newglossaryentry{gls:kl:divergence}{
 	name = {Kullback-Leibler Divergence},
 	description={A measure of the difference between two probability distributions
 	\begin{align*}
@@ -125,67 +127,51 @@ Table \ref{table:notation} shows how the notation used for Active Inference has 
 
 
 \section{Free Energy}
+This section makes use of the following Theorem.
+
+\begin{thm}[Bayes' Rule]
+	\begin{align*}
+		 P(x)P(y\vert x) = P(x,y) = P(y)P(x\vert y) \numberthis \label{eq:bayes}
+	\end{align*}
+\end{thm}
 
 \subsection{Variational Free Energy}
 
-Variational Free Energy is defined in \cite{parr2022Active}
+This Section derives the equation of \cite[Section 2.5]{parr2022Active}, which defines Variational Free Energy. The annotations in \eqref{eq:fe},\eqref{eq:fe:complexity:accuracy} and \eqref{eq:fe:divergence:evidence} are explained in Table \ref{table:terms:FE}.
 
 \begin{align*}
-	F[Q,y] \defeq&\underbrace{ -\mathbb{E}_{Q(x)}[\ln{P(y,x)}] }_\text{Energy--Table \ref{table:terms:FE}}- \underbrace{\mathbb{H}[Q(x)]}_\text{Entropy--Table \ref{table:terms:FE}} \text{, where}\\
-	\mathbb{H}[Q(x)] \defeq& - \mathbb{E}_{Q(x)} [Q(x)] \text{, whence}\\
-	F[Q,y] = & -\mathbb{E}_{Q(x)}[\ln{P(y,x)}] + \mathbb{E}_{Q(x)}[Q(x)]\\
-	=&-\mathbb{E}_{Q(x)}[\ln{P(y\vert x)} + \ln{P(x)}] + \mathbb{E}_{Q(x)}[Q(x)]\\
-	=&\mathbb{E}_{Q(x)}[Q(x)-P(x)] -\mathbb{E}_{Q(x)}[\ln{P(y\vert x)}]\\
-	 =&\underbrace{ D_{KL}[Q(x)\lvert\rvert P(x)]}_\text{Complexity--Table \ref{table:terms:FE}} - \underbrace{\mathbb{E}_{Q(x)}[\ln{P(y\vert x)}]}_\text{Accuracy--Table \ref{table:terms:FE}} 
+	F[Q,y] \defeq&\underbrace{ -\mathbb{E}_{Q(x)}[\ln{P(y,x)}] }_\text{Energy}- \underbrace{\mathbb{H}[Q(x)]}_\text{Entropy} \text{, where} \numberthis \label{eq:fe}\\
+	\mathbb{H}[Q(x)] \defeq& - \mathbb{E}_{Q(x)} [\ln{Q(x)}] \text{, \cite{shannon1949mathematical}, whence}\\
+	F[Q,y] = & -\mathbb{E}_{Q(x)}[\ln{P(y,x)}] + \mathbb{E}_{Q(x)}[\ln{Q(x)}]\numberthis \label{eq:fe:int}\\
+	=&-\mathbb{E}_{Q(x)}[\ln{P(y\vert x)} + \ln{P(x)}] + \mathbb{E}_{Q(x)}[\ln{Q(x)}] \text{, from \eqref{eq:bayes}} \\
+	=&\mathbb{E}_{Q(x)}[\ln{Q(x)}-\ln{P(x)}] -\mathbb{E}_{Q(x)}[\ln{P(y\vert x)}]\\
+	 =&\underbrace{ D_{KL}[Q(x)\lvert\rvert P(x)]}_\text{Complexity} - \underbrace{\mathbb{E}_{Q(x)}[\ln{P(y\vert x)}]}_\text{Accuracy}\text{, using \eqref{eq:kl:divergence}} \numberthis \label{eq:fe:complexity:accuracy}
+\end{align*}
+Rearranging \eqref{eq:fe:int} and applying  \eqref{eq:bayes}:
+\begin{align*}
+	F[Q,y] =& -\mathbb{E}_{Q(x)}[\ln{P(x\vert y)} + \ln{P(y)}] + \mathbb{E}_{Q(x)}[\ln{Q(x)}]\\
+	=& \mathbb{E}_{Q(x)}[\ln{Q(x)}-\ln{P(x\vert y)]} - \mathbb{E}_{Q(x)}\ln{P(y)}\\
+	=&\underbrace{D_{KL}[Q(x)\lvert\rvert P(x\vert y)]}_\text{Divergence} - \underbrace{\ln{P(y)}}_\text{Evidence} \numberthis \label{eq:fe:divergence:evidence}
 \end{align*}
 
 \begin{table}[H]
 	\begin{center}
 		\caption{Terminology for Variational Free Energy}\label{table:terms:FE}
-		\begin{tabular}{|l|l|}\hline
-			Accuracy&TBP\\ \hline
-			Complexity&TBP\\ \hline
-			Energy&$P \propto e^{-E}$\\ \hline
-			Entropy&TBP\\ \hline
+		\begin{tabular}{|l|l|p{8cm}|}\hline
+			Name&Symbol&Interpretation\\ \hline
+			Accuracy&&TBP\\ \hline
+			Complexity&&The \gls{gls:kl:divergence} measures the difference between P and Q\\ \hline
+			Divergence&&\\\hline
+			Energy&&$P \propto e^{-E}$\\ \hline
+			Entropy&$\mathbb{H}[Q(x)]$&This is the standard definition from \cite{shannon1949mathematical}\\ \hline
+			Evidence&&\\ \hline
 		\end{tabular}
 	\end{center}
 \end{table}
 
+\subsection{Expected Free Energy}
+This Section derives the equation of \cite[Section 2.6]{parr2022Active}, which defines Expected Free Energy.
 
-
-From \cite{friston2016therefore}
-\begin{align*}
-	F(s,a,r) =& E_q\big[L(x)\big]-H\big[q(\Psi\vert r)\big] \text{, where}\\
-	L(x) =& -\ln{p(\psi,s,a,r)}\\
-	F(s,a,r) =&  E_q\big[ -\ln{p(\psi,s,a,r)} - \ln{q(\Psi\vert r)}\big]
-\end{align*}
-
-From \cite{friston2022free}
-
-\begin{align*}
-	F\big(\pi(\tau)\big) =& E_q\big[\ln q\big(\eta(\tau)\big) - \ln p\big(\eta(\tau)\big) - \ln p\big(\pi(\tau)\vert\eta(\tau)\big)\big] \numberthis \label{eq:free:energy}
-\end{align*}
-
-We can rearrange \eqref{eq:free:energy} in several different ways.
-\begin{align*}
-	F\big(\pi(\tau)\big) =& E_q\big[\ln q\big(\eta(\tau)\big) - \ln p\big(\eta(\tau)\big) - \ln p\big(\pi(\tau)\vert\eta(\tau)\big)\big]\\
-	=& E_q\big[\ln q\big(\eta(\tau)\big)\big] - E_q \bigg[\ln \big[p\big(\eta(\tau)\big)  p\big(\pi(\tau)\vert\eta(\tau)\big)\big]\bigg]\\
-	=& E_q\big[\ln q\big(\eta(\tau)\big)\big] - E_q \bigg[\ln \big[  p\big(\pi(\tau),\eta(\tau)\big)\big]\bigg]\\
-	=&-\underbrace{H(q\big(\eta(\tau)\big))}_\text{Entropy}  \underbrace{- E_q \bigg[\ln \big[  p\big(\pi(\tau),\eta(\tau)\big)\big]\bigg]}_\text{Identified with Expected Energy in \cite{friston2022free}}
-\end{align*}
-This agrees with the thermodynamic definition of Helmholtz Free Energy $U-TS$, where $U$ is the enthalpy and $S$ the entropy, if we set the temperature $T=1$.
-\begin{align*}
-	F\big(\pi(\tau)\big) =& E_q\big[\ln q\big(\eta(\tau)\big) - \ln p\big(\eta(\tau)\big) - \ln p\big(\pi(\tau)\vert\eta(\tau)\big)\big]\\
-	=& E_q\big[\ln \frac{q\big(\eta(\tau)\big)}{p\big(\eta(\tau)\big)}   \big] - E_q \bigg[\ln \big[  p\big(\pi(\tau)\vert\eta(\tau)\big)\big]\bigg]\\
-	=& D_{KL}\big(q\big(\eta(\tau)\big)\vert\vert p\big(\eta(\tau)\big)\big)- E_q \bigg[\ln \big[  p\big(\pi(\tau)\vert\eta(\tau)\big)\big]\bigg]\\
-	\ge&- E_q \bigg[\ln \big[  p\big(\pi(\tau)\vert\eta(\tau)\big)\big]\bigg]
-\end{align*}
-
-\begin{align*}
-	F\big(\pi(\tau)\big) =& E_q\big[\ln q\big(\eta(\tau)\big) - \ln p\big(\eta(\tau)\big) - \ln p\big(\pi(\tau)\vert\eta(\tau)\big)\big]\\
-	=& E_q\big[\ln q\big(\eta(\tau)\big)  - \ln p\big(\pi(\tau)\vert\eta(\tau)\big)\big] +  E_q\big[- \ln p\big(\eta(\tau)\big)\big]\\
-	=& D_{KL}\big(q\big(\eta(\tau)\big)\vert\vert p\big(\pi(\tau)\vert\eta(\tau)\big)\big)+  E_q\big[- \ln p\big(\eta(\tau)\big)\big]
-\end{align*}
 
 \begin{appendices}
 	
@@ -258,7 +244,39 @@ This agrees with the thermodynamic definition of Helmholtz Free Energy $U-TS$, w
 		\end{align*}
 		
 	\end{proof}
-	
+From \cite{friston2016therefore}
+\begin{align*}
+	F(s,a,r) =& E_q\big[L(x)\big]-H\big[q(\Psi\vert r)\big] \text{, where}\\
+	L(x) =& -\ln{p(\psi,s,a,r)}\\
+	F(s,a,r) =&  E_q\big[ -\ln{p(\psi,s,a,r)} - \ln{q(\Psi\vert r)}\big]
+\end{align*}
+
+From \cite{friston2022free}
+
+\begin{align*}
+	F\big(\pi(\tau)\big) =& E_q\big[\ln q\big(\eta(\tau)\big) - \ln p\big(\eta(\tau)\big) - \ln p\big(\pi(\tau)\vert\eta(\tau)\big)\big] \numberthis \label{eq:free:energy}
+\end{align*}
+
+We can rearrange \eqref{eq:free:energy} in several different ways.
+\begin{align*}
+	F\big(\pi(\tau)\big) =& E_q\big[\ln q\big(\eta(\tau)\big) - \ln p\big(\eta(\tau)\big) - \ln p\big(\pi(\tau)\vert\eta(\tau)\big)\big]\\
+	=& E_q\big[\ln q\big(\eta(\tau)\big)\big] - E_q \bigg[\ln \big[p\big(\eta(\tau)\big)  p\big(\pi(\tau)\vert\eta(\tau)\big)\big]\bigg]\\
+	=& E_q\big[\ln q\big(\eta(\tau)\big)\big] - E_q \bigg[\ln \big[  p\big(\pi(\tau),\eta(\tau)\big)\big]\bigg]\\
+	=&-\underbrace{H(q\big(\eta(\tau)\big))}_\text{Entropy}  \underbrace{- E_q \bigg[\ln \big[  p\big(\pi(\tau),\eta(\tau)\big)\big]\bigg]}_\text{Identified with Expected Energy in \cite{friston2022free}}
+\end{align*}
+This agrees with the thermodynamic definition of Helmholtz Free Energy $U-TS$, where $U$ is the enthalpy and $S$ the entropy, if we set the temperature $T=1$.
+\begin{align*}
+	F\big(\pi(\tau)\big) =& E_q\big[\ln q\big(\eta(\tau)\big) - \ln p\big(\eta(\tau)\big) - \ln p\big(\pi(\tau)\vert\eta(\tau)\big)\big]\\
+	=& E_q\big[\ln \frac{q\big(\eta(\tau)\big)}{p\big(\eta(\tau)\big)}   \big] - E_q \bigg[\ln \big[  p\big(\pi(\tau)\vert\eta(\tau)\big)\big]\bigg]\\
+	=& D_{KL}\big(q\big(\eta(\tau)\big)\vert\vert p\big(\eta(\tau)\big)\big)- E_q \bigg[\ln \big[  p\big(\pi(\tau)\vert\eta(\tau)\big)\big]\bigg]\\
+	\ge&- E_q \bigg[\ln \big[  p\big(\pi(\tau)\vert\eta(\tau)\big)\big]\bigg]
+\end{align*}
+
+\begin{align*}
+	F\big(\pi(\tau)\big) =& E_q\big[\ln q\big(\eta(\tau)\big) - \ln p\big(\eta(\tau)\big) - \ln p\big(\pi(\tau)\vert\eta(\tau)\big)\big]\\
+	=& E_q\big[\ln q\big(\eta(\tau)\big)  - \ln p\big(\pi(\tau)\vert\eta(\tau)\big)\big] +  E_q\big[- \ln p\big(\eta(\tau)\big)\big]\\
+	=& D_{KL}\big(q\big(\eta(\tau)\big)\vert\vert p\big(\pi(\tau)\vert\eta(\tau)\big)\big)+  E_q\big[- \ln p\big(\eta(\tau)\big)\big]
+\end{align*}	
 	\section{Boolean Algebra}
 	We define the symmetric difference of two sets:
 	\begin{align*}
