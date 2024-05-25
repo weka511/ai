@@ -34,8 +34,15 @@
 \usepackage{thmtools}
 \usepackage{tocloft}
 \usepackage{url}
+
+\newcommand{\defeq}{\vcentcolon=}
 \newcommand\numberthis{\addtocounter{equation}{1}\tag{\theequation}}
 \newcommand{\stcomp}[1]{\widetilde{#1}}
+\DeclarePairedDelimiterX{\infdivx}[2]{(}{)}{%
+	#1\;\delimsize\|\;#2%
+}
+\newcommand{\infdiv}{D_{KL}\infdivx}
+\DeclarePairedDelimiter{\norm}{\lVert}{\rVert}
 \newtheorem{defn}{Definition}
 \newtheorem{thm}{Theorem}
 \newtheorem{lemma}[thm]{Lemma}
@@ -59,37 +66,49 @@
 \newglossaryentry{gls:helmholz}{
 	name={Helmholtz Decomposition},
 	description={Any well-behaved vector field can be decomposed into the sum of a longitudinal (diverging, non-curling, irrotational) vector field and a transverse (solenoidal, curling, rotational, non-diverging) vector field\cite{baird2012helmholtz}}}
+
+\newglossaryentry{gls:kl}{
+	name = {Kullback-Leibler Divergence},
+	description={A measure of the difference between two probability distributions
+	\begin{align*}
+		\infdiv{Q(x)}{P(x)}\defeq&\mathbb{E}_{Q(x)}[Q(x)-P(x)] \numberthis \label{eq:kl:divergence}
+	\end{align*}}
+}
+
 \maketitle
 
 \begin{abstract}
-This document collects my derivations of equations from Karl Fristons's work, specifically \cite{friston_free_2006,friston_free-energy_2009,friston_life_2013,friston2016therefore,friston_interesting_2021,friston2022free}. It is intended to help me understand the details of the Free Energy Principle.
+This document collects my derivations of equations from Karl Fristons's work, in order to help me understand the details of the Free Energy Principle.
 \end{abstract}
 
 \tableofcontents
 \listoftheorems
+\listoffigures
+\listoftables
 
 \section{Introduction}
+Table \ref{table:notation} shows how the notation used for Active Inference has changed durijg the period contained in Figure \ref{fig:timeline}. I have adopted the notation of \cite{parr2022Active}, since I expect it to be stable.
 
 \begin{figure}[H]
-	\caption{Timeline for Active Inference references}
+	\caption{Timeline for Active Inference references}\label{fig:timeline}
 	\begin{chronology}[5]{2002}{2024}{18cm}[\textwidth]
 		\event{2003}{\cite{beal2003variational}Variational algorithms for approximate Bayesian inference}
 		\event{2006}{\color{blue}\cite{friston_free_2006}A Free Energy Principle for the brain}
 		\event{2009}{\color{blue}\cite{friston_free-energy_2009}The free-energy principle: a rough guide to the brain}
 		\event{2013}{\color{blue}\cite{friston_life_2013}Life as we Know it}
 		\event{2016}{\color{blue}\cite{friston2016therefore}I am therefore I think}
-		\event{2017}{\cite{Blei2017}Variational inference: A review for statisticians}
+		\event{2017}{\cite{blei2017}Variational inference: A review for statisticians}
 		\event{2021}{\color{blue}\cite{friston_interesting_2021}Some Interesting Observations on the Free Energy Principle}
 		\event{\decimaldate{1}{1}{2022}}{\color{blue}\cite{friston2022free}The free energy principle made simpler but not too simple}
-		\event{\decimaldate{30}{10}{2022}}{\color{blue}\cite{Parr2022Active}Active Inference: The Free Energy Principle in Mind, Brain and Behavior}
+		\event{\decimaldate{30}{10}{2022}}{\color{blue}\cite{parr2022Active}Active Inference: The Free Energy Principle in Mind, Brain and Behavior}
 	\end{chronology}
 \end{figure}
 
 \begin{table}[H]
 	\begin{center}
-		\caption{Notation for Active Inference references}
+		\caption{Notation for Active Inference references}\label{table:notation}
 		\begin{tabular}{|l|c|c|c|c|c|}\hline
-			&\cite{beal2003variational}&\cite{friston_life_2013}&\cite{friston2016therefore}&\cite{Blei2017}&\cite{friston2022free,Parr2022Active}\\ \hline
+			&\cite{beal2003variational}&\cite{friston_life_2013}&\cite{friston2016therefore}&\cite{blei2017}&\cite{friston2022free,parr2022Active}\\ \hline
 			External State&x&$\Psi$&$\Psi$&z&$\eta$\\ \hline
 			Internal State&&$\lambda$&r&&$\mu$\\ \hline
 			Sensory State&y&s&s&x&s\\ \hline
@@ -103,77 +122,35 @@ This document collects my derivations of equations from Karl Fristons's work, sp
 	\end{center}
 \end{table}
 
-\section{Fokker-Planck Equation}
 
-\begin{thm}[Fokker-Planck equation]
-	If $\vec{x}$ satisfies the \gls{gls:sde}
-	\begin{align*}
-		\dot{\vec{x}} =& f(\vec{x}) + \omega \numberthis \label{eq:dynamics}
-	\end{align*}
-	then the probability distribution over states is given by:
-	\begin{align*}
-		\dot{p}(\vec{x}\vert m) =& \nabla \cdot \Gamma \nabla p -\nabla \cdot(f p) \numberthis \label{eq:fokker:planck}
-	\end{align*}
-	See \cite[(2.2)]{friston_life_2013} and  \cite[Chapter 33]{cvitanovic2005chaos}.
-\end{thm}
-
-\begin{proof}
-	\cite[Section 33.3]{cvitanovic2005chaos}
-\end{proof}
-
-\cite{friston_life_2013,friston2012free}
-
-\begin{thm}[Equilibrium distribution for Fokker-Planck]
-	The equilibrium distribution for \eqref{eq:fokker:planck} is given by:
-	\begin{align*}
-		p(\vec{x}\vert m) =& \exp \big(-G(\vec{x})\big) \text{, where $G$ satisfies}\\
-		f =& -(\Gamma + R) \cdot \nabla G \text{, where} \numberthis \label{eq:f:Gamma:R}\\
-		\nabla.R =& 0 \text{ and R antisymmetric}
-	\end{align*}
-	
-\end{thm}
-\begin{proof}
-The equilibrium distribution of \eqref{eq:fokker:planck} satisfies:
-	\begin{align*}
-		\dot{p}(\vec{x}\vert m) =&0 \text{, i.e.}\\
-		\nabla \cdot (\Gamma \nabla p -f p)=&0 \numberthis \label{eq:fokker:plank:eq}
-	\end{align*}
-	Since $	p(\vec{x}\vert m) > 0$, we can define:
-	\begin{align*}
-		G(x) =& - \ln{}p(\vec{x}\vert m) \text{, so}\\
-		p(\vec{x}\vert m) =& \exp \big(-G(\vec{x})\big) \text{. Then}\\
-		\nabla p =& - \exp \big(-G(\vec{x})\big) \nabla G(\vec{x}) \numberthis \label{eq:grad:p}\\
-		=& - p \nabla G(\vec{x})
-	\end{align*}
-	 whence \eqref{eq:fokker:plank:eq} becomes
-	\begin{align*}
-		-\nabla \cdot [(\Gamma \nabla G +f)p]=&0\\
-		(\Gamma \nabla G +f)p =& \nabla \times \vec{A} \text{, for some $\vec{A}$}\\
-		=& -p \vec{R} \cdot \nabla G \text{, for some $R$, whence}\\
-		f =& -(\Gamma + R) \cdot \nabla G \text{, the \gls{gls:helmholz}-- \cite[(2.3)]{friston_life_2013}}
-	\end{align*}
-\end{proof}
-\begin{proof}[Alternative proof using indices.]
-	Equation \eqref{eq:f:Gamma:R} expands as 
-	\begin{align*}
-		f_i =& - \sum_{j}\big(\Gamma_{ij}+R_{ij}\big)\partial_j G \text{, whence}\\
-		\big(\Gamma\nabla p - \vec{f} p\big)_i =& \sum_{j}\big[\Gamma_{ij}\partial_j p\big] -  f_i p\\
-		=& \sum_{j}\big[\Gamma_{ij}\partial_j p\big] + p\sum_{j}\big(\Gamma_{ij}+R_{ij}\big)\partial_j G  \\
-		=& - \cancel{\sum_{j}\big[\Gamma_{ij}p\partial_j G\big]} + p\sum_{j}\big(\cancel{\Gamma_{ij}}+R_{ij}\big)\partial_j G \\
-		=& p\sum_{j}R_{ij}\partial_j G
-	\end{align*}
-	Calculating the divergence:
-	\begin{align*}
-		\nabla \cdot \big(\Gamma\nabla p - \vec{f} p\big) =& \sum_{i,j} \partial_i \big[p R_{ij}\partial_j G\big]\\
-		=& \sum_{i,j} \big[(\partial_i p) R_{ij}\partial_j G + p (\partial_i  R_{ij})\partial_j G +\underbrace{ p R_{ij}(\partial_i \partial_j G)}_{=0}\big]\\
-		=& \sum_{i,j} \big[-\underbrace{p (\partial_i G) R_{ij}\partial_j G}_{=0} + p (\partial_i  R_{ij})\partial_j G \big] \\
-		=& p \sum_{i,j} \underbrace{(\partial_i  R_{ij})}_{\nabla\cdot R=0}\partial_j G\\
-		=& 0
-	\end{align*}
-
-\end{proof}
 
 \section{Free Energy}
+
+\subsection{Variational Free Energy}
+
+Variational Free Energy is defined in \cite{parr2022Active}
+
+\begin{align*}
+	F[Q,y] \defeq&\underbrace{ -\mathbb{E}_{Q(x)}[\ln{P(y,x)}] }_\text{Energy--Table \ref{table:terms:FE}}- \underbrace{\mathbb{H}[Q(x)]}_\text{Entropy--Table \ref{table:terms:FE}} \text{, where}\\
+	\mathbb{H}[Q(x)] \defeq& - \mathbb{E}_{Q(x)} [Q(x)] \text{, whence}\\
+	F[Q,y] = & -\mathbb{E}_{Q(x)}[\ln{P(y,x)}] + \mathbb{E}_{Q(x)}[Q(x)]\\
+	=&-\mathbb{E}_{Q(x)}[\ln{P(y\vert x)} + \ln{P(x)}] + \mathbb{E}_{Q(x)}[Q(x)]\\
+	=&\mathbb{E}_{Q(x)}[Q(x)-P(x)] -\mathbb{E}_{Q(x)}[\ln{P(y\vert x)}]\\
+	 =&\underbrace{ D_{KL}[Q(x)\lvert\rvert P(x)]}_\text{Complexity--Table \ref{table:terms:FE}} - \underbrace{\mathbb{E}_{Q(x)}[\ln{P(y\vert x)}]}_\text{Accuracy--Table \ref{table:terms:FE}} 
+\end{align*}
+
+\begin{table}[H]
+	\begin{center}
+		\caption{Terminology for Variational Free Energy}\label{table:terms:FE}
+		\begin{tabular}{|l|l|}\hline
+			Accuracy&TBP\\ \hline
+			Complexity&TBP\\ \hline
+			Energy&$P \propto e^{-E}$\\ \hline
+			Entropy&TBP\\ \hline
+		\end{tabular}
+	\end{center}
+\end{table}
+
 
 
 From \cite{friston2016therefore}
@@ -211,6 +188,77 @@ This agrees with the thermodynamic definition of Helmholtz Free Energy $U-TS$, w
 \end{align*}
 
 \begin{appendices}
+	
+	\section{Fokker-Planck Equation}
+	
+	\begin{thm}[Fokker-Planck equation]
+		If $\vec{x}$ satisfies the \gls{gls:sde}
+		\begin{align*}
+			\dot{\vec{x}} =& f(\vec{x}) + \omega \numberthis \label{eq:dynamics}
+		\end{align*}
+		then the probability distribution over states is given by:
+		\begin{align*}
+			\dot{p}(\vec{x}\vert m) =& \nabla \cdot \Gamma \nabla p -\nabla \cdot(f p) \numberthis \label{eq:fokker:planck}
+		\end{align*}
+		See \cite[(2.2)]{friston_life_2013} and  \cite[Chapter 33]{cvitanovic2005chaos}.
+	\end{thm}
+	
+	\begin{proof}
+		\cite[Section 33.3]{cvitanovic2005chaos}
+	\end{proof}
+	
+	\cite{friston_life_2013,friston2012free}
+	
+	\begin{thm}[Equilibrium distribution for Fokker-Planck]
+		The equilibrium distribution for \eqref{eq:fokker:planck} is given by:
+		\begin{align*}
+			p(\vec{x}\vert m) =& \exp \big(-G(\vec{x})\big) \text{, where $G$ satisfies}\\
+			f =& -(\Gamma + R) \cdot \nabla G \text{, where} \numberthis \label{eq:f:Gamma:R}\\
+			\nabla.R =& 0 \text{ and R antisymmetric}
+		\end{align*}
+		
+	\end{thm}
+	\begin{proof}
+		The equilibrium distribution of \eqref{eq:fokker:planck} satisfies:
+		\begin{align*}
+			\dot{p}(\vec{x}\vert m) =&0 \text{, i.e.}\\
+			\nabla \cdot (\Gamma \nabla p -f p)=&0 \numberthis \label{eq:fokker:plank:eq}
+		\end{align*}
+		Since $	p(\vec{x}\vert m) > 0$, we can define:
+		\begin{align*}
+			G(x) =& - \ln{}p(\vec{x}\vert m) \text{, so}\\
+			p(\vec{x}\vert m) =& \exp \big(-G(\vec{x})\big) \text{. Then}\\
+			\nabla p =& - \exp \big(-G(\vec{x})\big) \nabla G(\vec{x}) \numberthis \label{eq:grad:p}\\
+			=& - p \nabla G(\vec{x})
+		\end{align*}
+		whence \eqref{eq:fokker:plank:eq} becomes
+		\begin{align*}
+			-\nabla \cdot [(\Gamma \nabla G +f)p]=&0\\
+			(\Gamma \nabla G +f)p =& \nabla \times \vec{A} \text{, for some $\vec{A}$}\\
+			=& -p \vec{R} \cdot \nabla G \text{, for some $R$, whence}\\
+			f =& -(\Gamma + R) \cdot \nabla G \text{, the \gls{gls:helmholz}-- \cite[(2.3)]{friston_life_2013}}
+		\end{align*}
+	\end{proof}
+	\begin{proof}[Alternative proof using indices.]
+		Equation \eqref{eq:f:Gamma:R} expands as 
+		\begin{align*}
+			f_i =& - \sum_{j}\big(\Gamma_{ij}+R_{ij}\big)\partial_j G \text{, whence}\\
+			\big(\Gamma\nabla p - \vec{f} p\big)_i =& \sum_{j}\big[\Gamma_{ij}\partial_j p\big] -  f_i p\\
+			=& \sum_{j}\big[\Gamma_{ij}\partial_j p\big] + p\sum_{j}\big(\Gamma_{ij}+R_{ij}\big)\partial_j G  \\
+			=& - \cancel{\sum_{j}\big[\Gamma_{ij}p\partial_j G\big]} + p\sum_{j}\big(\cancel{\Gamma_{ij}}+R_{ij}\big)\partial_j G \\
+			=& p\sum_{j}R_{ij}\partial_j G
+		\end{align*}
+		Calculating the divergence:
+		\begin{align*}
+			\nabla \cdot \big(\Gamma\nabla p - \vec{f} p\big) =& \sum_{i,j} \partial_i \big[p R_{ij}\partial_j G\big]\\
+			=& \sum_{i,j} \big[(\partial_i p) R_{ij}\partial_j G + p (\partial_i  R_{ij})\partial_j G +\underbrace{ p R_{ij}(\partial_i \partial_j G)}_{=0}\big]\\
+			=& \sum_{i,j} \big[-\underbrace{p (\partial_i G) R_{ij}\partial_j G}_{=0} + p (\partial_i  R_{ij})\partial_j G \big] \\
+			=& p \sum_{i,j} \underbrace{(\partial_i  R_{ij})}_{\nabla\cdot R=0}\partial_j G\\
+			=& 0
+		\end{align*}
+		
+	\end{proof}
+	
 	\section{Boolean Algebra}
 	We define the symmetric difference of two sets:
 	\begin{align*}
@@ -233,7 +281,7 @@ This agrees with the thermodynamic definition of Helmholtz Free Energy $U-TS$, w
 		A \triangle B =& \big(A \cup B\big) \bigcap \big(\stcomp{B} \cup\stcomp{A}\big) \numberthis \label{eq:symm:diff:without:diff}
 	\end{align*}
 
-	\begin{thm}
+	\begin{thm}[Semi-group property for $\triangle$]
 		Sets form a semi-group with identity under $\triangle$.
 	\end{thm}
 	\begin{proof}
@@ -263,10 +311,15 @@ This agrees with the thermodynamic definition of Helmholtz Free Energy $U-TS$, w
 		\begin{align*}
 			A \setminus B =& \big[\big(S_A \cancel{\cup S_{AB}} \cup S_{AC} \cup \bcancel{S_{ABC}}\big) - \big(S_B \cup S_{BC} \cancel{\cup S_{BA}} \bcancel{\cup S_{BCA}}\big)\big]\\
 			=& \big[\big(S_A  \cup S_{AC}\big) - \big(S_B \cup S_{BC} \big)\big]\\
-			B \setminus A =& \big[\big(S_B  \cup S_{BC}\big) - \big(S_A \cup S_{AC} \big)\big]
+			B \setminus A =& \big[\big(S_B  \cup S_{BC}\big) - \big(S_A \cup S_{AC} \big)\big]\\
+			A \triangle B =& \bigg[\big[\big(S_A  \cup S_{AC}\big) - \big(S_B \cup S_{BC} \big)\big] \bigcup \big[\big(S_B  \cup S_{BC}\big) - \big(S_A \cup S_{AC} \big)\big]\bigg]
+		\end{align*}
+		
+		\begin{align*}
+					A \triangle B 32=& \big(A \cap \stcomp{B}\big) \bigcup \big(B \cap \stcomp{A}\big)
 		\end{align*}
 	\end{proof}
-	\begin{thm}
+	\begin{thm}[$	A \triangle C =\big(A\triangle B\big) \triangle \big(B\triangle C\big)$]
 		\begin{align*}
 			\forall& A,B,C\\
 			A \triangle C =& \big(A\triangle B\big) \triangle \big(B\triangle C\big) \numberthis \label{eq:symm:diff:3}
@@ -280,7 +333,7 @@ This agrees with the thermodynamic definition of Helmholtz Free Energy $U-TS$, w
 			=&A \triangle C
 		\end{align*}
 	\end{proof}
-	\begin{cor}
+	\begin{cor}[$A \triangle C \subseteq \big(A\triangle B\big) \bigcup \big(B\triangle C\big)$]
 			\begin{align*}
 			\forall& A,B,C\\
 			A \triangle C \subseteq& \big(A\triangle B\big) \bigcup \big(B\triangle C\big)
