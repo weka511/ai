@@ -64,6 +64,7 @@
 \begin{document}
 
 \newabbreviation{gls:kl}{KL}{Kullbak-Leibler}
+\newabbreviation{gls:ae}{a.e.}{Almost Everywhere}
 	
 \newglossaryentry{gls:sde}{
 	name={Stochastic Differential Equation},
@@ -94,7 +95,8 @@ This document collects my derivations of equations from Karl Friston's work, in 
 \listoftables
 
 \section{Introduction}
-Table \ref{table:notation} shows how the notation used for Active Inference has changed durijg the period contained in Figure \ref{fig:timeline}. I have adopted the notation of \cite{parr2022Active}, since I expect it to be stable.
+
+Table \ref{table:notation} shows changes to notation during the period shown in Figure \ref{fig:timeline}--the timeline of \cite{beal2003variational,friston_free_2006,friston_free-energy_2009,friston_life_2013,friston2016therefore,blei2017,friston_interesting_2021,friston2022free,parr2022Active}. I have adopted the notation of \cite{parr2022Active}, since I expect it to be stable.
 
 \begin{figure}[H]
 	\caption{Timeline for Active Inference references}\label{fig:timeline}
@@ -124,7 +126,7 @@ Table \ref{table:notation} shows how the notation used for Active Inference has 
 			Blanket States&&&&&$b(s,a)$\\ \hline
 			Particular States&&&&&$\pi(b,\mu)$\\ \hline
 			Ergodic Density&p&$p(\psi,s,a,\lambda\vert m)$&$p(\psi,s,a,r\vert m)$&p&p\\ \hline
-			Recognition Density or Variational Density&q&$q(\psi\vert \mu)$&$q(\psi\vert \mu)$&q&q\\ \hline
+			Recognition or Variational Density&q&$q(\psi\vert \mu)$&$q(\psi\vert \mu)$&q&q\\ \hline
 		\end{tabular}
 	\end{center}
 \end{table}
@@ -132,7 +134,7 @@ Table \ref{table:notation} shows how the notation used for Active Inference has 
 
 
 \section{Free Energy}
-This section makes use of the following Theorem.
+This section makes use of the following Theorem\cite{parr2022Active}.
 
 \begin{thm}[Bayes' Rule]
 	\begin{align*}
@@ -142,41 +144,53 @@ This section makes use of the following Theorem.
 
 \subsection{Variational Free Energy}
 
-This Section derives the equation of \cite[Section 2.5]{parr2022Active}, which defines Variational Free Energy. The annotations in \eqref{eq:fe},\eqref{eq:fe:complexity:accuracy} and \eqref{eq:fe:divergence:evidence} are explained in Table \ref{table:terms:FE}.
-
+We derive the equation of \cite[Section 2.5]{parr2022Active}, which defines Variational Free Energy. 
 \begin{align*}
 	F[Q,y] \defeq&\underbrace{ -\mathbb{E}_{Q(x)}[\ln{P(y,x)}] }_\text{Energy}- \underbrace{\mathbb{H}[Q(x)]}_\text{Entropy} \text{, where} \numberthis \label{eq:fe}\\
-	\mathbb{H}[Q(x)] \defeq& - \mathbb{E}_{Q(x)} [\ln{Q(x)}] \text{, \cite{shannon1949mathematical}, whence}\\
+	\mathbb{H}[Q(x)] \defeq& - \mathbb{E}_{Q(x)} [\ln{Q(x)}] \text{, the Entropy defined in \cite{shannon1949mathematical}}
+\end{align*}
+\begin{enumerate}
+	\item Energy--$P \propto e^{-E}$
+	\item Entropy
+\end{enumerate}
+\begin{align*}
 	F[Q,y] = & -\mathbb{E}_{Q(x)}[\ln{P(y,x)}] + \mathbb{E}_{Q(x)}[\ln{Q(x)}]\numberthis \label{eq:fe:int}\\
 	=&-\mathbb{E}_{Q(x)}[\ln{P(y\vert x)} + \ln{P(x)}] + \mathbb{E}_{Q(x)}[\ln{Q(x)}] \text{, from \eqref{eq:bayes}} \\
 	=&\mathbb{E}_{Q(x)}[\ln{Q(x)}-\ln{P(x)}] -\mathbb{E}_{Q(x)}[\ln{P(y\vert x)}]\\
-	 =&\underbrace{ D_{KL}[Q(x)\lvert\rvert P(x)]}_\text{Complexity} - \underbrace{\mathbb{E}_{Q(x)}[\ln{P(y\vert x)}]}_\text{Accuracy}\text{, using \eqref{eq:kl:divergence}} \numberthis \label{eq:fe:complexity:accuracy}
+	=&\underbrace{ D_{KL}[Q(x)\lvert\rvert P(x)]}_\text{Complexity} - \underbrace{\mathbb{E}_{Q(x)}[\ln{P(y\vert x)}]}_\text{Accuracy}\text{, using \eqref{eq:kl:divergence}} \numberthis \label{eq:fe:complexity:accuracy}
 \end{align*}
+\begin{enumerate}
+	\item Complexity--The \gls{gls:kl:divergence} measures the difference between P and Q
+	\item Accuracy
+\end{enumerate}
 Rearranging \eqref{eq:fe:int} and applying  \eqref{eq:bayes}:
 \begin{align*}
 	F[Q,y] =& -\mathbb{E}_{Q(x)}[\ln{P(x\vert y)} + \ln{P(y)}] + \mathbb{E}_{Q(x)}[\ln{Q(x)}]\\
 	=& \mathbb{E}_{Q(x)}[\ln{Q(x)}-\ln{P(x\vert y)]} - \mathbb{E}_{Q(x)}\ln{P(y)}\\
-	=&\underbrace{D_{KL}[Q(x)\lvert\rvert P(x\vert y)]}_\text{Divergence} - \underbrace{\ln{P(y)}}_\text{Evidence} \numberthis \label{eq:fe:divergence:evidence}
+	=&\underbrace{D_{KL}[Q(x)\lvert\rvert P(x\vert y)]}_\text{Divergence} - \underbrace{\ln{P(y)}}_\text{Evidence} \numberthis \label{eq:fe:divergence:evidence}\\
+	\ge& -\ln{P(y)} \text{, from Theorem \ref{thm:kl:nn}} \numberthis \label{eq:evidence:bound}
 \end{align*}
 
-\begin{table}[H]
-	\begin{center}
-		\caption{Terminology for Variational Free Energy}\label{table:terms:FE}
-		\begin{tabular}{|l|l|p{8cm}|}\hline
-			Name&Symbol&Interpretation\\ \hline
-			Accuracy&&TBP\\ \hline
-			Complexity&&The \gls{gls:kl:divergence} measures the difference between P and Q\\ \hline
-			Divergence&&\\\hline
-			Energy&&$P \propto e^{-E}$\\ \hline
-			Entropy&$\mathbb{H}[Q(x)]$&This is the standard definition from \cite{shannon1949mathematical}\\ \hline
-			Evidence&&\\ \hline
-		\end{tabular}
-	\end{center}
-\end{table}
+\begin{enumerate}
+	\item Divergence
+	\item Evidence
+\end{enumerate}
 
+\begin{thm}[\gls{gls:kl} is non-negative]\label{thm:kl:nn}
+	\begin{enumerate}
+		\leavevmode
+		\item 	$\infdiv{Q(x)}{P(x)}\ge 0$
+		\item 	$\infdiv{Q(x)}{P(x)}= 0 \iff Q(x)=P(x)$ \gls{gls:ae}
+	\end{enumerate}
+\end{thm}
 \subsection{Expected Free Energy}
-This Section derives the equation of \cite[Section 2.6]{parr2022Active}, which defines Expected Free Energy.
+This Section derives the equations of \cite[Section 2.6]{parr2022Active}. We use $\tilde{x}$ to denote a sequence, and $\pi$ a policy.
 
+Expected Free Energy is defined in \cite[Section 2.6]{parr2022Active} as:
+\begin{align*}
+	G(\pi) \defeq& -\underbrace{\mathbb{E}_{Q(\tilde{x},\tilde{y},\vert \pi)}\big[\infdiv{Q(\tilde{x},\tilde{y},\vert \pi)}{Q(\tilde{x}.\vert \pi)}\big]}_\text{Information gain}  - \underbrace{\mathbb{E}_{Q(\tilde{y},\vert \pi)}\big[\ln{P(\tilde{y}\vert C)}\big]}_\text{Pragmatic value}\\
+	Q(\tilde{x},\tilde{y},\vert \pi) \defeq& Q(\tilde{x}\vert \pi)P(\tilde{y}\vert\tilde{x})
+\end{align*}
 
 \begin{appendices}
 	
