@@ -116,17 +116,17 @@ Table \ref{table:notation} shows changes to notation during the period shown in 
 \begin{table}[H]
 	\begin{center}
 		\caption{Notation for Active Inference references}\label{table:notation}
-		\begin{tabular}{|l|c|c|c|c|c|}\hline
-			&\cite{beal2003variational}&\cite{friston_life_2013}&\cite{friston2016therefore}&\cite{blei2017}&\cite{friston2022free,parr2022Active}\\ \hline
-			External State&x&$\Psi$&$\Psi$&z&$\eta$\\ \hline
-			Internal State&&$\lambda$&r&&$\mu$\\ \hline
-			Sensory State&y&s&s&x&s\\ \hline
-			Action State&&a&a&&a\\ \hline
-			Autonomous States&&&&& $\alpha(a,\mu)$\\\hline
-			Blanket States&&&&&$b(s,a)$\\ \hline
-			Particular States&&&&&$\pi(b,\mu)$\\ \hline
-			Ergodic Density&p&$p(\psi,s,a,\lambda\vert m)$&$p(\psi,s,a,r\vert m)$&p&p\\ \hline
-			Recognition or Variational Density&q&$q(\psi\vert \mu)$&$q(\psi\vert \mu)$&q&q\\ \hline
+		\begin{tabular}{|l|c|c|c|c|c|c|}\hline
+			&\cite{beal2003variational}&\cite{friston_life_2013}&\cite{friston2016therefore}&\cite{blei2017}&\cite{friston2022free}&\cite{parr2022Active}\\ \hline
+			External State&x&$\Psi$&$\Psi$&z&$\eta$&$\eta$\\ \hline
+			Internal State&&$\lambda$&r&&$\mu$&$\mu$\\ \hline
+			Sensory State&y&s&s&x&s&s\\ \hline
+			Action State&&a&a&&a&a\\ \hline
+			Autonomous States&&&&& $\alpha(a,\mu)$&$\alpha(a,\mu)$\\\hline
+			Blanket States&&&&&$b(s,a)$&$b(s,a)$\\ \hline
+			Particular States&&&&&$\pi(b,\mu)$&$\pi(b,\mu)$\\ \hline
+			Ergodic Density&p&$p(\psi,s,a,\lambda\vert m)$&$p(\psi,s,a,r\vert m)$&p&p&P\\ \hline
+			Recognition Density&q&$q(\psi\vert \mu)$&$q(\psi\vert \mu)$&q&q&Q\\ \hline
 		\end{tabular}
 	\end{center}
 \end{table}
@@ -185,7 +185,7 @@ Rearranging \eqref{eq:fe:int} and applying  \eqref{eq:bayes}:
 \end{thm}
 \subsection{Expected Free Energy}
 This Section derives the equations of \cite[Section 2.6]{parr2022Active}. We use $\tilde{x}$ to denote a sequence, and $\pi$ a policy.
-
+\cite{millidge2021whence}
 Expected Free Energy is defined in \cite[Section 2.6]{parr2022Active} as:
 \begin{align*}
 	G(\pi) \defeq& -\underbrace{\mathbb{E}_{Q(\tilde{x},\tilde{y},\vert \pi)}\big[\infdiv{Q(\tilde{x},\tilde{y},\vert \pi)}{Q(\tilde{x}.\vert \pi)}\big]}_\text{Information gain}  - \underbrace{\mathbb{E}_{Q(\tilde{y},\vert \pi)}\big[\ln{P(\tilde{y}\vert C)}\big]}_\text{Pragmatic value}\\
