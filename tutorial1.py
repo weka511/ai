@@ -15,7 +15,10 @@
 # You should have received a copy of the GNU General Public License
 # along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.
 
-'''Tutorial 1: Active inference from scratch'''
+'''
+    Tutorial 1: Active inference from scratch
+    https://pymdp-rtd.readthedocs.io/en/latest/notebooks/active_inference_from_scratch.html
+'''
 
 
 from argparse import ArgumentParser
@@ -28,7 +31,6 @@ from matplotlib.pyplot import figure, show
 import seaborn as sns
 from pymdp import utils
 
-# Local application/library specific imports.
 
 def plot_likelihood(matrix, xlabels = list(range(9)), ylabels = list(range(9)), title_str = 'Likelihood distribution (A)',ax=None):
     '''
@@ -53,7 +55,7 @@ def plot_grid(grid_locations, num_x = 3, num_y = 3,ax=None ):
     sns.set(font_scale=1.5)
     sns.heatmap(grid_heatmap, annot=True, cbar = False, fmt='.0f', cmap='crest',ax=ax)
 
-def plot_point_on_grid(state_vector, grid_locations):
+def plot_point_on_grid(state_vector, grid_locations,ax=None):
     '''
     Plots the current location of the agent on the grid world
     '''
@@ -61,7 +63,7 @@ def plot_point_on_grid(state_vector, grid_locations):
     y, x = grid_locations[state_index]
     grid_heatmap = np.zeros((3,3))
     grid_heatmap[y,x] = 1.0
-    sns.heatmap(grid_heatmap, cbar = False, fmt='.0f')
+    sns.heatmap(grid_heatmap, cbar = False, fmt='.0f',ax=ax)
 
 def plot_beliefs(belief_dist, title_str='',ax=None):
     '''
@@ -75,25 +77,60 @@ def plot_beliefs(belief_dist, title_str='',ax=None):
     ax.set_xticks(range(belief_dist.shape[0]))
     ax.set_title(title_str)
 
-
-if __name__=='__main__':
-    rc('font',**{'family':'serif','serif':['Palatino']})
-    rc('text', usetex=True)
+def parse_args():
     parser = ArgumentParser(__doc__)
     parser.add_argument('--seed',type=int,default=None,help='Seed for random number generator')
     parser.add_argument('--show', default=False, action='store_true', help='Controls whether plot will be displayed')
     parser.add_argument('--figs', default='./figs',                   help = 'Location for storing plot files')
-    args = parser.parse_args()
+    return parser.parse_args()
 
+def create_B_matrix( actions = ["UP", "DOWN", "LEFT", "RIGHT", "STAY"]):
+    B = np.zeros( (len(grid_locations), len(grid_locations), len(actions)) )
+    for action_id, action_label in enumerate(actions):
+        for curr_state, grid_location in enumerate(grid_locations):
+            y, x = grid_location
+            match action_label:
+                case "UP":
+                    next_y = y - 1 if y > 0 else y
+                    next_x = x
+                case  "DOWN":
+                    next_y = y + 1 if y < 2 else y
+                    next_x = x
+                case "LEFT":
+                    next_x = x - 1 if x > 0 else x
+                    next_y = y
+                case "RIGHT":
+                    next_x = x + 1 if x < 2 else x
+                    next_y = y
+                case  "STAY":
+                    next_x = x
+                    next_y = y
+            new_location = (next_y, next_x)
+            next_state = grid_locations.index(new_location)
+            B[next_state, curr_state, action_id] = 1.0
+
+    return B,actions
+
+if __name__=='__main__':
+    args = parse_args()
     rng = np.random.default_rng(args.seed)
-    fig = figure()
+    fig = figure(figsize=(12,12))
+    rc('font',**{'family':'serif','serif':['Palatino']})
+    rc('text', usetex=True)
+    n_rows = 3
+    n_columns = 3
 
+    #  create a simple categorical distribution
     my_categorical = rng.random(size=3)
-    my_categorical = utils.norm_dist(my_categorical) # normalizes the distribution so it integrates to 1.0
+    my_categorical = utils.norm_dist(my_categorical)
 
     sampled_outcome = utils.sample(my_categorical)
-    plot_beliefs(my_categorical, title_str = 'A random (unconditional) Categorical distribution',ax=fig.add_subplot(2,2,1))
+    plot_beliefs(my_categorical, title_str = f'Random categorical distribution, sample={sampled_outcome}',
+                 ax = fig.add_subplot(n_rows,n_columns,1))
 
+    # Now let’s move onto conditional categorical distributions or likelihoods,
+    # i.e. how we represent the distribution of one discrete random variable X,
+    # conditioned on the settings of another discrete random variable Y.
     p_x_given_y = rng.random((3, 4))
     p_x_given_y = utils.norm_dist(p_x_given_y)
     print(p_x_given_y[:,0])
@@ -111,12 +148,53 @@ if __name__=='__main__':
     E_x_wrt_y = p_x_given_y.dot(p_y)
     print(E_x_wrt_y)
     print(f'Integral: {E_x_wrt_y.sum().round(3)}')
+
+    # A simple environment: Grid-world
+    # Create  the grid locations in the form of a list of (Y, X) tuples
     grid_locations = list(product(range(3), repeat = 2))
-    plot_grid(grid_locations,ax=fig.add_subplot(2,2,2))
+    plot_grid(grid_locations,ax=fig.add_subplot(n_rows,n_columns,2))
+
     n_states = len(grid_locations)
     n_observations = len(grid_locations)
+
+    # The A matrix or $A=P(o|s)
+    # Create an umambiguous or 'noise-less' mapping between hidden states and observations
     A = np.eye(n_observations, n_states)
-    plot_likelihood(A, title_str = 'A matrix or $P(o|s)$',ax=fig.add_subplot(2,2,3))
+    plot_likelihood(A, title_str = '$A=P(o|s)$',ax=fig.add_subplot(n_rows,n_columns,3))
+    A_noisy = A.copy()
+    A_noisy[0,0] = 1.0/3.0
+    A_noisy[1,0] = 1.0/3.0
+    A_noisy[3,0] = 1.0/3.0
+    plot_likelihood(A_noisy, title_str = 'Blurred A matrix',ax=fig.add_subplot(n_rows,n_columns,4))
+
+    my_A_noisy = A_noisy.copy()
+
+    # locations 3 and 7 are the nearest neighbours to location 6
+    my_A_noisy[3,6] = 1.0 / 3.0
+    my_A_noisy[6,6] = 1.0 / 3.0
+    my_A_noisy[7,6] = 1.0 / 3.0
+    plot_likelihood(my_A_noisy, title_str = 'Noisy A matrix',
+                    ax=fig.add_subplot(n_rows,n_columns,5))
+
+    B,actions = create_B_matrix()
+
+    starting_location = (1,0)
+    state_index = grid_locations.index(starting_location)
+    starting_state = utils.onehot(state_index, n_states)
+    plot_point_on_grid(starting_state, grid_locations, ax=fig.add_subplot(n_rows,n_columns,6))
+
+    plot_beliefs(starting_state, "Categorical distribution over the starting state", ax=fig.add_subplot(n_rows,n_columns,7))
+
+    right_action_idx = actions.index("RIGHT")
+    next_state = B[:,:, right_action_idx].dot(starting_state) # input the indices to the B matrix
+    plot_point_on_grid(next_state, grid_locations, ax=fig.add_subplot(n_rows,n_columns,8))
+
+    prev_state = next_state.copy()
+    down_action_index = actions.index("DOWN")
+    next_state = B[:,:,down_action_index].dot(prev_state)
+    plot_point_on_grid(next_state, grid_locations, ax=fig.add_subplot(n_rows,n_columns,9))
+
+    fig.suptitle('Tutorial 1: Active inference from scratch')
     fig.tight_layout()
     fig.savefig(join(args.figs,Path(__file__).stem))
 
