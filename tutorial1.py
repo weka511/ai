@@ -25,6 +25,7 @@ from argparse import ArgumentParser
 from itertools import product
 from os.path  import join
 from pathlib  import Path
+from warnings import warn
 import numpy as np
 from matplotlib import rc
 from matplotlib.pyplot import figure, show
@@ -44,7 +45,10 @@ class AxisIterator:
         return self
 
     def __next__(self):
-        self.seq += 1
+        if self.seq < self.n_rows*self.n_columns:
+            self.seq += 1
+        else:
+            warn('Too many subplots')
         return self.fig.add_subplot(self.n_rows,self.n_columns,self.seq)
 
     def __enter__(self):
@@ -141,7 +145,7 @@ if __name__=='__main__':
     rc('font',**{'family':'serif','serif':['Palatino']})
     rc('text', usetex=True)
 
-    with AxisIterator(figs=args.figs,title = 'Tutorial 1: Active inference from scratch') as axes:
+    with AxisIterator(n_rows=4,n_columns=3,figs=args.figs,title = 'Tutorial 1: Active inference from scratch') as axes:
 
         #  create a simple categorical distribution
         my_categorical = rng.random(size=3)
@@ -215,6 +219,24 @@ if __name__=='__main__':
         down_action_index = actions.index("DOWN")
         next_state = B[:,:,down_action_index].dot(prev_state)
         plot_point_on_grid(next_state, grid_locations,ax = next(axes))
+
+        #  preferences over observations
+        C = np.zeros(n_observations)
+        desired_location = (2,2) # choose a desired location
+        desired_location_index = grid_locations.index(desired_location) # get the linear index of the grid location, in terms of 0 through 8
+
+        C[desired_location_index] = 1.0
+        plot_beliefs(C, title_str = "Preferences over observations", ax = next(axes))
+
+        #  prior belief over hidden states at the first timestep
+        D = utils.onehot(0, n_states)
+
+        # demonstrate hwo belief about initial state can also be uncertain / spread among different possible initial states
+        # alternative, where you have a degenerate/noisy prior belief
+        # D = utils.norm_dist(np.ones(n_states))
+
+        """ Let's look at the prior over hidden states """
+        plot_beliefs(D, title_str = "Prior beliefs over states", ax = next(axes))
 
     if args.show:
         show()
