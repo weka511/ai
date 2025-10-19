@@ -53,7 +53,7 @@ class Huyghens(Oscillator):
           return np.array([v, - self.omega2 * np.sin(theta)],float)
 
      def get_y0(self,args,rng):
-          return np.array(args.N*[0.0,1.0])
+          return np.array((args.N//2)*[0.0,1.0,0.0,-1.0])
 
      def __str__(self):
           return self.name
@@ -179,9 +179,6 @@ if __name__ == "__main__":
      t = np.linspace(0, args.tFinal, args.Nt)
      d = oscillator.d * args.N
      rng = np.random.default_rng(args.seed)
-     # y0 = rng.normal(loc = args.loc,
-                     # scale = args.sigma0,
-                     # size = oscillator.d*args.N)
      y0 = oscillator.get_y0(args,rng)
 
      population = Population(oscillator,
@@ -226,9 +223,17 @@ if __name__ == "__main__":
 
      if args.details:
           fig = figure(figsize=(12,6))
+          ax = fig.add_subplot(1,1,1)
+          markers = ['x','.']
+          s = 100
           for i in range(n//2):
-               ax = fig.add_subplot(n//2,1,i+1)
-               ax.plot(y[args.burnin:,2*i],y[args.burnin:,2*i+1])
+               ax.scatter(y[args.burnin:,2*i],y[args.burnin:,2*i+1],
+                         s = s,
+                          alpha = 0.5,
+                          label = f'{0}',
+                          marker=markers[i])
+               s /= 2
+          fig.legend()
 
      if args.show:
           show()
