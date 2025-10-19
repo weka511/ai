@@ -90,11 +90,12 @@ if __name__=='__main__':
     my_categorical = rng.random(size=3)
     my_categorical = utils.norm_dist(my_categorical) # normalizes the distribution so it integrates to 1.0
 
-    print(my_categorical.reshape(-1,1)) # we reshape it to display it like a column vector
-    print(f'Integral of the distribution: {round(my_categorical.sum(), 2)}')
     sampled_outcome = utils.sample(my_categorical)
-    print(f'Sampled outcome: {sampled_outcome}')
     plot_beliefs(my_categorical, title_str = 'A random (unconditional) Categorical distribution')
+
+    p_x_given_y = rng.random((3, 4))
+    p_x_given_y = utils.norm_dist(p_x_given_y)
+
     # fig = figure()
     # ax  = fig.add_subplot(1,1,1)
 

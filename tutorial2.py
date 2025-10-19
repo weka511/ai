@@ -17,9 +17,6 @@
 
 '''Template for Python code'''
 
-
-# Standard library imports.
-
 from argparse import ArgumentParser
 from os.path  import join
 from pathlib  import Path

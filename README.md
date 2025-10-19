@@ -44,6 +44,8 @@ sde.py|Euler-Maruyama method
 File  | Remarks |
 ---------------|-------------------------------------------------------------------------------------------
 pymdp_demo1.py|Snarfed from paper
+tutorial1.py|Snarfed from paper
+tutorial2.py|Snarfed from paper
 
 ## Miscellaneous
 
