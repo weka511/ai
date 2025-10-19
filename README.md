@@ -44,7 +44,7 @@ sde.py|Euler-Maruyama method
 File  | Remarks |
 ---------------|-------------------------------------------------------------------------------------------
 pymdp_demo1.py|Snarfed from paper
-tutorial1.py|Snarfed from paper
+tutorial1.py|[Active inference from scratch](https://pymdp-rtd.readthedocs.io/en/latest/notebooks/active_inference_from_scratch.html)
 tutorial2.py|Snarfed from paper
 
 ## Miscellaneous
