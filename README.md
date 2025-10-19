@@ -39,9 +39,15 @@ euler.py|Euler's method
 rk4.py|Workhorse Runge-Kutta 4th order
 sde.py|Euler-Maruyama method
 
+## pydmp demos
+
+File  | Remarks |
+---------------|-------------------------------------------------------------------------------------------
+pymdp_demo1.py|Snarfed from paper
+
 ## Miscellaneous
 
 File  | Remarks |
 ---------------|-------------------------------------------------------------------------------------------
-ActiveInference.wpr|Project for Python Code
+ai.wpr|Project for Python Code
 template.py|Template for creating additional programs
