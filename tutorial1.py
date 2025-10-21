@@ -260,11 +260,98 @@ class GridWorldEnv():
 
         return obs
 
+def calculate_G_policies(A, B, C, qs_current, policies):
+
+    G = np.zeros(len(policies)) # initialize the vector of expected free energies, one per policy
+    H_A = entropy(A)            # can calculate the entropy of the A matrix beforehand, since it'll be the same for all policies
+
+    for policy_id, policy in enumerate(policies): # loop over policies - policy_id will be the linear index of the policy (0, 1, 2, ...) and `policy` will be a column vector where `policy[t,0]` indexes the action entailed by that policy at time `t`
+
+        t_horizon = policy.shape[0] # temporal depth of the policy
+
+        G_pi = 0.0 # initialize expected free energy for this policy
+
+        for t in range(t_horizon): # loop over temporal depth of the policy
+
+            action = policy[t,0] # action entailed by this particular policy, at time `t`
+
+            # get the past predictive posterior - which is either your current posterior at the current time (not the policy time) or the predictive posterior entailed by this policy, one timstep ago (in policy time)
+            if t == 0:
+                qs_prev = qs_current
+            else:
+                qs_prev = qs_pi_t
+
+            qs_pi_t = get_expected_states(B, qs_prev, action) # expected states, under the action entailed by the policy at this particular time
+            qo_pi_t = get_expected_observations(A, qs_pi_t)   # expected observations, under the action entailed by the policy at this particular time
+
+            kld = kl_divergence(qo_pi_t, C) # Kullback-Leibler divergence between expected observations and the prior preferences C
+
+            G_pi_t = H_A.dot(qs_pi_t) + kld # predicted uncertainty + predicted divergence, for this policy & timepoint
+
+            G_pi += G_pi_t # accumulate the expected free energy for each timepoint into the overall EFE for the policy
+
+        G[policy_id] += G_pi
+
+    return G
+
+def compute_prob_actions(actions, policies, Q_pi):
+    P_u = np.zeros(len(actions)) # initialize the vector of probabilities of each action
+
+    for policy_id, policy in enumerate(policies):
+        P_u[int(policy[0,0])] += Q_pi[policy_id] # get the marginal probability for the given action, entailed by this policy at the first timestep
+
+    P_u = utils.norm_dist(P_u) # normalize the action probabilities
+
+    return P_u
+
+def active_inference_with_planning(A, B, C, D, n_actions, env, policy_len = 2, T = 5):
+
+    """ Initialize prior, first observation, and policies """
+
+    prior = D # initial prior should be the D vector
+
+    obs = env.reset() # get the initial observation
+
+    policies = construct_policies([n_states], [n_actions], policy_len = policy_len)
+
+    for t in range(T):
+
+        print(f'Time {t}: Agent observes itself in location: {obs}')
+
+        # convert the observation into the agent's observational state space (in terms of 0 through 8)
+        obs_idx = grid_locations.index(obs)
+
+        # perform inference over hidden states
+        qs_current = infer_states(obs_idx, A, prior)
+        plot_beliefs(qs_current, title_str = f"Beliefs about location at time {t}", ax = next(axes))
+
+        # calculate expected free energy of actions
+        G = calculate_G_policies(A, B, C, qs_current, policies)
+
+        # to get action posterior, we marginalize P(u|pi) with the probabilities of each policy Q(pi), given by \sigma(-G)
+        Q_pi = softmax(-G)
+
+        # compute the probability of each action
+        P_u = compute_prob_actions(actions, policies, Q_pi)
+
+        # sample action from probability distribution over actions
+        chosen_action = utils.sample(P_u)
+
+        # compute prior for next timestep of inference
+        prior = B[:,:,chosen_action].dot(qs_current)
+
+        # step the generative process and get new observation
+        action_label = actions[chosen_action]
+        obs = env.step(action_label)
+
+    return qs_current
+
+
 if __name__=='__main__':
     args = parse_args()
     rng = np.random.default_rng(args.seed)
 
-    with AxisIterator(n_rows=5,n_columns=5,figs=args.figs,title = 'Active inference from scratch') as axes:
+    with AxisIterator(n_rows=6,n_columns=6,figs=args.figs,title = 'Active inference from scratch') as axes:
 
         #  create a simple categorical distribution
         my_categorical = rng.random(size=3)
@@ -503,6 +590,18 @@ if __name__=='__main__':
 
             return qs_current
         qs = run_active_inference_loop(A, B, C, D, actions, env, T = 5)
+
+        policy_len = 4
+        n_actions = len(actions)
+
+        # we have to wrap `n_states` and `n_actions` in a list for reasons that will become clear in Part II
+        all_policies = construct_policies([n_states], [n_actions], policy_len = policy_len)
+
+        print(f'Total number of policies for {n_actions} possible actions and a planning horizon of {policy_len}: {len(all_policies)}')
+
+        D = utils.onehot(grid_locations.index((0,0)), n_states) # let's have the agent believe it starts in location (0,0) (upper left corner)
+        env = GridWorldEnv(starting_state = (0,0))
+        qs_final = active_inference_with_planning(A, B, C, D, n_actions, env, policy_len = 3, T = 10)
 
     if args.show:
         show()
