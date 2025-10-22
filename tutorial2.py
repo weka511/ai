@@ -76,6 +76,30 @@ class TwoArmedBandit(object):
 
         return [observed_hint, observed_reward, observed_choice]
 
+def run_active_inference_loop(my_agent, my_env, T = 5, axes=None):
+
+    ''' Initialize the first observation '''
+    obs_label = ['Null', 'Null', 'Start']  # agent observes itself seeing a `Null` hint, getting a `Null` reward, and seeing itself in the `Start` location
+    obs = [hint_obs_names.index(obs_label[0]), reward_obs_names.index(obs_label[1]), choice_obs_names.index(obs_label[2])]
+
+    for t in range(T):
+        qs = my_agent.infer_states(obs)
+        plot_beliefs(qs[0], title_str = f'Beliefs about the context at time {t}',ax=next(axes))
+
+        q_pi, efe = my_agent.infer_policies()
+        chosen_action_id = my_agent.sample_action()
+
+        movement_id = int(chosen_action_id[1])
+
+        choice_action = choice_action_names[movement_id]
+
+        obs_label = my_env.step(choice_action)
+
+        obs = [hint_obs_names.index(obs_label[0]), reward_obs_names.index(obs_label[1]), choice_obs_names.index(obs_label[2])]
+
+        print(f'Action at time {t}: {choice_action}')
+        print(f'Reward at time {t}: {obs_label[1]}')
+
 def parse_args():
     parser = ArgumentParser(__doc__)
     parser.add_argument('--show', default=False, action='store_true', help='Controls whether plot will be displayed')
@@ -85,7 +109,7 @@ def parse_args():
 if __name__=='__main__':
     args = parse_args()
 
-    with AxisIterator(n_rows=3,n_columns=3,figs=args.figs,title = 'Tutorial 2: the Agent API',
+    with AxisIterator(n_rows=5,n_columns=5,figs=args.figs,title = 'Tutorial 2: the Agent API',
                       show=args.show,name=Path(__file__).stem) as axes:
 
         context_names = ['Left-Better', 'Right-Better']
@@ -198,3 +222,19 @@ if __name__=='__main__':
         print(f'Beliefs about starting location: {D[1]}')
 
         my_agent = Agent(A = A, B = B, C = C, D = D)
+
+        p_hint_env = 1.0 # this is the "true" accuracy of the hint - i.e. how often does the hint actually signal which arm is better. REMEMBER: THIS IS INDEPENDENT OF HOW YOU PARAMETERIZE THE A MATRIX FOR THE HINT MODALITY
+        p_reward_env = 0.7 # this is the "true" reward probability - i.e. how often does the better arm actually return a reward, as opposed to a loss. REMEMBER: THIS IS INDEPENDENT OF HOW YOU PARAMETERIZE THE A MATRIX FOR THE REWARD MODALITY
+        env = TwoArmedBandit(p_hint = p_hint_env, p_reward = p_reward_env)
+        print(f'Context: {env.context}')
+
+        run_active_inference_loop(my_agent, env, T = 10, axes=axes)
+
+        # change the 'shape' of the agent's reward function
+        C[1][1] = 0.0 # makes the Loss "less aversive" than before (higher prior prior probability assigned to seeing the Loss outcome). This should make the agent less risk-averse / willing to explore both arms, under uncertainty
+
+        my_agent = Agent(A = A, B = B, C = C, D = D) # redefine the agent with the new preferences
+        env = TwoArmedBandit(p_hint = 0.8, p_reward = 0.8) # re-initialize the environment -- this time, the hint is not always accurate (`p_hint = 0.8`)
+        print(f'Context: {env.context}')
+
+        run_active_inference_loop(my_agent, env, T = 10, axes=axes)
