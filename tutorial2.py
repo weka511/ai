@@ -21,6 +21,8 @@
 '''
 
 from argparse import ArgumentParser
+from os.path import join
+from pathlib import Path
 # from itertools import product
 import numpy as np
 from pymdp import utils
@@ -31,13 +33,14 @@ from tutorial_common import AxisIterator, plot_likelihood, plot_grid, plot_belie
 def parse_args():
     parser = ArgumentParser(__doc__)
     parser.add_argument('--show', default=False, action='store_true', help='Controls whether plot will be displayed')
-    parser.add_argument('--figs', default='./figs',                   help = 'Location for storing plot files')
+    parser.add_argument('--figs', default='./figs', help = 'Location for storing plot files')
     return parser.parse_args()
 
 if __name__=='__main__':
     args = parse_args()
 
-    with AxisIterator(n_rows=3,n_columns=3,figs=args.figs,title = 'Tutorial 2: the Agent API',show=args.show) as axes:
+    with AxisIterator(n_rows=3,n_columns=3,figs=args.figs,title = 'Tutorial 2: the Agent API',
+                      show=args.show,name=Path(__file__).stem) as axes:
 
         context_names = ['Left-Better', 'Right-Better']
         choice_names = ['Start', 'Hint', 'Left Arm', 'Right Arm']
@@ -78,3 +81,12 @@ if __name__=='__main__':
         A[0] = A_hint
 
         plot_likelihood(A[0][:,:,1], title_str = 'Probability of the two hint types, for the two game states',ax=next(axes))
+
+        A_choice = np.zeros((len(choice_obs_names), len(context_names), len(choice_names)))
+
+        for choice_id in range(len(choice_names)):
+            A_choice[choice_id, :, choice_id] = 1.0
+
+        A[2] = A_choice
+
+        plot_likelihood(A[2][:,0,:], title_str='Mapping between sensed states and true states',ax=next(axes))
