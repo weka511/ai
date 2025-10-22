@@ -23,12 +23,58 @@
 from argparse import ArgumentParser
 from os.path import join
 from pathlib import Path
-# from itertools import product
 import numpy as np
 from pymdp import utils
-# from pymdp.maths import softmax, spm_log_single as log_stable
-# from pymdp.control import construct_policies
+from pymdp.maths import softmax
+from pymdp.agent import Agent
 from tutorial_common import AxisIterator, plot_likelihood, plot_grid, plot_beliefs, plot_point_on_grid
+
+class TwoArmedBandit(object):
+
+    def __init__(self, context = None, p_hint = 1.0, p_reward = 0.8):
+
+        self.context_names = ['Left-Better', 'Right-Better']
+
+        if context == None:
+            self.context = self.context_names[utils.sample(np.array([0.5, 0.5]))] # randomly sample which bandit arm is better (Left or Right)
+        else:
+            self.context = context
+
+        self.p_hint = p_hint
+        self.p_reward = p_reward
+
+        self.reward_obs_names = ['Null', 'Loss', 'Reward']
+        self.hint_obs_names = ['Null', 'Hint-left', 'Hint-right']
+
+    def step(self, action):
+        match(action):
+            case 'Move-start':
+                observed_hint = 'Null'
+                observed_reward = 'Null'
+                observed_choice = 'Start'
+            case 'Get-hint':
+                if self.context == 'Left-Better':
+                    observed_hint = self.hint_obs_names[utils.sample(np.array([0.0, self.p_hint, 1.0 - self.p_hint]))]
+                if self.context == 'Right-Better':
+                    observed_hint = self.hint_obs_names[utils.sample(np.array([0.0, 1.0 - self.p_hint, self.p_hint]))]
+                observed_reward = 'Null'
+                observed_choice = 'Hint'
+            case 'Play-left':
+                observed_hint = 'Null'
+                observed_choice = 'Left Arm'
+                if self.context == 'Left-Better':
+                    observed_reward = self.reward_obs_names[utils.sample(np.array([0.0, 1.0 - self.p_reward, self.p_reward]))]
+                if self.context == 'Right-Better':
+                    observed_reward = self.reward_obs_names[utils.sample(np.array([0.0, self.p_reward, 1.0 - self.p_reward]))]
+            case 'Play-right':
+                observed_hint = 'Null'
+                observed_choice = 'Right Arm'
+                if self.context == 'Right-Better':
+                    observed_reward = self.reward_obs_names[utils.sample(np.array([0.0, 1.0 - self.p_reward, self.p_reward]))]
+                if self.context == 'Left-Better':
+                    observed_reward = self.reward_obs_names[utils.sample(np.array([0.0, self.p_reward, 1.0 - self.p_reward]))]
+
+        return [observed_hint, observed_reward, observed_choice]
 
 def parse_args():
     parser = ArgumentParser(__doc__)
@@ -72,13 +118,32 @@ if __name__=='__main__':
                     A_hint[0,:,choice_id] = 1.0
                 case 'Hint':
                     A_hint[1:,:,choice_id] = np.array([[p_hint, 1.0 - p_hint],
-                                                      [1.0 - p_hint,  p_hint]])
+                                                       [1.0 - p_hint,  p_hint]])
                 case 'Left Arm':
                     A_hint[0,:,choice_id] = 1.0
                 case 'Right Arm':
                     A_hint[0,:,choice_id] = 1.0
 
         A[0] = A_hint
+
+        p_reward = 0.8 # probability of getting a rewarding outcome, if you are sampling the more rewarding bandit
+
+        A_reward = np.zeros((len(reward_obs_names), len(context_names), len(choice_names)))
+
+        for choice_id, choice_name in enumerate(choice_names):
+            match (choice_name):
+                case 'Start':
+                    A_reward[0,:,choice_id] = 1.0
+                case'Hint':
+                    A_reward[0,:,choice_id] = 1.0
+                case 'Left Arm':
+                    A_reward[1:,:,choice_id] = np.array([ [1.0-p_reward, p_reward],
+                                                      [p_reward, 1.0-p_reward]])
+                case 'Right Arm':
+                    A_reward[1:, :, choice_id] = np.array([[ p_reward, 1.0- p_reward],
+                                                   [1- p_reward, p_reward]])
+
+        A[1] = A_reward
 
         plot_likelihood(A[0][:,:,1], title_str = 'Probability of the two hint types, for the two game states',ax=next(axes))
 
@@ -90,3 +155,46 @@ if __name__=='__main__':
         A[2] = A_choice
 
         plot_likelihood(A[2][:,0,:], title_str='Mapping between sensed states and true states',ax=next(axes))
+
+        B = utils.obj_array(num_factors)
+
+        B_context = np.zeros( (len(context_names), len(context_names), len(context_action_names)) )
+
+        B_context[:,:,0] = np.eye(len(context_names))
+
+        B[0] = B_context
+
+        B_choice = np.zeros( (len(choice_names), len(choice_names), len(choice_action_names)) )
+
+        for choice_i in range(len(choice_names)):
+
+            B_choice[choice_i, :, choice_i] = 1.0
+
+        B[1] = B_choice
+
+        C = utils.obj_array_zeros(num_obs)
+
+        C_reward = np.zeros(len(reward_obs_names))
+        C_reward[1] = -4.0
+        C_reward[2] = 2.0
+
+        C[1] = C_reward
+
+        plot_beliefs(softmax(C_reward), title_str = 'Prior preferences',ax=next(axes))
+
+        D = utils.obj_array(num_factors)
+
+        D_context = np.array([0.5,0.5])
+
+        D[0] = D_context
+
+        D_choice = np.zeros(len(choice_names))
+
+        D_choice[choice_names.index('Start')] = 1.0
+
+        D[1] = D_choice
+
+        print(f'Beliefs about which arm is better: {D[0]}')
+        print(f'Beliefs about starting location: {D[1]}')
+
+        my_agent = Agent(A = A, B = B, C = C, D = D)
