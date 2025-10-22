@@ -31,7 +31,7 @@ class AxisIterator:
 	'''
 	This class creates subplots as needed
 	'''
-	def __init__(self,figsize=(14,14), n_rows = 3, n_columns = 3,figs='figs',title = '',show=False):
+	def __init__(self,figsize=(14,14), n_rows = 3, n_columns = 3,figs='figs',title = '',show=False,name=Path(__file__).stem):
 		self.figsize=figsize
 		self.n_rows = n_rows
 		self.n_columns = n_columns
@@ -39,6 +39,7 @@ class AxisIterator:
 		self.title = title
 		self.figs = figs
 		self.show = show
+		self.name = name
 
 	def __iter__(self):
 		return self
@@ -65,19 +66,23 @@ class AxisIterator:
 	def __exit__(self, exc_type, exc_val, exc_tb):
 		self.fig.suptitle(self.title, fontsize=10)
 		self.fig.tight_layout(pad=1)
-		self.fig.savefig(join(self.figs,Path(__file__).stem))
+		self.fig.savefig(join(self.figs,self.name))
 		if self.show:
 			show()
 
-def plot_likelihood(matrix, xlabels = list(range(9)), ylabels = list(range(9)), title_str = 'Likelihood distribution (A)',ax=None):
+def plot_likelihood(matrix, xlabels = None, ylabels = None, title_str = 'Likelihood distribution (A)',ax=None):
 	'''
 	Plots a 2-D likelihood matrix as a heatmap
 	'''
-
+	m,n = matrix.shape
+	if xlabels == None:
+		xlabels = list(range(m))
+	if ylabels == None:
+		ylabels = list(range(n))
 	if not np.isclose(matrix.sum(axis=0), 1.0).all():
 		raise ValueError('Distribution not column-normalized! Please normalize (ensure matrix.sum(axis=0) == 1.0 for all columns)')
 
-	sns.heatmap(matrix, xticklabels = xlabels, yticklabels = ylabels, cmap = 'gray', cbar = False, vmin = 0.0, vmax = 1.0,ax=ax)
+	sns.heatmap(matrix, xticklabels = xlabels, yticklabels = ylabels, cmap = 'viridis', cbar = False, vmin = 0.0, vmax = 1.0,ax=ax)
 	ax.set_title(title_str, fontsize=8)
 	ax.tick_params(axis='x', labelsize=8)
 	ax.tick_params(axis='y', labelsize=8)
@@ -92,7 +97,7 @@ def plot_grid(grid_locations, num_x = 3, num_y = 3,ax=None ):
 		y, x = location
 		grid_heatmap[y, x] = linear_idx
 	sns.set(font_scale=1.5)
-	sns.heatmap(grid_heatmap, annot=True, cbar = False, fmt='.0f', cmap='crest',ax=ax)
+	sns.heatmap(grid_heatmap, annot=True, cbar = False, fmt='.0f', cmap = 'viridis',ax=ax)
 	ax.tick_params(axis='x', labelsize=8)
 	ax.tick_params(axis='y', labelsize=8)
 
@@ -104,7 +109,7 @@ def plot_point_on_grid(state_vector, grid_locations,ax=None,title='Current locat
 	y, x = grid_locations[state_index]
 	grid_heatmap = np.zeros((3,3))
 	grid_heatmap[y,x] = 1.0
-	sns.heatmap(grid_heatmap, cbar = False, fmt='.0f',ax=ax)
+	sns.heatmap(grid_heatmap, cbar = False, fmt='.0f',ax=ax, cmap = 'viridis')
 	ax.set_title(title, fontsize=8)
 	ax.tick_params(axis='x', labelsize=8)
 	ax.tick_params(axis='y', labelsize=8)

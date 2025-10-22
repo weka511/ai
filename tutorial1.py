@@ -21,6 +21,8 @@
 '''
 
 from argparse import ArgumentParser
+from os.path import join
+from pathlib import Path
 from itertools import product
 import numpy as np
 from pymdp import utils
@@ -307,7 +309,8 @@ if __name__=='__main__':
     args = parse_args()
     rng = np.random.default_rng(args.seed)
 
-    with AxisIterator(n_rows=6,n_columns=6,figs=args.figs,title = 'Active inference from scratch',show=args.show) as axes:
+    with AxisIterator(n_rows=6,n_columns=6,figs=args.figs,title = 'Active inference from scratch',
+                      show=args.show,name=Path(__file__).stem) as axes:
 
         #  create a simple categorical distribution
         my_categorical = rng.random(size=3)
