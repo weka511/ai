@@ -15,56 +15,26 @@
 # You should have received a copy of the GNU General Public License
 # along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.
 
-'''Tutorial 2: the Agent API'''
+'''
+    Tutorial 2: the Agent API
+    https://pymdp-rtd.readthedocs.io/en/latest/notebooks/using_the_agent_class.html
+'''
 
 from argparse import ArgumentParser
-from os.path  import join
-from pathlib  import Path
-from matplotlib.pyplot import figure, show
+from itertools import product
 import numpy as np
-import seaborn as sns
 from pymdp import utils
-from pymdp.maths import softmax
-from pymdp.agent import Agent
+from pymdp.maths import softmax, spm_log_single as log_stable
+from pymdp.control import construct_policies
+from tutorial_common import AxisIterator, plot_likelihood, plot_grid, plot_beliefs, plot_point_on_grid
 
-def plot_likelihood(matrix, title_str = "Likelihood distribution (A)"):
-    '''
-    Plots a 2-D likelihood matrix as a heatmap
-    '''
-
-    if not np.isclose(matrix.sum(axis=0), 1.0).all():
-        raise ValueError("Distribution not column-normalized! Please normalize (ensure matrix.sum(axis=0) == 1.0 for all columns)")
-
-    fig = plt.figure(figsize = (6,6))
-    ax = sns.heatmap(matrix, cmap = 'gray', cbar = False, vmin = 0.0, vmax = 1.0)
-    plt.title(title_str)
-    plt.show()
-
-
-def plot_beliefs(belief_dist, title_str=""):
-    '''
-    Plot a categorical distribution or belief distribution, stored in the 1-D numpy vector `belief_dist`
-    '''
-
-    if not np.isclose(belief_dist.sum(), 1.0):
-        raise ValueError("Distribution not normalized! Please normalize")
-
-    plt.grid(zorder=0)
-    plt.bar(range(belief_dist.shape[0]), belief_dist, color='r', zorder=3)
-    plt.xticks(range(belief_dist.shape[0]))
-    plt.title(title_str)
-    plt.show()
-
-if __name__=='__main__':
+def parse_args():
     parser = ArgumentParser(__doc__)
     parser.add_argument('--show', default=False, action='store_true', help='Controls whether plot will be displayed')
     parser.add_argument('--figs', default='./figs',                   help = 'Location for storing plot files')
-    args = parser.parse_args()
+    return parser.parse_args()
 
-    fig = figure()
-    ax  = fig.add_subplot(1,1,1)
+if __name__=='__main__':
+    args = parse_args()
 
-    fig.savefig(join(args.figs,Path(__file__).stem))
-    if args.show:
-        show()
 
