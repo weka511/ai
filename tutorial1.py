@@ -20,121 +20,30 @@
     https://pymdp-rtd.readthedocs.io/en/latest/notebooks/active_inference_from_scratch.html
 '''
 
-
 from argparse import ArgumentParser
 from itertools import product
-from os.path import join
-from pathlib import Path
-from warnings import warn
 import numpy as np
-from matplotlib import rc
-from matplotlib.pyplot import figure, show
-import seaborn as sns
 from pymdp import utils
 from pymdp.maths import softmax, spm_log_single as log_stable
 from pymdp.control import construct_policies
+from tutorial_common import AxisIterator, plot_likelihood, plot_grid, plot_beliefs, plot_point_on_grid
 
-class AxisIterator:
-    '''
-    This class creates subplots as needed
-    '''
-    def __init__(self,figsize=(12,12), n_rows = 3, n_columns = 3,figs='figs',title = ''):
-        self.figsize=figsize
-        self.n_rows = n_rows
-        self.n_columns = n_columns
-        self.seq = 0
-        self.title = title
-        self.figs = figs
-
-    def __iter__(self):
-        return self
-
-    def __next__(self):
-        '''
-        Used to supply subplots
-        '''
-        if self.seq < self.n_rows*self.n_columns:
-            self.seq += 1
-        else:
-            warn('Too many subplots')
-
-        return self.fig.add_subplot(self.n_rows,self.n_columns,self.seq)
-
-    def __enter__(self):
-        rc('font',**{'family' : 'serif',
-                     'serif' : ['Palatino'],
-                     'size' : 8})
-        rc('text', usetex=True)
-        self.fig = figure(figsize=self.figsize)
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.fig.suptitle(self.title, fontsize=10)
-        self.fig.tight_layout(pad=1)
-        self.fig.savefig(join(self.figs,Path(__file__).stem))
-
-def plot_likelihood(matrix, xlabels = list(range(9)), ylabels = list(range(9)), title_str = 'Likelihood distribution (A)',ax=None):
-    '''
-    Plots a 2-D likelihood matrix as a heatmap
-    '''
-
-    if not np.isclose(matrix.sum(axis=0), 1.0).all():
-        raise ValueError('Distribution not column-normalized! Please normalize (ensure matrix.sum(axis=0) == 1.0 for all columns)')
-
-    sns.heatmap(matrix, xticklabels = xlabels, yticklabels = ylabels, cmap = 'gray', cbar = False, vmin = 0.0, vmax = 1.0,ax=ax)
-    ax.set_title(title_str, fontsize=8)
-    ax.tick_params(axis='x', labelsize=8)
-    ax.tick_params(axis='y', labelsize=8)
-
-def plot_grid(grid_locations, num_x = 3, num_y = 3,ax=None ):
-    '''
-    Plots the spatial coordinates of GridWorld as a heatmap, with each (X, Y) coordinate
-    labeled with its linear index (its `state id`)
-    '''
-    grid_heatmap = np.zeros((num_x, num_y))
-    for linear_idx, location in enumerate(grid_locations):
-        y, x = location
-        grid_heatmap[y, x] = linear_idx
-    sns.set(font_scale=1.5)
-    sns.heatmap(grid_heatmap, annot=True, cbar = False, fmt='.0f', cmap='crest',ax=ax)
-    ax.tick_params(axis='x', labelsize=8)
-    ax.tick_params(axis='y', labelsize=8)
-
-def plot_point_on_grid(state_vector, grid_locations,ax=None,title='Current location'):
-    '''
-    Plots the current location of the agent on the grid world
-    '''
-    state_index = np.nonzero(state_vector)[0][0]
-    y, x = grid_locations[state_index]
-    grid_heatmap = np.zeros((3,3))
-    grid_heatmap[y,x] = 1.0
-    sns.heatmap(grid_heatmap, cbar = False, fmt='.0f',ax=ax)
-    ax.set_title(title, fontsize=8)
-    ax.tick_params(axis='x', labelsize=8)
-    ax.tick_params(axis='y', labelsize=8)
-
-def plot_beliefs(belief_dist, title_str='',ax=None):
-    '''
-    Plot a categorical distribution or belief distribution, stored in the 1-D numpy vector `belief_dist`
-    '''
-    if not np.isclose(belief_dist.sum(), 1.0):
-        raise ValueError('Distribution not normalized! Please normalize')
-
-    ax.grid(zorder=0)
-    ax.bar(range(belief_dist.shape[0]), belief_dist, color='r', zorder=3)
-    ax.set_xticks(range(belief_dist.shape[0]))
-    ax.set_title(title_str, fontsize=8)
-    ax.tick_params(axis='x', labelsize=8)
-    ax.tick_params(axis='y', labelsize=8)
 
 def parse_args():
     parser = ArgumentParser(__doc__)
-    parser.add_argument('--seed',type=int,default=None,help='Seed for random number generator')
+    parser.add_argument('--seed', type=int, default=None, help='Seed for random number generator')
     parser.add_argument('--show', default=False, action='store_true', help='Controls whether plot will be displayed')
-    parser.add_argument('--figs', default='./figs',                   help = 'Location for storing plot files')
+    parser.add_argument('--figs', default='./figs', help = 'Location for storing plot files')
     return parser.parse_args()
 
 def create_B_matrix( actions = ['UP', 'DOWN', 'LEFT', 'RIGHT', 'STAY']):
+    '''
+    Factory method for transition probilities
+
+    Returns:
+         B
+         actions
+    '''
     B = np.zeros( (len(grid_locations), len(grid_locations), len(actions)) )
     for action_id, action_label in enumerate(actions):
         for curr_state, grid_location in enumerate(grid_locations):
@@ -168,6 +77,11 @@ def infer_states(observation_index, A, prior):
     This function has already been given P(s_t). The conditional expectation that creates 'today's prior',
     using 'yesterday's posterior', will happen *before calling* this function
 
+    Parameters:
+        observation_index
+        A
+        prior
+
     Returns:    qs
     '''
 
@@ -179,50 +93,65 @@ def get_expected_states(B, qs_current, action):
     '''
     Compute the expected states one step into the future, given a particular action
 
+    Parameters:
+        B
+        qs_current   Our beliefs about the current state
+        action       The action we are considerig
+
+    Returns:
+        Our beliefs about the state one step into the future
     '''
     return B[:,:,action].dot(qs_current) # qs_u
 
 def get_expected_observations(A, qs_u):
     '''
     Compute the expected observations one step into the future, given a particular action
+
+    Paramaters:
+        A
+        qs_u     Our beliefs about the state one step into the future
     '''
 
     return  A.dot(qs_u) # qo_u
 
-def entropy(A):
-    ''' Compute the entropy of a set of conditional distributions, i.e. one entropy value per column '''
+def get_entropy(A):
+    '''
+    Compute the entropy of a set of conditional distributions, i.e. one entropy value per column
+    '''
 
-    H_A = - (A * log_stable(A)).sum(axis=0)
+    return - (A * log_stable(A)).sum(axis=0)
 
-    return H_A
-
-def kl_divergence(qo_u, C):
-    ''' Compute the Kullback-Leibler divergence between two 1-D categorical distributions'''
+def get_kl_divergence(qo_u, C):
+    '''
+    Compute the Kullback-Leibler divergence between two 1-D categorical distributions
+    '''
 
     return (log_stable(qo_u) - log_stable(C)).dot(qo_u)
 
-def calculate_G(A, B, C, qs_current, actions):
-
+def get_expected_free_energy(A, B, C, qs_current, actions):
     G = np.zeros(len(actions)) # vector of expected free energies, one per action
-
-    H_A = entropy(A) # entropy of the observation model, P(o|s)
+    H_A = get_entropy(A) # entropy of the observation model, P(o|s)
 
     for action_i in range(len(actions)):
-
-        qs_u = get_expected_states(B, qs_current, action_i) # expected states, under the action we're currently looping over
-        qo_u = get_expected_observations(A, qs_u)           # expected observations, under the action we're currently looping over
-
-        pred_uncertainty = H_A.dot(qs_u) # predicted uncertainty, i.e. expected entropy of the A matrix
-        pred_div = kl_divergence(qo_u, C) # predicted divergence
-
-        G[action_i] = pred_uncertainty + pred_div # sum them together to get expected free energy
+        qs_u = get_expected_states(B, qs_current, action_i)
+        qo_u = get_expected_observations(A, qs_u)
+        pred_uncertainty = H_A.dot(qs_u)
+        pred_div = get_kl_divergence(qo_u, C)
+        G[action_i] = pred_uncertainty + pred_div
 
     return G
 
 class GridWorldEnv():
+    '''
+    Let’s start by creating a class that will represent the Grid World environment (i.e., generative process)
+    that our active inference agent will navigate within. Note that we don’t need to specify the generative
+    process in terms of A and B matrices - the generative process will be as arbitrary and
+    complex as the environment is. The A and B matrices are just the agent’s representation
+    of the world and the task, which in this case happen to capture the
+    Markovian, noiseless dynamics of the world perfectly.
+    '''
 
     def __init__(self,starting_state = (0,0)):
-
         self.init_state = starting_state
         self.current_state = self.init_state
         print(f'Starting state is {starting_state}')
@@ -246,45 +175,40 @@ class GridWorldEnv():
             case 'STAY':
                 Y_new, X_new = Y, X
 
-        self.current_state = (Y_new, X_new) # store the new grid location
-
-        obs = self.current_state # agent always directly observes the grid location they're in
-
-        return obs
+        self.current_state = (Y_new, X_new)
+        return self.current_state # agent always directly observes the grid location they're in
 
     def reset(self):
         self.current_state = self.init_state
         print(f'Re-initialized location to {self.init_state}')
         obs = self.current_state
         print(f'..and sampled observation {obs}')
-
         return obs
 
-def calculate_G_policies(A, B, C, qs_current, policies):
+def get_G_policies(A, B, C, qs_current, policies):
 
     G = np.zeros(len(policies)) # initialize the vector of expected free energies, one per policy
-    H_A = entropy(A)            # can calculate the entropy of the A matrix beforehand, since it'll be the same for all policies
+    H_A = get_entropy(A)        # entropy will be the same for all policies
 
-    for policy_id, policy in enumerate(policies): # loop over policies - policy_id will be the linear index of the policy (0, 1, 2, ...) and `policy` will be a column vector where `policy[t,0]` indexes the action entailed by that policy at time `t`
-
+    for policy_id, policy in enumerate(policies):
         t_horizon = policy.shape[0] # temporal depth of the policy
-
         G_pi = 0.0 # initialize expected free energy for this policy
 
         for t in range(t_horizon): # loop over temporal depth of the policy
-
             action = policy[t,0] # action entailed by this particular policy, at time `t`
-
             # get the past predictive posterior - which is either your current posterior at the current time (not the policy time) or the predictive posterior entailed by this policy, one timstep ago (in policy time)
             if t == 0:
                 qs_prev = qs_current
             else:
                 qs_prev = qs_pi_t
 
-            qs_pi_t = get_expected_states(B, qs_prev, action) # expected states, under the action entailed by the policy at this particular time
-            qo_pi_t = get_expected_observations(A, qs_pi_t)   # expected observations, under the action entailed by the policy at this particular time
+            qs_pi_t = get_expected_states(B, qs_prev, action)   # expected states, under the action entailed
+                                                                # by the policy at this particular time
+            qo_pi_t = get_expected_observations(A, qs_pi_t)     # expected observations, under the action entailed
+                                                                # by the policy at this particular time
 
-            kld = kl_divergence(qo_pi_t, C) # Kullback-Leibler divergence between expected observations and the prior preferences C
+            kld = get_kl_divergence(qo_pi_t, C) # Kullback-Leibler divergence between expected observations
+                                                # and the prior preferences C
 
             G_pi_t = H_A.dot(qs_pi_t) + kld # predicted uncertainty + predicted divergence, for this policy & timepoint
 
@@ -306,7 +230,7 @@ def compute_prob_actions(actions, policies, Q_pi):
 
 def active_inference_with_planning(A, B, C, D, n_actions, env, policy_len = 2, T = 5):
 
-    """ Initialize prior, first observation, and policies """
+    # Initialize prior, first observation, and policies
 
     prior = D # initial prior should be the D vector
 
@@ -323,10 +247,10 @@ def active_inference_with_planning(A, B, C, D, n_actions, env, policy_len = 2, T
 
         # perform inference over hidden states
         qs_current = infer_states(obs_idx, A, prior)
-        plot_beliefs(qs_current, title_str = f"Beliefs about location at time {t}", ax = next(axes))
+        plot_beliefs(qs_current, title_str = f'Beliefs about location at time {t}', ax = next(axes))
 
         # calculate expected free energy of actions
-        G = calculate_G_policies(A, B, C, qs_current, policies)
+        G = get_G_policies(A, B, C, qs_current, policies)
 
         # to get action posterior, we marginalize P(u|pi) with the probabilities of each policy Q(pi), given by \sigma(-G)
         Q_pi = softmax(-G)
@@ -346,12 +270,44 @@ def active_inference_with_planning(A, B, C, D, n_actions, env, policy_len = 2, T
 
     return qs_current
 
+def run_active_inference_loop(A, B, C, D, actions, env, T = 5):
+    '''
+    Run the entire active inference loop for a desired number of timesteps
+
+    Parameters:
+        A
+        B
+        C
+        D
+        actions
+        env
+        T          desired number of timesteps
+    '''
+    prior = D.copy()
+
+    obs = env.reset() # the first observation you sample from the environment, before `step`-ing it.
+
+    for t in range(T):
+        print(f'Time {t}: Agent observes itself in location: {obs}')
+
+        # convert the observation into the agent's observational state space [0,8]
+        obs_idx = grid_locations.index(obs)
+        qs_current = infer_states(obs_idx, A, prior)
+        plot_beliefs(qs_current, title_str = f'Beliefs about location at time {t}', ax = next(axes))
+        G = get_expected_free_energy(A, B, C, qs_current, actions)
+        Q_u = softmax(-G)          # action posterior
+        chosen_action = utils.sample(Q_u)  # sample action from probability distribution over actions
+        prior = B[:,:,chosen_action].dot(qs_current) # compute prior for next timestep of inference
+        action_label = actions[chosen_action]          # update generative process
+        obs = env.step(action_label)
+
+    return qs_current
 
 if __name__=='__main__':
     args = parse_args()
     rng = np.random.default_rng(args.seed)
 
-    with AxisIterator(n_rows=6,n_columns=6,figs=args.figs,title = 'Active inference from scratch') as axes:
+    with AxisIterator(n_rows=6,n_columns=6,figs=args.figs,title = 'Active inference from scratch',show=args.show) as axes:
 
         #  create a simple categorical distribution
         my_categorical = rng.random(size=3)
@@ -483,13 +439,15 @@ if __name__=='__main__':
 
         plot_beliefs(C, title_str = 'Preferences', ax = next(axes))
 
+        # evaluate the expected free energies of just two actions that we could take
+        # from our current position – either moving LEFT or moving RIGHT.
         left_idx = actions.index('LEFT')
         right_idx = actions.index('RIGHT')
 
         print(f'Action index of moving left: {left_idx}')
         print(f'Action index of moving right: {right_idx}')
 
-        ''' Compute the expected free energies for moving left vs. moving right '''
+        #Compute the expected free energies for moving left vs. moving right
         G = np.zeros(2) # store the expected free energies for each action in here
 
         '''
@@ -497,16 +455,11 @@ if __name__=='__main__':
         '''
 
         qs_u_left = get_expected_states(B, qs_current, left_idx)
-        # alternative
-        # qs_u_left = B[:,:,left_idx].dot(qs_current)
-
-        H_A = entropy(A)
+        H_A = get_entropy(A)
         qo_u_left = get_expected_observations(A, qs_u_left)
-        # alternative
-        # qo_u_left = A.dot(qs_u_left)
 
         predicted_uncertainty_left = H_A.dot(qs_u_left)
-        predicted_divergence_left = kl_divergence(qo_u_left, C)
+        predicted_divergence_left = get_kl_divergence(qo_u_left, C)
         G[0] = predicted_uncertainty_left + predicted_divergence_left
 
         '''
@@ -514,16 +467,14 @@ if __name__=='__main__':
         '''
 
         qs_u_right = get_expected_states(B, qs_current, right_idx)
-        # alternative
-        # qs_u_right = B[:,:,right_idx].dot(qs_current)
 
-        H_A = entropy(A)
+        H_A = get_entropy(A)
         qo_u_right = get_expected_observations(A, qs_u_right)
         # alternative
         # qo_u_right = A.dot(qs_u_right)
 
         predicted_uncertainty_right = H_A.dot(qs_u_right)
-        predicted_divergence_right = kl_divergence(qo_u_right, C)
+        predicted_divergence_right = get_kl_divergence(qo_u_right, C)
         G[1] = predicted_uncertainty_right + predicted_divergence_right
 
         # Now let's print the expected free energies for the two actions, that we just calculated
@@ -546,49 +497,8 @@ if __name__=='__main__':
 
         D = utils.onehot(grid_locations.index( (1,2) ), n_states) # start the agent with the prior belief that it starts in location (1,2)
 
-        # actions = ["UP", "DOWN", "LEFT", "RIGHT", "STAY"]
-
         env = GridWorldEnv(starting_state = (1,2))
 
-        def run_active_inference_loop(A, B, C, D, actions, env, T = 5):
-            """ Write a function that, when called, runs the entire active inference loop for a desired number of timesteps"""
-
-            #Initialize the prior that will be passed in during inference to be the same as `D`
-            prior = D.copy() # initial prior should be the D vector
-
-            #Initialize the observation that will be passed in during inference - hint use env.reset()
-            obs = env.reset() # initialize the `obs` variable to be the first observation you sample from the environment, before `step`-ing it.
-
-            for t in range(T):
-
-                print(f'Time {t}: Agent observes itself in location: {obs}')
-
-                # convert the observation into the agent's observational state space (in terms of 0 through 8)
-                obs_idx = grid_locations.index(obs)
-
-                # perform inference over hidden states
-                qs_current = infer_states(obs_idx, A, prior)
-
-                plot_beliefs(qs_current, title_str = f"Beliefs about location at time {t}", ax = next(axes))
-
-                # calculate expected free energy of actions
-                G = calculate_G(A, B, C, qs_current, actions)
-
-                # compute action posterior
-                Q_u = softmax(-G)
-
-                # sample action from probability distribution over actions
-                chosen_action = utils.sample(Q_u)
-
-                # compute prior for next timestep of inference
-                prior = B[:,:,chosen_action].dot(qs_current)
-
-                # update generative process
-                action_label = actions[chosen_action]
-
-                obs = env.step(action_label)
-
-            return qs_current
         qs = run_active_inference_loop(A, B, C, D, actions, env, T = 5)
 
         policy_len = 4
@@ -602,7 +512,3 @@ if __name__=='__main__':
         D = utils.onehot(grid_locations.index((0,0)), n_states) # let's have the agent believe it starts in location (0,0) (upper left corner)
         env = GridWorldEnv(starting_state = (0,0))
         qs_final = active_inference_with_planning(A, B, C, D, n_actions, env, policy_len = 3, T = 10)
-
-    if args.show:
-        show()
-
