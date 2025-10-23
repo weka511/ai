@@ -20,12 +20,11 @@
    framework for modelling perception and learning, by Rafal Bogacz
 '''
 
-from math              import sqrt
-from random            import random
+from os.path import join
+from pathlib import Path
+import numpy as np
 from matplotlib.pyplot import figure, show
-from matplotlib        import rc
-
-rc('text', usetex=True)
+from matplotlib import rc
 
 class Colours:
     def __init__(self):
@@ -45,6 +44,8 @@ class Colours:
         return value
 
 if __name__=='__main__':
+    rc('text', usetex=True)
+    rng = np.random.default_rng()
     phi_mean = 5
     phi_sigma = 2
     phi_above = 5
@@ -53,26 +54,28 @@ if __name__=='__main__':
     MaxT = 20
     N = 1000
     LRate = 0.01
-    Sigma = [1]
+    Sigma = np.zeros((N+1))
+    Sigma[0] = 1
 
     fig = figure(figsize=(10,10))
     ax  = fig.add_subplot(2,1,1)
-    colors = Colours()
-    cc = iter(colors)
-
+    colours = Colours()
+    colour_iterator = iter(colours)
+    m = int(MaxT/dt)
+    e = np.zeros((m+1))   # interneuron
+    error = np.zeros((m+1))  # prediction error
     for i in range(N):
-        error = [1]   # prediction error
-        e     = [0]   # interneuron
-        phi = phi_mean + sqrt(phi_sigma)*random()
-        for j in range(int(MaxT/dt)):
-            error.append(error[-1]+dt*(phi-phi_above - e[-1]))
-            e.append(e[-1] + dt *(Sigma[-1] * error[-2] - e[-1]))
-        Sigma.append(Sigma[-1] + LRate *(error[-1]*error[-1]-1))
+        phi = phi_mean + np.sqrt(phi_sigma)*rng.uniform()
+        for j in range(m):
+            error[j+1] = error[j] + dt*(phi-phi_above - e[j])
+            e[j+1] = e[j] + dt *(Sigma[i] * error[j] - e[j])
 
-        if i%100==0:
-            c = next(colors)
-            ax.plot(error, linestyle = 'dotted', c = c, label = 'prediction error' if i==0 else None)
-            ax.plot(e, linestyle = 'dashed',  c = c,  label ='interneuron' if i==0 else None)
+        Sigma[i+1] = Sigma[i] + LRate *( error[-1]*e[-1]- 1)
+
+        if i % 100==0:
+            colour = next(colour_iterator)
+            ax.plot(error, linestyle = 'dotted', c = colour, label = 'prediction error' if i==0 else None)
+            ax.plot(e, linestyle = 'dashed',  c = colour,  label ='interneuron' if i==0 else None)
 
     ax.set_title(f'Errors over {N} runs')
     ax.legend()
@@ -84,5 +87,5 @@ if __name__=='__main__':
     ax.set_title(r'Evolution of $\Sigma$')
 
     fig.suptitle('Exercise 5: learn variance')
-    fig.savefig('figs/feex5')
+    fig.savefig(join('figs',Path(__file__).stem))
     show()

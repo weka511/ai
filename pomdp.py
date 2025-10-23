@@ -39,18 +39,18 @@ def softmax(x,axis=0):
     return exps/exps.sum(axis=axis)
 
 
-# def update(D,B,A,
-          # o    = [],
-          # s    = [],
-          # log  = np.log,
-          # step = 1):
-    # def get_o(o,i):
-        # return o[i] if i<step else np.array([0,0])
+def update(D,B,A,
+          o    = [],
+          s    = [],
+          log  = np.log,
+          step = 1):
+    def get_o(o,i):
+        return o[i] if i<step else np.array([0,0])
 
-    # s1 = softmax(0.5*log(D) + 0.5*log(np.dot(B,s[1]))+log(np.dot(A,get_o(o,0))))
-    # s2 = softmax(0.5*log(np.dot(B,s1)) +log(np.dot(A,get_o(o,1))))
+    s1 = softmax(0.5*log(D) + 0.5*log(np.dot(B,s[1]))+log(np.dot(A,get_o(o,0))))
+    s2 = softmax(0.5*log(np.dot(B,s1)) +log(np.dot(A,get_o(o,1))))
 
-    # return s1,s2
+    return s1,s2
 
 def initialize_approximate_posteriors(priors=np.array([0.5,0.5]),T=2):
     '''

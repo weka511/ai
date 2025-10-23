@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright (C) 2020-23 Greenweaves Software Limited
+# Copyright (C) 2020-25 Greenweaves Software Limited
 
 # This is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -22,24 +22,29 @@
    Find the most likely size for the food item
 '''
 
+from os.path import join
+from pathlib import Path
 from matplotlib.pyplot import figure, show
 from matplotlib import rc
 import numpy as np
 
-rc('text', usetex=True)
-
-vp       = 3    # Mean of prior for food size
-Sigma_p  = 1    # Variance of prior
-Sigma_u  = 1    # Variance of sensory noise
-u        = 2    # Observed light intensity
+vp = 3    # Mean of prior for food size
+Sigma_p = 1    # Variance of prior
+Sigma_u = 1    # Variance of sensory noise
+u = 2   # Observed light intensity
 
 
-def generate_phi(phi0,
-            N = 500,
-            g = lambda v:v**2,
-            g_prime = lambda v: 2*v,
-            dt = 0.01):
-    '''Generate successive estimates for size of food item'''
+def generate_phi(phi0, N = 500, g = lambda v:v**2, g_prime = lambda v: 2*v, dt = 0.01):
+    '''
+    Generate successive estimates for size of food item
+
+    Parameters:
+        phi0        Initial estimate for size
+        N = 500
+        g = lambda v:v**2
+        g_prime = lambda v: 2*v
+        dt
+    '''
     phi = phi0
     yield phi
     for i in range(N):
@@ -47,22 +52,21 @@ def generate_phi(phi0,
         phi += dt*df
         yield phi
 
-T0 = 0
-T1 = 5
-N = 500
-Ts = np.linspace(T0,T1,num=N+1)
-Phis = np.array(list(generate_phi(vp,N=N,dt=(T1-T0)/N)))
+if __name__ == '__main__':
+    rc('text', usetex=True)
+    T0 = 0
+    T1 = 5
+    N = 500
+    Ts = np.linspace(T0,T1,num=N+1)
+    Phis = np.array(list(generate_phi(vp,N=N,dt=(T1-T0)/N)))
 
-fig = figure(figsize=(10,10))
-ax  = fig.add_subplot(1,1,1)
-ax.scatter(Ts,Phis,
-           s = 1,
-           c = 'xkcd:blue',
-           label = 'Most likely size of food item')
-ax.set_title('Exercise 2')
-ax.set_ylim(0,3)
-ax.set_xlabel('t')
-ax.set_ylabel(r'$\phi$')
-ax.legend()
-fig.savefig('figs/feex2')
-show()
+    fig = figure(figsize=(10,10))
+    ax  = fig.add_subplot(1,1,1)
+    ax.scatter(Ts,Phis, s = 1, c = 'xkcd:blue', label = 'Most likely size of food item')
+    ax.set_title('Exercise 2')
+    ax.set_ylim(0,3)
+    ax.set_xlabel('t')
+    ax.set_ylabel(r'$\phi$')
+    ax.legend()
+    fig.savefig(join('figs',Path(__file__).stem))
+    show()

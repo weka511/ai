@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright (C) 2020-2022 Greenweaves Software Limited
+# Copyright (C) 2020-2025 Greenweaves Software Limited
 
 # This is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -20,9 +20,11 @@
    framework for modelling perception and learning, by Rafal Bogacz
 '''
 
+from os.path import join
+from pathlib import Path
 from matplotlib.pyplot import figure, show
-from matplotlib        import rc
-rc('text', usetex=True)
+from matplotlib import rc
+import numpy as np
 
 def g(v):
     return v**2
@@ -30,54 +32,45 @@ def g(v):
 def g_prime(v):
     return 2*v
 
-v_p        = 3   # Mean of prior for food size
-Sigma_p    = 1   # Variance of prior
-Sigma_u    = 1   # Variance of sensory noise
-u          = 2   # Observed light intensity
+if __name__ == '__main__':
+    v_p  = 3   # Mean of prior for food size
+    Sigma_p = 1   # Variance of prior
+    Sigma_u = 1   # Variance of sensory noise
+    u = 2   # Observed light intensity
+    T = 501
+    phi = v_p  # Estimate for food size
+    epsilon_p = 0    # prediction error food size
+    epsilon_u = 0    # prediction error sensory input
+    dt = 0.01
 
-phi        = v_p  # Estimate for food size
-epsilon_p  = 0    # prediction error food size
-epsilon_u  = 0    # prediction error sensory input
-dt         = 0.01
+     # Keep track of time, and of estimates for food size and prediction errors
+    phis = np.zeros((T))
+    epsilon_us = np.zeros((T))
+    epsilon_ps = np.zeros((T))
+    phis[0] = phi
+    TT = np.arange(0,5+dt,dt)
+    for t in range(1,T):
+        phi_dot = epsilon_u*g_prime(phi) - epsilon_p
+        epsilon_p_dot = phi - v_p - Sigma_p*epsilon_p
+        epsilon_u_dot = u - g(phi) - Sigma_u*epsilon_u
 
- # Keep track of time, and of estimates for food size and prediction errors
-phis       = [phi]
-epsilon_us = [epsilon_u]
-epsilon_ps = [epsilon_p]
-ts         = [0]
+        phi += dt*phi_dot
+        epsilon_p += dt*epsilon_p_dot
+        epsilon_u += dt*epsilon_u_dot
 
-for t in range(1,501):
-    phi_dot       = epsilon_u*g_prime(phi) - epsilon_p
-    epsilon_p_dot = phi - v_p    - Sigma_p *epsilon_p
-    epsilon_u_dot = u -   g(phi) - Sigma_u * epsilon_u
+        phis[t] = phi
+        epsilon_us[t] = epsilon_u
+        epsilon_ps[t] = epsilon_p
 
-    phi          += dt*phi_dot
-    epsilon_p    += dt*epsilon_p_dot
-    epsilon_u    += dt*epsilon_u_dot
+    fig = figure(figsize=(10,10))
+    ax = fig.add_subplot(1,1,1)
 
-    ts.append(dt*t)
-    phis.append(phi)
-    epsilon_us.append(epsilon_u)
-    epsilon_ps.append(epsilon_p)
+    ax.scatter(TT,phis, s = 1, c = 'xkcd:blue', label = r'$\phi$: food size')
+    ax.scatter(TT,epsilon_us, s = 1, c ='xkcd:red', label = r'$\epsilon_u$: prediction error sensory input')
+    ax.scatter(TT,epsilon_ps, s = 1, c = 'xkcd:green', label = r'$\epsilon_p$: prediction error food size')
 
-fig = figure(figsize=(10,10))
-ax  = fig.add_subplot(1,1,1)
-
-ax.scatter(ts,phis,
-           s     = 1,
-           c     = 'xkcd:blue',
-           label = r'$\phi$: food size')
-ax.scatter(ts,epsilon_us,
-           s     = 1,
-           c     ='xkcd:red',
-           label = r'$\epsilon_u$: prediction error sensory input')
-ax.scatter(ts,epsilon_ps,
-           s     = 1,
-           c     = 'xkcd:green',
-           label = r'$\epsilon_p$: prediction error food size')
-
-ax.set_xlabel('Time')
-ax.legend()
-ax.set_title('Exercise 3--Neural Implementation')
-fig.savefig('figs/feex3')
-show()
+    ax.set_xlabel('Time')
+    ax.legend()
+    ax.set_title('Exercise 3--Neural Implementation')
+    fig.savefig(join('figs',Path(__file__).stem))
+    show()

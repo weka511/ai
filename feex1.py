@@ -23,6 +23,8 @@
    sizes from 0.01 to 5, and plots them.
 '''
 
+from os.path import join
+from pathlib import Path
 from matplotlib.pyplot import figure, show
 import numpy as np
 from scipy.integrate import quad
@@ -84,5 +86,5 @@ if __name__ == '__main__':
     ax.vlines(x,0,y, colors = 'xkcd:red', linestyles = 'dotted', label = f'Max posterior={x:.2f}')
     ax.legend()
     ax.set_title('Bogacz, Exercise 1')
-    fig.savefig('figs/feex1')
+    fig.savefig(join('figs',Path(__file__).stem))
     show()
