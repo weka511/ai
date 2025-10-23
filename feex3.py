@@ -27,9 +27,21 @@ from matplotlib import rc
 import numpy as np
 
 def g(v):
+    '''
+    Model for intensity of light
+
+    Parameters:
+        v   Food size
+    '''
     return v**2
 
 def g_prime(v):
+    '''
+    Calculate derivative of g
+
+    Parameters:
+        v   Food size
+    '''
     return 2*v
 
 if __name__ == '__main__':
@@ -43,10 +55,9 @@ if __name__ == '__main__':
     epsilon_u = 0    # prediction error sensory input
     dt = 0.01
 
-     # Keep track of time, and of estimates for food size and prediction errors
-    phis = np.zeros((T))
-    epsilon_us = np.zeros((T))
-    epsilon_ps = np.zeros((T))
+    phis = np.zeros((T))       # Estimates for food size
+    epsilon_us = np.zeros((T)) # Prediction error for light intensity
+    epsilon_ps = np.zeros((T)) # Prediction error for food size
     phis[0] = phi
     TT = np.arange(0,5+dt,dt)
     for t in range(1,T):
