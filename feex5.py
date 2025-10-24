@@ -27,6 +27,9 @@ from matplotlib.pyplot import figure, show
 from matplotlib import rc
 
 class Colours:
+    '''
+    Provide a selection of colours from XKCD model
+    '''
     def __init__(self):
         self.XKCD = [
             'xkcd:purple','xkcd:green','xkcd:blue','xkcd:pink',
@@ -39,6 +42,7 @@ class Colours:
         return self
 
     def __next__(self):
+        if self.i >= len(self.XKCD): raise StopIteration()
         value = self.XKCD[self.i]
         self.i += 1
         return value
@@ -54,28 +58,30 @@ if __name__=='__main__':
     MaxT = 20
     N = 1000
     LRate = 0.01
-    Sigma = np.zeros((N+1))
-    Sigma[0] = 1
+    m = int(MaxT/dt)
+    e = np.zeros((m+1))   # interneuron
+    error = np.zeros((m+1))  # prediction error
+    Sigma = np.ones((N+1))
 
     fig = figure(figsize=(10,10))
     ax  = fig.add_subplot(2,1,1)
     colours = Colours()
     colour_iterator = iter(colours)
-    m = int(MaxT/dt)
-    e = np.zeros((m+1))   # interneuron
-    error = np.zeros((m+1))  # prediction error
-    for i in range(N):
+
+    for trial in range(N):
         phi = phi_mean + np.sqrt(phi_sigma)*rng.uniform()
-        for j in range(m):
-            error[j+1] = error[j] + dt*(phi-phi_above - e[j])
-            e[j+1] = e[j] + dt *(Sigma[i] * error[j] - e[j])
+        error[0] = 0
+        e[0] = 0
+        for i in range(m):
+            error[i+1] = error[i] + dt*(phi - phi_above - e[i])
+            e[i+1] = e[i] + dt *(Sigma[trial] * error[i] - e[i])
 
-        Sigma[i+1] = Sigma[i] + LRate *( error[-1]*e[-1]- 1)
+        Sigma[trial+1] = Sigma[trial] + LRate*(error[-1]*e[-1] - 1)
 
-        if i % 100==0:
+        if trial % 100==0:
             colour = next(colour_iterator)
-            ax.plot(error, linestyle = 'dotted', c = colour, label = 'prediction error' if i==0 else None)
-            ax.plot(e, linestyle = 'dashed',  c = colour,  label ='interneuron' if i==0 else None)
+            ax.plot(error, linestyle = 'dotted', c = colour, label = 'prediction error' if trial == 0 else None)
+            ax.plot(e, linestyle = 'dashed',  c = colour,  label ='interneuron' if trial == 0 else None)
 
     ax.set_title(f'Errors over {N} runs')
     ax.legend()
