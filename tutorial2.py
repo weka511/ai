@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
 # Copyright (C) 2025 Simon Crase  simon@greenweaves.nz
 
@@ -30,21 +31,19 @@ from pymdp.agent import Agent
 from tutorial_common import AxisIterator, plot_likelihood, plot_grid, plot_beliefs, plot_point_on_grid
 
 class TwoArmedBandit(object):
+    '''
+    This class represents the 2-armed bandit environment (AKA the generative process)
+    '''
 
-    def __init__(self, context = None, p_hint = 1.0, p_reward = 0.8):
+    def __init__(self, p_hint = 1.0, p_reward = 0.8,
+                 context_names = ['Left-Better', 'Right-Better'],reward_obs_names = ['Null', 'Loss', 'Reward'],
+                 hint_obs_names = ['Null', 'Hint-left', 'Hint-right']):
 
-        self.context_names = ['Left-Better', 'Right-Better']
-
-        if context == None:
-            self.context = self.context_names[utils.sample(np.array([0.5, 0.5]))] # randomly sample which bandit arm is better (Left or Right)
-        else:
-            self.context = context
-
+        self.context = context_names[utils.sample(np.array([0.5, 0.5]))]
         self.p_hint = p_hint
         self.p_reward = p_reward
-
-        self.reward_obs_names = ['Null', 'Loss', 'Reward']
-        self.hint_obs_names = ['Null', 'Hint-left', 'Hint-right']
+        self.reward_obs_names = reward_obs_names
+        self.hint_obs_names = hint_obs_names
 
     def step(self, action):
         match(action):
@@ -114,13 +113,10 @@ if __name__=='__main__':
 
         context_names = ['Left-Better', 'Right-Better']
         choice_names = ['Start', 'Hint', 'Left Arm', 'Right Arm']
-
         num_states = [len(context_names), len(choice_names)]
         num_factors = len(num_states)
-
         context_action_names = ['Do-nothing']
         choice_action_names = ['Move-start', 'Get-hint', 'Play-left', 'Play-right']
-
         num_controls = [len(context_action_names), len(choice_action_names)]
 
         hint_obs_names = ['Null', 'Hint-left', 'Hint-right']
@@ -130,12 +126,12 @@ if __name__=='__main__':
         num_obs = [len(hint_obs_names), len(reward_obs_names), len(choice_obs_names)]
         num_modalities = len(num_obs)
 
+        p_hint = 0.7 # accuracy of the hint, according to the agent's generative model
+        p_reward = 0.8 # probability of getting a rewarding outcome, if you are sampling the more rewarding bandit
+
         A = utils.obj_array( num_modalities )
 
-        p_hint = 0.7 # accuracy of the hint, according to the agent's generative model (how much does the agent trust the hint?)
-
         A_hint = np.zeros( (len(hint_obs_names), len(context_names), len(choice_names)) )
-
         for choice_id, choice_name in enumerate(choice_names):
             match(choice_name):
                 case 'Start':
@@ -147,10 +143,7 @@ if __name__=='__main__':
                     A_hint[0,:,choice_id] = 1.0
                 case 'Right Arm':
                     A_hint[0,:,choice_id] = 1.0
-
         A[0] = A_hint
-
-        p_reward = 0.8 # probability of getting a rewarding outcome, if you are sampling the more rewarding bandit
 
         A_reward = np.zeros((len(reward_obs_names), len(context_names), len(choice_names)))
 
@@ -191,7 +184,6 @@ if __name__=='__main__':
         B_choice = np.zeros( (len(choice_names), len(choice_names), len(choice_action_names)) )
 
         for choice_i in range(len(choice_names)):
-
             B_choice[choice_i, :, choice_i] = 1.0
 
         B[1] = B_choice
@@ -223,18 +215,21 @@ if __name__=='__main__':
 
         my_agent = Agent(A = A, B = B, C = C, D = D)
 
-        p_hint_env = 1.0 # this is the "true" accuracy of the hint - i.e. how often does the hint actually signal which arm is better. REMEMBER: THIS IS INDEPENDENT OF HOW YOU PARAMETERIZE THE A MATRIX FOR THE HINT MODALITY
-        p_reward_env = 0.7 # this is the "true" reward probability - i.e. how often does the better arm actually return a reward, as opposed to a loss. REMEMBER: THIS IS INDEPENDENT OF HOW YOU PARAMETERIZE THE A MATRIX FOR THE REWARD MODALITY
-        env = TwoArmedBandit(p_hint = p_hint_env, p_reward = p_reward_env)
+        env = TwoArmedBandit(p_hint = 1.0, p_reward = 0.7, context_names=context_names,
+                             reward_obs_names=reward_obs_names,hint_obs_names=hint_obs_names)
         print(f'Context: {env.context}')
 
         run_active_inference_loop(my_agent, env, T = 10, axes=axes)
 
         # change the 'shape' of the agent's reward function
-        C[1][1] = 0.0 # makes the Loss "less aversive" than before (higher prior prior probability assigned to seeing the Loss outcome). This should make the agent less risk-averse / willing to explore both arms, under uncertainty
+        # makes the Loss "less aversive" than before (higher prior prior probability assigned
+        # to seeing the Loss outcome). This should make the agent less risk-averse /
+        # willing to explore both arms, under uncertainty
+        C[1][1] = 0.0
 
         my_agent = Agent(A = A, B = B, C = C, D = D) # redefine the agent with the new preferences
-        env = TwoArmedBandit(p_hint = 0.8, p_reward = 0.8) # re-initialize the environment -- this time, the hint is not always accurate (`p_hint = 0.8`)
+        env = TwoArmedBandit(p_hint = 0.8, p_reward = 0.8, context_names=context_names,
+                             reward_obs_names=reward_obs_names,hint_obs_names=hint_obs_names) # re-initialize the environment -- this time, the hint is not always accurate (`p_hint = 0.8`)
         print(f'Context: {env.context}')
 
         run_active_inference_loop(my_agent, env, T = 10, axes=axes)
