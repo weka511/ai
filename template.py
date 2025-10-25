@@ -21,22 +21,22 @@
 # Standard library imports.
 
 from argparse import ArgumentParser
-from os.path  import join
-from pathlib  import Path
+from os.path import join
+from pathlib import Path
 from matplotlib.pyplot import figure, show
 import numpy as np
 
 
-if __name__=='__main__':
+if __name__ == '__main__':
     parser = ArgumentParser(__doc__)
     parser.add_argument('--show', default=False, action='store_true', help='Controls whether plot will be displayed')
-    parser.add_argument('--figs', default='./figs',                   help = 'Location for storing plot files')
+    parser.add_argument('--figs', default='./figs', help='Location for storing plot files')
     args = parser.parse_args()
 
     fig = figure()
-    ax  = fig.add_subplot(1,1,1)
+    ax = fig.add_subplot(1, 1, 1)
 
-    fig.savefig(join(args.figs,Path(__file__).stem))
+    fig.savefig(join(args.figs, Path(__file__).stem))
     if args.show:
         show()
 

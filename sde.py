@@ -22,20 +22,23 @@
 from matplotlib.pyplot import figure, show
 import numpy as np
 
+
 class Wiener:
     '''This class represents a Wiener process'''
+
     def __init__(self,
-                 d = 1,
-                 sigma = 1,
-                 rng = np.random.default_rng(None)):
+                 d=1,
+                 sigma=1,
+                 rng=np.random.default_rng(None)):
         self.rng = rng
         self.d = d
         self.sigma = sigma
 
-    def dW(self,dt):
-        return self.rng.normal(size = self.d,
-                               loc  = 0.0,
-                               scale = np.sqrt(self.sigma*dt))
+    def dW(self, dt):
+        return self.rng.normal(size=self.d,
+                               loc=0.0,
+                               scale=np.sqrt(self.sigma * dt))
+
 
 class EulerMaruyama:
     '''
@@ -43,26 +46,27 @@ class EulerMaruyama:
     See https://en.wikipedia.org/wiki/Euler%E2%80%93Maruyama_method
     '''
 
-    def solve(self,a, y0, t,
-              b  = lambda y,t:y, #Magnitude of Gaussian proportional to y
-              wiener = Wiener()):
+    def solve(self, a, y0, t,
+              b=lambda y, t: y, #Magnitude of Gaussian proportional to y
+              wiener=Wiener()):
         d = np.size(y0, 0)
         y = np.zeros((np.size(t, 0), d))
         y[0, :] = y0
         for i in range(0, np.size(t) - 1):
             dt = t[i + 1] - t[i]
-            y[i + 1] = y[i] + a(y[i], t[i])*dt + b(y[i],t[i])*wiener.dW(dt)
+            y[i + 1] = y[i] + a(y[i], t[i]) * dt + b(y[i], t[i]) * wiener.dW(dt)
 
         return y
 
-if __name__=='__main__':
+
+if __name__ == '__main__':
     # Test code from https://en.wikipedia.org/wiki/Euler%E2%80%93Maruyama_method
     class Model:
         '''
         Stochastic model constants.
         '''
         THETA = 0.7
-        MU    = 1.5
+        MU = 1.5
         SIGMA = 0.06
 
     def mu(y: float, _t: float) -> float:
@@ -85,10 +89,10 @@ if __name__=='__main__':
     TS = np.arange(T_INIT, T_END + DT, DT)
     solver = EulerMaruyama()
     fig = figure()
-    ax = fig.add_subplot(1,1,1)
+    ax = fig.add_subplot(1, 1, 1)
 
     for _ in range(n):
         y = solver.solve(mu, [0], TS, b=sigma)
-        ax.plot(TS,y[:,0])
+        ax.plot(TS, y[:, 0])
     ax.set_title(f'Euler-Maruyama repeated {n} times')
     show()

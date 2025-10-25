@@ -30,7 +30,8 @@ import numpy as np
 from scipy.integrate import quad
 from scipy.stats import norm
 
-def get_likelihood(u,v,Sigma_u=1, g=lambda v:v**2):
+
+def get_likelihood(u, v, Sigma_u=1, g=lambda v: v**2):
     '''
     Calculate Likelihood
 
@@ -40,7 +41,8 @@ def get_likelihood(u,v,Sigma_u=1, g=lambda v:v**2):
         Sigma_u  Expected standard deviation for u
         g        Function that relates light intensity with size
     '''
-    return norm(g(v),Sigma_u).pdf(u)
+    return norm(g(v), Sigma_u).pdf(u)
+
 
 def get_prior(v, vp=3, Sigma_p=1):
     '''
@@ -53,7 +55,8 @@ def get_prior(v, vp=3, Sigma_p=1):
     '''
     return norm(vp, Sigma_p).pdf(v)
 
-def get_evidence(u, minsize = 0,maxsize = 5,epsabs=0.0001):
+
+def get_evidence(u, minsize=0, maxsize=5, epsabs=0.0001):
     '''
     Calculate Evidence by integrating get_prior*get_likelihood
 
@@ -61,9 +64,10 @@ def get_evidence(u, minsize = 0,maxsize = 5,epsabs=0.0001):
         u        Light intensity
         epsabs   Absolute error tolerance
     '''
-    return quad(lambda v:get_prior(v)*get_likelihood(u,v),minsize,maxsize,epsabs=epsabs)[0]
+    return quad(lambda v: get_prior(v) * get_likelihood(u, v), minsize, maxsize, epsabs=epsabs)[0]
 
-def get_posterior(v,u,minsize = 0,maxsize = 5):
+
+def get_posterior(v, u, minsize=0, maxsize=5):
     '''
     Calculate Posterior probability for size
 
@@ -71,9 +75,10 @@ def get_posterior(v,u,minsize = 0,maxsize = 5):
         u        Light intensity
         v        Size of a food item
     '''
-    return get_prior(v)*get_likelihood(u,v)/get_evidence(u,minsize = minsize,maxsize = maxsize)
+    return get_prior(v) * get_likelihood(u, v) / get_evidence(u, minsize=minsize, maxsize=maxsize)
 
-def get_max_posterior(Sizes,Posterior):
+
+def get_max_posterior(Sizes, Posterior):
     '''
     Calculate maximum posterior proability
 
@@ -82,22 +87,23 @@ def get_max_posterior(Sizes,Posterior):
         Posterior  Posterior probability for each size
     '''
     index_max = np.argmax(Posterior)
-    return Sizes[index_max],Posterior[index_max]
+    return Sizes[index_max], Posterior[index_max]
+
 
 if __name__ == '__main__':
     u = 2   # Observed light intensity
     minsize = 0
     maxsize = 5
-    Sizes = np.linspace(minsize,maxsize,num=500)
-    Posterior = get_posterior(Sizes,u,minsize = minsize,maxsize = maxsize)
-    size,max_posterior = get_max_posterior(Sizes,Posterior)
-    fig = figure(figsize=(10,10))
-    ax = fig.add_subplot(1,1,1)
-    ax.scatter(Sizes,Posterior, s = 1, c = 'xkcd:blue', label = 'Posterior probability of sizes')
+    Sizes = np.linspace(minsize, maxsize, num=500)
+    Posterior = get_posterior(Sizes, u, minsize=minsize, maxsize=maxsize)
+    size, max_posterior = get_max_posterior(Sizes, Posterior)
+    fig = figure(figsize=(10, 10))
+    ax = fig.add_subplot(1, 1, 1)
+    ax.scatter(Sizes, Posterior, s=1, c='xkcd:blue', label='Posterior probability of sizes')
     ax.set_xlabel('v')
     ax.set_ylabel('p(v|u)')
-    ax.vlines(size,0,max_posterior, colors = 'xkcd:red', linestyles = 'dotted', label = f'Max posterior occurs at {size:.2f}')
+    ax.vlines(size, 0, max_posterior, colors='xkcd:red', linestyles='dotted', label=f'Max posterior occurs at {size:.2f}')
     ax.legend()
     ax.set_title('Bogacz, Exercise 1')
-    fig.savefig(join('figs',Path(__file__).stem))
+    fig.savefig(join('figs', Path(__file__).stem))
     show()

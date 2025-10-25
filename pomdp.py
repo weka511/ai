@@ -26,7 +26,8 @@ from unittest import TestCase, main
 import numpy as np
 from numpy.testing import assert_array_almost_equal, assert_array_equal
 
-def softmax(x,axis=0):
+
+def softmax(x, axis=0):
     '''
     The softmax function converts a vector of K real numbers into a probability
     distribution of K possible outcomes.
@@ -36,23 +37,24 @@ def softmax(x,axis=0):
         axis  Axis for summation: the default makes it agree with calculation on paage 27
     '''
     exps = np.exp(x)
-    return exps/exps.sum(axis=axis)
+    return exps / exps.sum(axis=axis)
 
 
-def update(D,B,A,
-          o    = [],
-          s    = [],
-          log  = np.log,
-          step = 1):
-    def get_o(o,i):
-        return o[i] if i<step else np.array([0,0])
+def update(D, B, A,
+           o=[],
+           s=[],
+           log=np.log,
+           step=1):
+    def get_o(o, i):
+        return o[i] if i < step else np.array([0, 0])
 
-    s1 = softmax(0.5*log(D) + 0.5*log(np.dot(B,s[1]))+log(np.dot(A,get_o(o,0))))
-    s2 = softmax(0.5*log(np.dot(B,s1)) +log(np.dot(A,get_o(o,1))))
+    s1 = softmax(0.5 * log(D) + 0.5 * log(np.dot(B, s[1])) + log(np.dot(A, get_o(o, 0))))
+    s2 = softmax(0.5 * log(np.dot(B, s1)) + log(np.dot(A, get_o(o, 1))))
 
-    return s1,s2
+    return s1, s2
 
-def initialize_approximate_posteriors(priors=np.array([0.5,0.5]),T=2):
+
+def initialize_approximate_posteriors(priors=np.array([0.5, 0.5]), T=2):
     '''
     Initialize the values of approximate posteriors for all hidden variables
 
@@ -60,40 +62,47 @@ def initialize_approximate_posteriors(priors=np.array([0.5,0.5]),T=2):
         priors
         T        Number of time points
     '''
-    Q = np.empty((T,priors.size))
+    Q = np.empty((T, priors.size))
     for t in range(T):
-        Q[t,:] = priors
+        Q[t, :] = priors
     return Q
+
 
 def create_observations():
     o = np.array([[1, 0],
                   [1, 0]])
     return o
 
+
 def generate_edges():
     pass
+
 
 def create_messages(v):
     pass
 
+
 def update_posterior():
     pass
 
-def get_delta(qs,n):
-    return (abs(qs[n+1,:,:] - qs[n,:,:])).max()
 
-def has_converged(qs,n,epsilon=0.001,burn_in=5):
-    return n>burn_in and get_delta(qs,n)<epsilon
+def get_delta(qs, n):
+    return (abs(qs[n + 1, :, :] - qs[n, :, :])).max()
 
-def example1(D = np.array([0.5,0.5]),
-          A = np.array([[.9,.1],
-                      [.1, .9]]),
-          B = np.array([[1,0],
-                      [0,1]]),
-          T = 2,
-          N = 16,
-          epsilon = 0.001,
-          burn_in = 5):
+
+def has_converged(qs, n, epsilon=0.001, burn_in=5):
+    return n > burn_in and get_delta(qs, n) < epsilon
+
+
+def example1(D=np.array([0.5, 0.5]),
+             A=np.array([[.9, .1],
+                         [.1, .9]]),
+             B=np.array([[1, 0],
+                         [0, 1]]),
+             T=2,
+             N=16,
+             epsilon=0.001,
+             burn_in=5):
     '''
     Example 1: Fixed observations and message passing steps
 
@@ -111,107 +120,108 @@ def example1(D = np.array([0.5,0.5]),
         T   Number of timesteps
         N   Number of iterations
     '''
-    Q = np.empty((T,D.size))
+    Q = np.empty((T, D.size))
     for tau in range(T):
-        Q[tau,:] = D
+        Q[tau, :] = D
 
     o = np.array([[1, 0],
                   [1, 0]])
 
-    qs = np.empty((N + 1,D.size,T))
+    qs = np.empty((N + 1, D.size, T))
 
     for tau in range(T):
-        qs[0,:,tau] =  Q[tau,:]
+        qs[0, :, tau] = Q[tau, :]
 
     for n in range(N):
         for tau in range(T):
-            q = np.log(Q[tau,:])
+            q = np.log(Q[tau, :])
             # compute messages sent by D and B (Steps 4) using the posterior
             # computed in Step 6B
             if tau == 0:
                 lnD = np.log(D)
-                lnBs = np.log(B.T.dot(Q[tau+1,:]))
+                lnBs = np.log(B.T.dot(Q[tau + 1, :]))
             elif tau == T - 1:
-                lnBs = np.log(B.dot(Q[tau-1,:]))
+                lnBs = np.log(B.dot(Q[tau - 1, :]))
 
-            lnAo = np.log(A.T.dot(o[tau,:])) # likelihood (Message 3)
+            lnAo = np.log(A.T.dot(o[tau, :])) # likelihood (Message 3)
 
             # Steps 5-6 (Pass messages and update the posterior)
             # Since all terms are in log space, this is addition instead of
             # multiplication. This corresponds to  equation 16 in the main
             # text (within the softmax)
             if tau == 0:
-                q = 0.5*lnD + 0.5*lnBs + lnAo
-            elif tau == T-1:
-                q = 0.5*lnBs + lnAo
+                q = 0.5 * lnD + 0.5 * lnBs + lnAo
+            elif tau == T - 1:
+                q = 0.5 * lnBs + lnAo
 
-            Q[:,tau] = softmax(q)       #Normalize
-            qs[n+1,:,tau] =  Q[:,tau]
+            Q[:, tau] = softmax(q)       #Normalize
+            qs[n + 1, :, tau] = Q[:, tau]
 
-        if has_converged(qs,n,epsilon=epsilon,burn_in=burn_in):
-            return qs[0:n+2,:,:], get_delta(qs,n)
+        if has_converged(qs, n, epsilon=epsilon, burn_in=burn_in):
+            return qs[0:n + 2, :, :], get_delta(qs, n)
 
-    return qs, get_delta(qs,n)
+    return qs, get_delta(qs, n)
 
 
-def example2(D = np.array([0.5,0.5]),
-          A = np.array([[.9,.1],
-                        [.1, .9]]),
-          B = np.array([[1,0],
-                        [0,1]]),
-          T = 2,
-          N = 16):
-    Q = np.empty((T,D.size))
+def example2(D=np.array([0.5, 0.5]),
+             A=np.array([[.9, .1],
+                         [.1, .9]]),
+             B=np.array([[1, 0],
+                         [0, 1]]),
+             T=2,
+             N=16):
+    Q = np.empty((T, D.size))
     for t in range(T):
-        Q[:,t] = D
+        Q[:, t] = D
 
     o = np.array([[1, 0],
                   [0, 0],
                   [1, 0],
                   [1, 0]])
 
-    epsilon = np.empty((len(D),N,T,T))
-    xn = np.empty((N,T,T,T))
+    epsilon = np.empty((len(D), N, T, T))
+    xn = np.empty((N, T, T, T))
     for t in range(T):
         for n in range(N):
             for tau in range(T):
-                v = np.log(Q[:,t])
+                v = np.log(Q[:, t])
                 if tau == 0: # first time point
                     lnD = np.log(D) #  past (Message 1)
-                    lnBs = np.log(B.T.dot(Q[:,tau+1]))
+                    lnBs = np.log(B.T.dot(Q[:, tau + 1]))
                 elif tau == T - 1: # last time point-- no contribution from future (only Message 1)
-                    lnBs  = np.log(B.dot(Q[:,tau-1]))
+                    lnBs = np.log(B.dot(Q[:, tau - 1]))
 
-                lnAo = np.log(A.T.dot(o[t,tau]))
+                lnAo = np.log(A.T.dot(o[t, tau]))
 
                 if tau == 0:
-                    epsilon[:,n,t,tau] = 0.5*lnD + 0.5*lnBs + lnAo - v
-                elif tau == T-1:
-                    epsilon[:,n,t,tau] = 0.5*lnBs + lnAo - v
+                    epsilon[:, n, t, tau] = 0.5 * lnD + 0.5 * lnBs + lnAo - v
+                elif tau == T - 1:
+                    epsilon[:, n, t, tau] = 0.5 * lnBs + lnAo - v
 
-                v += epsilon[:,n,t,tau]
+                v += epsilon[:, n, t, tau]
 
-                Q[:,tau] = softmax(v)
+                Q[:, tau] = softmax(v)
 
-                xn[Ni,:,tau,t] = Qs[:,tau]
+                xn[Ni, :, tau, t] = Qs[:, tau]
+
 
 class TestSoftMax(TestCase):
     def testC(self):
         '''Example on page 26'''
-        assert_array_almost_equal(np.array([[-1.1, -4.0,-2.1],
+        assert_array_almost_equal(np.array([[-1.1, -4.0, -2.1],
                                             [-1.1, -5.0, -3.2],
                                             [-1.1, -0.02, -0.2]]),
-                                  np.log(softmax(np.array([[0,  0, 0],
+                                  np.log(softmax(np.array([[0, 0, 0],
                                                            [0, -1, -1],
-                                                           [0,  4,  2]]))),
+                                                           [0, 4, 2]]))),
                                   decimal=1)
 
     def test_initialize_approximate_posteriors(self):
-        assert_array_equal(np.array([[0.5,0.5],
-                                     [0.5,0.5],
-                                     [0.5,0.5]]),
+        assert_array_equal(np.array([[0.5, 0.5],
+                                     [0.5, 0.5],
+                                     [0.5, 0.5]]),
                            initialize_approximate_posteriors(T=3))
 
 
-if __name__=='__main__':
+if __name__ == '__main__':
     main()

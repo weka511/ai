@@ -24,19 +24,21 @@
 from argparse import ArgumentParser
 from os.path import join
 from pathlib import Path
-from matplotlib.pyplot import figure,rcParams,show
+from matplotlib.pyplot import figure, rcParams, show
 import numpy as np
 from pomdp import example1, example2
+
 
 def parse_args():
     parser = ArgumentParser(description=__doc__)
     parser.add_argument('action', type=int)
     parser.add_argument('--show', default=False, action='store_true')
     parser.add_argument('--figs', default='./figs', help='Path to plot files (default: %(default)s)')
-    parser.add_argument('--plot', default = None)
+    parser.add_argument('--plot', default=None)
     parser.add_argument('--epsilon', default=0.001, type=float)
     parser.add_argument('--burn_in', default=5, type=int)
     return parser.parse_args()
+
 
 def get_plotfile_name(args):
     if args.plot == None:
@@ -44,36 +46,37 @@ def get_plotfile_name(args):
     else:
         return args.plot
 
+
 if __name__ == '__main__':
     args = parse_args()
     rcParams['text.usetex'] = True
     match args.action:
         case 1:
-            qs,delta = example1(epsilon=args.epsilon,burn_in=args.burn_in)
+            qs, delta = example1(epsilon=args.epsilon, burn_in=args.burn_in)
             fig = figure()
-            ax1 = fig.add_subplot(1,1,1)
-            _,m,T = qs.shape
+            ax1 = fig.add_subplot(1, 1, 1)
+            _, m, T = qs.shape
             for i in range(m):
                 for tau in range(T):
-                    ax1.plot(qs[:,i,tau],label=fr'{i}, $\tau=${tau}')
+                    ax1.plot(qs[:, i, tau], label=fr'{i}, $\tau=${tau}')
             ax1.legend()
             ax1.set_title(rf'Example 1: Fixed observations and message passing steps $\delta=${delta:.2e}')
             ax1.set_xlabel('Iterations')
             ax1.set_ylabel('Posterior')
-            fig.savefig(join(args.figs,get_plotfile_name(args)))
+            fig.savefig(join(args.figs, get_plotfile_name(args)))
 
         case 2:
             xs = example2()
             fig = figure()
-            ax2 = fig.add_subplot(1,1,1)
-            _,l,m,n = qs.shape
+            ax2 = fig.add_subplot(1, 1, 1)
+            _, l, m, n = qs.shape
             for i in range(l):
                 for j in range(m):
                     for k in range(n):
-                        ax2.plot(xs[:,i,j,k])
+                        ax2.plot(xs[:, i, j, k])
 
         case _:
-            print (f'Action {args.action} not implemented')
+            print(f'Action {args.action} not implemented')
 
     if args.show:
         show()

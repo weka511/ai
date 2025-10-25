@@ -19,27 +19,29 @@
 
 
 from argparse import ArgumentParser
-from os.path import  basename,splitext,join
+from os.path import basename, splitext, join
 from time import time
 import numpy as np
 from matplotlib.pyplot import figure, show
 from euler import euler
 from selforg import Huyghens
 
-def parse_args(tFinal = 10.0,
-               Nt = 5000,
-               V0 = 1.0):
+
+def parse_args(tFinal=10.0,
+               Nt=5000,
+               V0=1.0):
     '''Define and parse command line arguments'''
     parser = ArgumentParser(description=__doc__)
-    parser.add_argument('--tFinal', type = float, default = tFinal, help= f'Final time for integration [{tFinal}]')
-    parser.add_argument('--Nt', type = int,   default = Nt, help= f'Number of time steps [{Nt}]')
-    parser.add_argument('--V0', type = float, default = V0, help= f'Initial Velocity [{V0}]')
-    parser.add_argument('--show',  default=False, action='store_true', help='Show plots')
+    parser.add_argument('--tFinal', type=float, default=tFinal, help=f'Final time for integration [{tFinal}]')
+    parser.add_argument('--Nt', type=int, default=Nt, help=f'Number of time steps [{Nt}]')
+    parser.add_argument('--V0', type=float, default=V0, help=f'Initial Velocity [{V0}]')
+    parser.add_argument('--show', default=False, action='store_true', help='Show plots')
     return parser.parse_args()
 
-def get_name_for_save(extra = None,
-                      sep = '-',
-                      figs = './figs'):
+
+def get_name_for_save(extra=None,
+                      sep='-',
+                      figs='./figs'):
     '''
     Extract name for saving figure
 
@@ -53,11 +55,12 @@ def get_name_for_save(extra = None,
         source file, with extra distinguising information if required
     '''
     basic = splitext(basename(__file__))[0]
-    name = basic if extra==None else f'{basic}{sep}{extra}'
-    return join(figs,name)
+    name = basic if extra == None else f'{basic}{sep}{extra}'
+    return join(figs, name)
 
-if __name__=='__main__':
-    start  = time()
+
+if __name__ == '__main__':
+    start = time()
     args = parse_args()
     huyghens = Huyghens()
 
@@ -68,25 +71,25 @@ if __name__=='__main__':
     xSolution = sspSolution[:, 0]
     vSolution = sspSolution[:, 1]
 
-    fig = figure(figsize=(6,6))
-    ax  = fig.add_subplot(2,2,1)
+    fig = figure(figsize=(6, 6))
+    ax = fig.add_subplot(2, 2, 1)
     ax.plot(tArray, xSolution)
     ax.set_ylabel('x(t)')
 
-    ax = fig.add_subplot(2,2,2)
+    ax = fig.add_subplot(2, 2, 2)
     ax.plot(tArray, vSolution)
     ax.set_xlabel('t(s)')
     ax.set_ylabel('v(t)')
 
-    ax  = fig.add_subplot(2,2,3)
-    ax.plot( xSolution, vSolution)
+    ax = fig.add_subplot(2, 2, 3)
+    ax.plot(xSolution, vSolution)
     ax.set_xlabel('x(t)')
     ax.set_ylabel('v(t)')
     fig.suptitle(f'tFinal={args.tFinal}, Nt={args.Nt}, V0={args.V0}')
     fig.savefig(get_name_for_save())
     elapsed = time() - start
-    minutes = int(elapsed/60)
-    seconds = elapsed - 60*minutes
-    print (f'Elapsed Time {minutes} m {seconds:.2f} s')
+    minutes = int(elapsed / 60)
+    seconds = elapsed - 60 * minutes
+    print(f'Elapsed Time {minutes} m {seconds:.2f} s')
     if args.show:
         show()

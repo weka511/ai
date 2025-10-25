@@ -17,18 +17,21 @@
 
 '''Solve problem of Figure 2 from Smith et al'''
 
-from numpy          import array,log
+from numpy import array, log
 from scipy.optimize import minimize
-from scipy.special  import xlogy
+from scipy.special import xlogy
+
 
 def get_q(q0):
-    return array([q0[0],1-q0[0]])
+    return array([q0[0], 1 - q0[0]])
 
-def F(q0,p=array([0.8,0.2])):
-    q = q0/q0.sum()
-    return (xlogy(q,q/p)).sum()
 
-result = minimize(F,array([0.5,0.5]),
-                  bounds   = [(0,1),(0,1)],
-                  callback = lambda x:print(x,F(x)))
-print (result.x)
+def F(q0, p=array([0.8, 0.2])):
+    q = q0 / q0.sum()
+    return (xlogy(q, q / p)).sum()
+
+
+result = minimize(F, array([0.5, 0.5]),
+                  bounds=[(0, 1), (0, 1)],
+                  callback=lambda x: print(x, F(x)))
+print(result.x)

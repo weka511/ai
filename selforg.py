@@ -28,56 +28,61 @@ from scipy.integrate import odeint
 from matplotlib.pyplot import figure, show
 from sde import EulerMaruyama, Wiener
 
+
 class Oscillator(ABC):
-     def __init__(self,name,d=3):
+     def __init__(self, name, d=3):
           self.name = name
           self.d = d
 
      @abstractmethod
-     def Velocity(self,t,ssp):
+     def Velocity(self, t, ssp):
           ...
 
      @abstractmethod
-     def get_y0(self,args,rng):
+     def get_y0(self, args, rng):
           ...
+
 
 class Huyghens(Oscillator):
      '''Simple Pendulum'''
-     def __init__(self,omega2=1):
-          super().__init__('Huyghens',d=2)
-          assert omega2>0
+
+     def __init__(self, omega2=1):
+          super().__init__('Huyghens', d=2)
+          assert omega2 > 0
           self.omega2 = omega2
 
-     def Velocity(self,t,ssp):
-          theta,v = ssp
-          return np.array([v, - self.omega2 * np.sin(theta)],float)
+     def Velocity(self, t, ssp):
+          theta, v = ssp
+          return np.array([v, - self.omega2 * np.sin(theta)], float)
 
-     def get_y0(self,args,rng):
-          return np.array((args.N//2)*[0.0,1.0,0.0,-1.0])
+     def get_y0(self, args, rng):
+          return np.array((args.N // 2) * [0.0, 1.0, 0.0, -1.0])
 
      def __str__(self):
           return self.name
 
+
 class Rossler(Oscillator):
      '''Roessler Equation'''
+
      def __init__(self,
-                  a = 0.2,
-                  b = 0.2,
-                  c = 5.7):
+                  a=0.2,
+                  b=0.2,
+                  c=5.7):
           super().__init__('Roessler')
           self.a = a
           self.b = b
           self.c = c
 
-     def Velocity(self,t,ssp):
+     def Velocity(self, t, ssp):
           x, y, z = ssp
           dxdt = - y - z
           dydt = x + self.a * y
           dzdt = self.b + z * (x - self.c)
           return np.array([dxdt, dydt, dzdt], float)
 
-     def get_y0(self,N,rng):
-          return np.zeros(self.d*args.N)
+     def get_y0(self, N, rng):
+          return np.zeros(self.d * args.N)
           # return rng.normal(loc = args.loc,
                             # scale = args.sigma0,
                             # size = self.d*args.N)
@@ -85,48 +90,51 @@ class Rossler(Oscillator):
      def __str__(self):
           return 'Rössler '
 
+
 class Lorentz(Oscillator):
      '''Lorenz Equation'''
+
      def __init__(self):
           super().__init__('Lorentz')
           self.sigma = 10.0
-          self.rho   = 28.0
-          self.b     = 8.0/3.0
+          self.rho = 28.0
+          self.b = 8.0 / 3.0
 
-     def Velocity(self,t,ssp):
+     def Velocity(self, t, ssp):
           x, y, z = ssp
-          return np.array([self.sigma * (y-x),
-                        self.rho*x - y - x*z,
-                        x*y - self.b*z])
+          return np.array([self.sigma * (y - x),
+                           self.rho * x - y - x * z,
+                           x * y - self.b * z])
 
-     def get_y0(self,N,rng):
-          return rng.normal(loc = args.loc,
-                            scale = args.sigma0,
-                            size = self.d*args.N)
+     def get_y0(self, N, rng):
+          return rng.normal(loc=args.loc,
+                            scale=args.sigma0,
+                            size=self.d * args.N)
 
 
 class Population:
      '''This class represents a coupled set of Oscillators'''
-     def __init__(self,oscillator,
-                  speed = np.ones(4),
-                  coupling = 0.2,
-                  rng = np.random.default_rng(42)):
+
+     def __init__(self, oscillator,
+                  speed=np.ones(4),
+                  coupling=0.2,
+                  rng=np.random.default_rng(42)):
           self.oscillator = oscillator
           self.speed = speed
           self.coupling = coupling
           self.rng = rng
 
-     def Velocity(self,y,t):
+     def Velocity(self, y, t):
           Average = self.get_average(y)
           Noise = rng.normal(size=len(y))
           Velocity = np.zeros_like(y)
-          for oscillator_id,i in enumerate(range(0,len(y),self.oscillator.d)):
-               OscillatorVelocity = self.oscillator.Velocity(t,y[i:i + self.oscillator.d])
-               Velocity[i:i+self.oscillator.d] = self.speed[oscillator_id] * (OscillatorVelocity + self.coupling*Average)
+          for oscillator_id, i in enumerate(range(0, len(y), self.oscillator.d)):
+               OscillatorVelocity = self.oscillator.Velocity(t, y[i:i + self.oscillator.d])
+               Velocity[i:i + self.oscillator.d] = self.speed[oscillator_id] * (OscillatorVelocity + self.coupling * Average)
           return Velocity
 
-     def get_average(self,y):
-          return np.array([np.mean(y[i::self.oscillator.d])  for i in range(self.oscillator.d)])
+     def get_average(self, y):
+          return np.array([np.mean(y[i::self.oscillator.d]) for i in range(self.oscillator.d)])
 
 
 class OscillatorFactory:
@@ -134,41 +142,43 @@ class OscillatorFactory:
      Oscillators = {}
 
      @classmethod
-     def Register(cls,Oscillators):
+     def Register(cls, Oscillators):
           for oscillator in Oscillators:
                OscillatorFactory.Oscillators[oscillator.name] = oscillator
 
      @classmethod
-     def Create(cls,name):
+     def Create(cls, name):
           return OscillatorFactory.Oscillators[name]
 
      @classmethod
      def Available(cls):
           return OscillatorFactory.Oscillators.keys()
 
-def parse_args(tFinal = 8,
-               Nt = 1024,
-               seed = None,
-               N = 16,
-               coupling = 1.0,
-               sigma = 1.0,
-               sigma0 = 8.0,
-               burnin = 0,
-               loc = 30.0):
+
+def parse_args(tFinal=8,
+               Nt=1024,
+               seed=None,
+               N=16,
+               coupling=1.0,
+               sigma=1.0,
+               sigma0=8.0,
+               burnin=0,
+               loc=30.0):
      parser = ArgumentParser(__doc__)
-     parser.add_argument('oscillator', choices = OscillatorFactory.Available(), help='Type of oscillar (Population is homogeneous)')
-     parser.add_argument('--tFinal', type = float, default = tFinal, help= f'Final time for integration [{tFinal}]')
-     parser.add_argument('--Nt', type = int,   default = Nt, help= f'Number of time steps [{Nt}]')
-     parser.add_argument('--seed', type = int,   default = seed, help= f'Seed for random number generation [{seed}]')
-     parser.add_argument('--N', type = int,   default = N, help= f'Number of identical oscillators [{N}]')
-     parser.add_argument('--coupling', type = float, default = coupling, help= f'Coupling coefficient for oscillators [{coupling}]')
-     parser.add_argument('--sigma', type = float, default = sigma, help= f'Standard deviation for noise [{sigma}]')
-     parser.add_argument('--sigma0', type = float, default = sigma0, help= f'Used to disperse starting points [{sigma0}]')
-     parser.add_argument('--show', default = False, action = 'store_true', help= 'Set if plots are to be displayed')
-     parser.add_argument('--burnin', type = int, default = burnin, help= f'Burning-in time (omitted from plots)[{burnin}]')
-     parser.add_argument('--loc', type=float, default=loc, help= f'Mean for initial positions [{loc}]')
-     parser.add_argument('--details', default = False, action = 'store_true', help= 'Plot each oscillator')
+     parser.add_argument('oscillator', choices=OscillatorFactory.Available(), help='Type of oscillar (Population is homogeneous)')
+     parser.add_argument('--tFinal', type=float, default=tFinal, help=f'Final time for integration [{tFinal}]')
+     parser.add_argument('--Nt', type=int, default=Nt, help=f'Number of time steps [{Nt}]')
+     parser.add_argument('--seed', type=int, default=seed, help=f'Seed for random number generation [{seed}]')
+     parser.add_argument('--N', type=int, default=N, help=f'Number of identical oscillators [{N}]')
+     parser.add_argument('--coupling', type=float, default=coupling, help=f'Coupling coefficient for oscillators [{coupling}]')
+     parser.add_argument('--sigma', type=float, default=sigma, help=f'Standard deviation for noise [{sigma}]')
+     parser.add_argument('--sigma0', type=float, default=sigma0, help=f'Used to disperse starting points [{sigma0}]')
+     parser.add_argument('--show', default=False, action='store_true', help='Set if plots are to be displayed')
+     parser.add_argument('--burnin', type=int, default=burnin, help=f'Burning-in time (omitted from plots)[{burnin}]')
+     parser.add_argument('--loc', type=float, default=loc, help=f'Mean for initial positions [{loc}]')
+     parser.add_argument('--details', default=False, action='store_true', help='Plot each oscillator')
      return parser.parse_args()
+
 
 if __name__ == "__main__":
      OscillatorFactory.Register([Rossler(),
@@ -179,58 +189,58 @@ if __name__ == "__main__":
      t = np.linspace(0, args.tFinal, args.Nt)
      d = oscillator.d * args.N
      rng = np.random.default_rng(args.seed)
-     y0 = oscillator.get_y0(args,rng)
+     y0 = oscillator.get_y0(args, rng)
 
      population = Population(oscillator,
-                             speed = np.exp(rng.normal(0,2**-6,args.N)),
-                             coupling = args.coupling,
-                             rng = rng)
+                             speed=np.exp(rng.normal(0, 2**-6, args.N)),
+                             coupling=args.coupling,
+                             rng=rng)
      solver = EulerMaruyama()
      y = solver.solve(population.Velocity, y0, t,
-                      b = lambda y,t:args.sigma * y, #Magnitude of Gaussian proportional to y
-                      wiener = Wiener(rng = rng, d = d))
+                      b=lambda y, t: args.sigma * y, #Magnitude of Gaussian proportional to y
+                      wiener=Wiener(rng=rng, d=d))
 
-     m,n = y.shape
-     fig = figure(figsize=(12,6))
+     m, n = y.shape
+     fig = figure(figsize=(12, 6))
      for i in range(3):
-          ax = fig.add_subplot(2,2,i+1)
-          ax.plot(t[args.burnin:],np.mean(y[args.burnin:,i::oscillator.d],axis=1),
-                  linestyle = 'solid',
-                  linewidth = 2)
-          for j in range(i,n,oscillator.d):
-               ax.plot(t[args.burnin:],y[args.burnin:,j],
-                       linestyle = 'dotted')
+          ax = fig.add_subplot(2, 2, i + 1)
+          ax.plot(t[args.burnin:], np.mean(y[args.burnin:, i::oscillator.d], axis=1),
+                  linestyle='solid',
+                  linewidth=2)
+          for j in range(i, n, oscillator.d):
+               ax.plot(t[args.burnin:], y[args.burnin:, j],
+                       linestyle='dotted')
                ax.set_xlabel('t')
                ax.set_ylabel('xyz'[i])
 
-     if oscillator.d==3:
-          ax = fig.add_subplot(2,2,4,projection='3d')
-          ax.plot(np.mean(y[args.burnin:,0::oscillator.d],axis=1),
-                  np.mean(y[args.burnin:,1::oscillator.d],axis=1),
-                  np.mean(y[args.burnin:,2::oscillator.d],axis=1))
+     if oscillator.d == 3:
+          ax = fig.add_subplot(2, 2, 4, projection='3d')
+          ax.plot(np.mean(y[args.burnin:, 0::oscillator.d], axis=1),
+                  np.mean(y[args.burnin:, 1::oscillator.d], axis=1),
+                  np.mean(y[args.burnin:, 2::oscillator.d], axis=1))
           ax.set_xlabel('x')
           ax.set_ylabel('y')
           ax.set_zlabel('z')
      else:
-          ax = fig.add_subplot(2,2,4)
-          ax.plot(np.mean(y[args.burnin:,0::oscillator.d],axis=1),
-                  np.mean(y[args.burnin:,1::oscillator.d],axis=1))
+          ax = fig.add_subplot(2, 2, 4)
+          ax.plot(np.mean(y[args.burnin:, 0::oscillator.d], axis=1),
+                  np.mean(y[args.burnin:, 1::oscillator.d], axis=1))
           ax.set_xlabel('x')
           ax.set_ylabel('y')
 
-     fig.suptitle(fr'{oscillator}: N={args.N}, $\lambda$={args.coupling}, $\sigma=${args.sigma}, $\delta T=${args.tFinal/args.Nt}')
+     fig.suptitle(fr'{oscillator}: N={args.N}, $\lambda$={args.coupling}, $\sigma=${args.sigma}, $\delta T=${args.tFinal / args.Nt}')
      fig.savefig(f'figs/selforg{args.oscillator}')
 
      if args.details:
-          fig = figure(figsize=(12,6))
-          ax = fig.add_subplot(1,1,1)
-          markers = ['x','.']
+          fig = figure(figsize=(12, 6))
+          ax = fig.add_subplot(1, 1, 1)
+          markers = ['x', '.']
           s = 100
-          for i in range(n//2):
-               ax.scatter(y[args.burnin:,2*i],y[args.burnin:,2*i+1],
-                         s = s,
-                          alpha = 0.5,
-                          label = f'{0}',
+          for i in range(n // 2):
+               ax.scatter(y[args.burnin:, 2 * i], y[args.burnin:, 2 * i + 1],
+                          s=s,
+                          alpha=0.5,
+                          label=f'{0}',
                           marker=markers[i])
                s /= 2
           fig.legend()

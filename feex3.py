@@ -26,6 +26,7 @@ from matplotlib.pyplot import figure, show
 from matplotlib import rc
 import numpy as np
 
+
 def g(v):
     '''
     Model for intensity of light
@@ -35,6 +36,7 @@ def g(v):
     '''
     return v**2
 
+
 def g_prime(v):
     '''
     Calculate derivative of g
@@ -42,10 +44,11 @@ def g_prime(v):
     Parameters:
         v   Food size
     '''
-    return 2*v
+    return 2 * v
+
 
 if __name__ == '__main__':
-    v_p  = 3   # Mean of prior for food size
+    v_p = 3   # Mean of prior for food size
     Sigma_p = 1   # Variance of prior
     Sigma_u = 1   # Variance of sensory noise
     u = 2   # Observed light intensity
@@ -59,29 +62,29 @@ if __name__ == '__main__':
     epsilon_us = np.zeros((T)) # Prediction error for light intensity
     epsilon_ps = np.zeros((T)) # Prediction error for food size
     phis[0] = phi
-    TT = np.arange(0,5+dt,dt)
-    for t in range(1,T):
-        phi_dot = epsilon_u*g_prime(phi) - epsilon_p
-        epsilon_p_dot = phi - v_p - Sigma_p*epsilon_p
-        epsilon_u_dot = u - g(phi) - Sigma_u*epsilon_u
+    TT = np.arange(0, 5 + dt, dt)
+    for t in range(1, T):
+        phi_dot = epsilon_u * g_prime(phi) - epsilon_p
+        epsilon_p_dot = phi - v_p - Sigma_p * epsilon_p
+        epsilon_u_dot = u - g(phi) - Sigma_u * epsilon_u
 
-        phi += dt*phi_dot
-        epsilon_p += dt*epsilon_p_dot
-        epsilon_u += dt*epsilon_u_dot
+        phi += dt * phi_dot
+        epsilon_p += dt * epsilon_p_dot
+        epsilon_u += dt * epsilon_u_dot
 
         phis[t] = phi
         epsilon_us[t] = epsilon_u
         epsilon_ps[t] = epsilon_p
 
-    fig = figure(figsize=(10,10))
-    ax = fig.add_subplot(1,1,1)
+    fig = figure(figsize=(10, 10))
+    ax = fig.add_subplot(1, 1, 1)
 
-    ax.scatter(TT,phis, s = 1, c = 'xkcd:blue', label = r'$\phi$: food size')
-    ax.scatter(TT,epsilon_us, s = 1, c ='xkcd:red', label = r'$\epsilon_u$: prediction error sensory input')
-    ax.scatter(TT,epsilon_ps, s = 1, c = 'xkcd:green', label = r'$\epsilon_p$: prediction error food size')
+    ax.scatter(TT, phis, s=1, c='xkcd:blue', label=r'$\phi$: food size')
+    ax.scatter(TT, epsilon_us, s=1, c='xkcd:red', label=r'$\epsilon_u$: prediction error sensory input')
+    ax.scatter(TT, epsilon_ps, s=1, c='xkcd:green', label=r'$\epsilon_p$: prediction error food size')
 
     ax.set_xlabel('Time')
     ax.legend()
     ax.set_title('Exercise 3--Neural Implementation')
-    fig.savefig(join('figs',Path(__file__).stem))
+    fig.savefig(join('figs', Path(__file__).stem))
     show()

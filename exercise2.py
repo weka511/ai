@@ -21,7 +21,7 @@ import numpy as np
 
 from pomdp import update
 
-if __name__=='__main__':
+if __name__ == '__main__':
     D = np.array([0.5, 0.5])
 
     A = np.array([
@@ -30,23 +30,23 @@ if __name__=='__main__':
     ])
 
     B = np.array([
-        [1,0],
-        [0,1]
+        [1, 0],
+        [0, 1]
     ])
 
-    o1 = np.array([1,0])
+    o1 = np.array([1, 0])
 
-    o2 = np.array([1,0])
+    o2 = np.array([1, 0])
 
     s1 = np.array([0.5, 0.5])
 
     s2 = np.array([0.5, 0.5])
 
-    for step in [1,2]:
-        s1,s2 = update(D,B,A,
-                       o    = [o1, o2],
-                       s    = [s1,s2],
-                       log  = lambda x:np.log(x+0.01),
-                       step = step)
-        print (s1)
-        print (s2)
+    for step in [1, 2]:
+        s1, s2 = update(D, B, A,
+                        o=[o1, o2],
+                        s=[s1, s2],
+                        log=lambda x: np.log(x + 0.01),
+                        step=step)
+        print(s1)
+        print(s2)
