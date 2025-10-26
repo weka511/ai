@@ -66,9 +66,7 @@ class KuttaMerson:
         R = 0.2 * norm(y1 - y2)
         return y2, R
 
-    def solve(self, yInit, t,
-              ytol=1e-12,
-              maxIter=25):
+    def solve(self, yInit, t, ytol=1e-12, maxIter=25):
         R = float('inf')
         m = 0
         n = t.shape[0]
@@ -81,10 +79,7 @@ class KuttaMerson:
                     m -= 1
                 h = (t[i + 1] - t[i]) / 2**m
                 y0 = y[i, :].copy()
-                y2, errorWithinTolerance = self.step1(y0, t[i],
-                                                      m=m,
-                                                      h=h,
-                                                      ytol=ytol)
+                y2, errorWithinTolerance = self.step1(y0, t[i], m=m, h=h, ytol=ytol)
                 if errorWithinTolerance:
                     y[i + 1, :] = y2
                     break
@@ -109,9 +104,7 @@ class KuttaMerson:
 
 
 if __name__ == '__main__':
-    def velocity(ssp, t,
-                 k=1.0,
-                 m=1.0):
+    def velocity(ssp, t, k=1.0, m=1.0):
         '''
         State space velocity function for 1D Harmonic oscillator
 
