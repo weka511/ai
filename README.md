@@ -2,6 +2,12 @@
 
 Code written to understand Karl Friston on Active Inference
 
+## Programs based on [Parr, Pezzulo, Friston 2022 Textbook](https://direct.mit.edu/books/oa-monograph/5299/Active-InferenceThe-Free-Energy-Principle-in-Mind)
+
+File|Description
+-------------------|---------------------------------------------------------------------------------------------------
+hmm_7_2.py|HMM Example from Section 7-2
+
 ## Programs based on [Life as we Know it](https://royalsocietypublishing.org/doi/10.1098/rsif.2013.0475)
 
 File|Description
