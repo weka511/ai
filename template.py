@@ -26,12 +26,14 @@ from pathlib import Path
 from matplotlib.pyplot import figure, show
 import numpy as np
 
-
-if __name__ == '__main__':
+def parse_args():
     parser = ArgumentParser(__doc__)
     parser.add_argument('--show', default=False, action='store_true', help='Controls whether plot will be displayed')
     parser.add_argument('--figs', default='./figs', help='Location for storing plot files')
-    args = parser.parse_args()
+    return parser.parse_args()
+
+if __name__ == '__main__':
+    args = parse_args()
 
     fig = figure()
     ax = fig.add_subplot(1, 1, 1)
