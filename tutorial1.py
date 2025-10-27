@@ -42,7 +42,7 @@ def parse_args():
 
 def create_B_matrix(actions=['UP', 'DOWN', 'LEFT', 'RIGHT', 'STAY']):
     '''
-    Factory method for transition probilities
+    Factory method for transition probabilities
 
     Returns:
          B
@@ -114,7 +114,7 @@ def get_expected_observations(A, qs_u):
     Compute the expected observations one step into the future, given a particular action
 
     Paramaters:
-        A
+        A        Expected observations for each state
         qs_u     Our beliefs about the state one step into the future
     '''
 
@@ -289,10 +289,10 @@ def run_active_inference_loop(A, B, C, D, actions, env, T=5):
     Run the entire active inference loop for a desired number of timesteps
 
     Parameters:
-        A
-        B
-        C
-        D
+        A         Expected observations for each state
+        B         transition probabilities
+        C         Preferences
+        D         Priors
         actions
         env
         T          desired number of timesteps
