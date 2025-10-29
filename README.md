@@ -4,6 +4,7 @@ Code written to understand Karl Friston on Active Inference
 
 ## Programs based on [Parr, Pezzulo, Friston 2022 Textbook](https://direct.mit.edu/books/oa-monograph/5299/Active-InferenceThe-Free-Energy-Principle-in-Mind)
 
+
 File|Description
 -------------------|---------------------------------------------------------------------------------------------------
 hmm_7_2.py|HMM Example from Section 7-2
@@ -60,3 +61,12 @@ File  | Remarks |
 ---------------|-------------------------------------------------------------------------------------------
 ai.wpr|Project for Python Code
 template.py|Template for creating additional programs
+
+## Software used for testing
+
+Library|Version
+-----------|-------------------
+python|3.14.0
+numpy|2.3.4
+matplotlib|3.10.7
+
