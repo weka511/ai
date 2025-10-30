@@ -27,6 +27,7 @@ from matplotlib.pyplot import figure, show
 from matplotlib import rc
 import numpy as np
 from pymdp.maths import softmax, spm_log_single as log_stable
+import seaborn as sns
 
 def parse_args():
     parser = ArgumentParser(__doc__)
@@ -73,7 +74,7 @@ class AxisIterator:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.fig.suptitle(self.title, fontsize=10)
-        self.fig.tight_layout(pad=2,h_pad=2)
+        self.fig.tight_layout(pad=3,h_pad=4,w_pad=3)
         self.fig.savefig(join(self.figs, self.name))
         if self.show:
             show()
@@ -118,24 +119,29 @@ if __name__ == '__main__':
     P_states = np.zeros((n_states,n_steps))
 
     tau = 0
-    P_states[:,tau] = D#np.dot(B,D.T)
+    P_states[:,tau] = D
 
     for tau in range(1,5):
         P_state_symbol = np.zeros((n_symbols,n_states))
         P_Trans = np.dot(B,P_states[:,tau-1].T)
         for i in range(n_symbols):
-            for j in range(n_states):  # need B also!
+            for j in range(n_states):
                 P_state_symbol[i,j] = P_Trans[j] * A[i,j]
-        observed = o[tau]
-        P_states[:,tau] = P_state_symbol[observed,:]/np.sum(P_state_symbol[observed,:])
+        P_states[:,tau] = P_state_symbol[o[tau],:]/np.sum(P_state_symbol[o[tau],:])
 
 
     with AxisIterator(n_rows=2, n_columns=2, figs=args.figs, title='Figure 7.2',
                       show=args.show, name=Path(__file__).stem) as axes:
 
         ax = next(axes)
-        heatmap_img = ax.imshow(P_states,cmap='viridis')
-        cbar = axes.fig.colorbar(heatmap_img, ax=ax)
+
+        ax = next(axes)
+        sns.heatmap(P_states, annot=True, fmt=".1g", ax=ax,cmap='PuRd')
+        ax.set_title('Retrospective Beliefs')
+        ax.set_xlabel(r'$\tau$')
+        ax.set_ylabel('State')
+
+        ax = next(axes)
 
         ax = next(axes)
         ax.scatter(list(range(len(o))),o)
