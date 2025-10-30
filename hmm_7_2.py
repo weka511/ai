@@ -39,8 +39,7 @@ class AxisIterator:
     '''
     This class creates subplots as needed
     '''
-
-    def __init__(self, figsize=(14, 14), n_rows=3, n_columns=3, figs='figs', title='', show=False, name=Path(__file__).stem):
+    def __init__(self, figsize=(8, 8), n_rows=2, n_columns=2, figs='figs', title='', show=False, name=Path(__file__).stem):
         self.figsize = figsize
         self.n_rows = n_rows
         self.n_columns = n_columns
@@ -79,65 +78,70 @@ class AxisIterator:
         if self.show:
             show()
 
-def infer_states(observation_index, A, prior):
+
+
+def create_P_state_symbol(prior,A,B):
     '''
-    Implement inference here -- NOTE: prior is already passed in, so you don't need to do anything with the B matrix.
-    This function has already been given P(s_t). The conditional expectation that creates 'today's prior',
-    using 'yesterday's posterior', will happen *before calling* this function
+    Create a matrix of containing the probability of being in each state and emitting each symbol,
+    given the probabilties of being in each state from the prvious step.
 
     Parameters:
-        observation_index
-        A
-        prior
-
-    Returns:    qs
+        prior   Vector of probabilties of each state from previous time step
+        A       Matrix, each row being the probabilty of one particular output from each state
+        B       Matrix, each row being the probabilty of one particular state as a transition from previous state
     '''
-
-    log_likelihood = log_stable(A[observation_index, :])
-    log_prior = log_stable(prior)
-    return softmax(log_likelihood + log_prior)
-
+    n_symbols,n_states = A.shape
+    product = np.zeros((n_symbols,n_states))
+    P_Trans = np.dot(B,prior) # Probabilities of each state, given prior
+    for i in range(n_symbols):
+        for j in range(n_states):
+            product[i,j] = P_Trans[j] * A[i,j]
+    return product
 
 if __name__ == '__main__':
     args = parse_args()
+
+    # Matrix, each row being the probabilty of one particular output from each state
     A = 0.1 * np.array([[7, 1, 1, 1],
                         [1, 7, 1, 1],
                         [1, 1, 7, 1],
                         [1, 1, 1, 7]])
+
+    # Matrix, each row being the probabilty of one particular state as a transition from previous state
 
     B = 0.01 * np.array([[1, 1, 1, 97],
                          [97, 1, 1, 1],
                          [1, 97, 1, 1],
                          [1, 1, 97, 1]])
 
+    # Prior probabilities for each state
+
     D = np.array([1, 0, 0, 0])
+
+    # Observed symbols
 
     o = np.array([0, 1, 1, 3, 0])
 
     n_symbols,n_states = A.shape
-    n_steps = 5
+    n_steps = len(o)
     P_states = np.zeros((n_states,n_steps))
 
     tau = 0
     P_states[:,tau] = D
 
-    for tau in range(1,5):
-        P_state_symbol = np.zeros((n_symbols,n_states))
-        P_Trans = np.dot(B,P_states[:,tau-1].T)
-        for i in range(n_symbols):
-            for j in range(n_states):
-                P_state_symbol[i,j] = P_Trans[j] * A[i,j]
+    for tau in range(1,n_steps):
+        P_state_symbol = create_P_state_symbol(P_states[:,tau-1].T,A,B)
         P_states[:,tau] = P_state_symbol[o[tau],:]/np.sum(P_state_symbol[o[tau],:])
 
 
-    with AxisIterator(n_rows=2, n_columns=2, figs=args.figs, title='Figure 7.2',
+    with AxisIterator(figs=args.figs, title='Figure 7.2: Perceptual Processing',
                       show=args.show, name=Path(__file__).stem) as axes:
 
         ax = next(axes)
 
         ax = next(axes)
         sns.heatmap(P_states, annot=True, fmt=".1g", ax=ax,cmap='PuRd')
-        ax.set_title('Retrospective Beliefs')
+        ax.set_title('Retrospective Beliefs based on observed symbols')
         ax.set_xlabel(r'$\tau$')
         ax.set_ylabel('State')
 
@@ -146,4 +150,5 @@ if __name__ == '__main__':
         ax = next(axes)
         ax.scatter(list(range(len(o))),o)
         ax.set_xticks(list(range(len(o))),[f'$o_{i}$' for i in range(1,len(o)+1)])
-        ax.set_yticks([])
+        ax.set_title('Observed symbols')
+        ax.set_yticks([0,1,2,3])
