@@ -116,26 +116,25 @@ if __name__ == '__main__':
     n_symbols,n_states = A.shape
     n_steps = 5
     P_states = np.zeros((n_states,n_steps))
-    P_states[:,0] = np.dot(B,D.T)
-    print ('P(each state after 1st transition)',P_states[:,0])
 
-    P_state_symbol = np.zeros((n_symbols,n_states))
-    for i in range(n_symbols):
-        for j in range(n_states):
-            P_state_symbol[i,j] = P_states[j,0] * A[i,j]
-    print (P_state_symbol)
-    observed = 1
-    tau = 1
-    P_states[:,tau] = P_state_symbol[observed,:]/np.sum(P_state_symbol[observed,:])
+    tau = 0
+    P_states[:,tau] = D#np.dot(B,D.T)
+
+    for tau in range(1,5):
+        P_state_symbol = np.zeros((n_symbols,n_states))
+        P_Trans = np.dot(B,P_states[:,tau-1].T)
+        for i in range(n_symbols):
+            for j in range(n_states):  # need B also!
+                P_state_symbol[i,j] = P_Trans[j] * A[i,j]
+        observed = o[tau]
+        P_states[:,tau] = P_state_symbol[observed,:]/np.sum(P_state_symbol[observed,:])
 
 
     with AxisIterator(n_rows=2, n_columns=2, figs=args.figs, title='Figure 7.2',
                       show=args.show, name=Path(__file__).stem) as axes:
 
-        # s = infer_states(o,A,D)
-        # print (s)
         ax = next(axes)
-        heatmap_img = ax.imshow(P_states.T,cmap='viridis')
+        heatmap_img = ax.imshow(P_states,cmap='viridis')
         cbar = axes.fig.colorbar(heatmap_img, ax=ax)
 
         ax = next(axes)
