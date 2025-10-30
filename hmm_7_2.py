@@ -78,8 +78,6 @@ class AxisIterator:
         if self.show:
             show()
 
-
-
 def create_P_state_symbol(prior,A,B):
     '''
     Create a matrix of containing the probability of being in each state and emitting each symbol,
@@ -87,8 +85,9 @@ def create_P_state_symbol(prior,A,B):
 
     Parameters:
         prior   Vector of probabilties of each state from previous time step
-        A       Matrix, each row being the probabilty of one particular output from each state
-        B       Matrix, each row being the probabilty of one particular state as a transition from previous state
+        A       Emission matrix, each row being the probabilty of one particular output from each state
+        B       Transition matrix, each row being the probabilty of one particular state
+                as a transition from previous state
     '''
     n_symbols,n_states = A.shape
     product = np.zeros((n_symbols,n_states))
@@ -98,16 +97,46 @@ def create_P_state_symbol(prior,A,B):
             product[i,j] = P_Trans[j] * A[i,j]
     return product
 
+def create_beliefs(A,B,D,o):
+    '''
+    Calculate the Observer's beliefs, i.e. her estimate of the probability
+    of being in each hidden state at a particular time, given the observations.
+
+    Parameters:
+        A
+        B
+        D
+        o
+
+    Returns:
+        Matrix of probabilties: the rows represent states, and the columns times
+    '''
+    n_symbols,n_states = A.shape
+    n_steps = len(o)
+
+    Beliefs = np.zeros((n_states,n_steps))
+
+    tau = 0
+    Beliefs[:,tau] = D
+
+    # Evolve state, based on observed symbols
+
+    for tau in range(1,n_steps):
+        P_state_symbol = create_P_state_symbol(Beliefs[:,tau-1].T,A,B)
+        Beliefs[:,tau] = P_state_symbol[o[tau],:]/np.sum(P_state_symbol[o[tau],:])
+
+    return Beliefs
+
 if __name__ == '__main__':
     args = parse_args()
 
-    # Matrix, each row being the probabilty of one particular output from each state
+    # Emission matrix, each row being the probabilty of one particular output from each state
     A = 0.1 * np.array([[7, 1, 1, 1],
                         [1, 7, 1, 1],
                         [1, 1, 7, 1],
                         [1, 1, 1, 7]])
 
-    # Matrix, each row being the probabilty of one particular state as a transition from previous state
+    # Transition matrix, each row being the probabilty of one particular state as a transition from previous state
 
     B = 0.01 * np.array([[1, 1, 1, 97],
                          [97, 1, 1, 1],
@@ -122,17 +151,9 @@ if __name__ == '__main__':
 
     o = np.array([0, 1, 1, 3, 0])
 
-    n_symbols,n_states = A.shape
-    n_steps = len(o)
-    P_states = np.zeros((n_states,n_steps))
 
-    tau = 0
-    P_states[:,tau] = D
 
-    for tau in range(1,n_steps):
-        P_state_symbol = create_P_state_symbol(P_states[:,tau-1].T,A,B)
-        P_states[:,tau] = P_state_symbol[o[tau],:]/np.sum(P_state_symbol[o[tau],:])
-
+    Beliefs = create_beliefs(A,B,D,o)
 
     with AxisIterator(figs=args.figs, title='Figure 7.2: Perceptual Processing',
                       show=args.show, name=Path(__file__).stem) as axes:
@@ -140,7 +161,7 @@ if __name__ == '__main__':
         ax = next(axes)
 
         ax = next(axes)
-        sns.heatmap(P_states, annot=True, fmt=".1g", ax=ax,cmap='PuRd')
+        sns.heatmap(Beliefs, annot=True, fmt=".1g", ax=ax,cmap='PuRd')
         ax.set_title('Retrospective Beliefs based on observed symbols')
         ax.set_xlabel(r'$\tau$')
         ax.set_ylabel('State')
