@@ -62,11 +62,11 @@ File  | Remarks |
 ai.wpr|Project for Python Code
 template.py|Template for creating additional programs
 
-## Software used for testing
+## The code has been developed and tested using the following versions of Python and its libraries.
 
 Library|Version
 -----------|-------------------
 python|3.14.0
 numpy|2.3.4
 matplotlib|3.10.7
-
+seaborn|0.13.2
