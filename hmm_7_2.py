@@ -130,7 +130,8 @@ def create_beliefs(A,B,D,o):
 if __name__ == '__main__':
     args = parse_args()
 
-    # Emission matrix, each row being the probabilty of one particular output from each state
+    # Emission matrix, the probabilty of one particular output given the state.
+    # Each row represents an output, and the coumns represent states
     A = 0.1 * np.array([[7, 1, 1, 1],
                         [1, 7, 1, 1],
                         [1, 1, 7, 1],
@@ -151,25 +152,25 @@ if __name__ == '__main__':
 
     o = np.array([0, 1, 1, 3, 0])
 
-
-
-    Beliefs = create_beliefs(A,B,D,o)
-
     with AxisIterator(figs=args.figs, title='Figure 7.2: Perceptual Processing',
                       show=args.show, name=Path(__file__).stem) as axes:
 
         ax = next(axes)
+        ax.text(0.4,0.5,'Beliefs: TBP',size='x-large')
 
         ax = next(axes)
-        sns.heatmap(Beliefs, annot=True, fmt=".1g", ax=ax,cmap='PuRd')
+        sns.heatmap(create_beliefs(A,B,D,o), annot=True, fmt=".1g", ax=ax,cmap='PuRd')
         ax.set_title('Retrospective Beliefs based on observed symbols')
         ax.set_xlabel(r'$\tau$')
         ax.set_ylabel('State')
 
         ax = next(axes)
+        ax.text(0.25,0.5,'Free Energy Gradients: TBP',size='x-large')
 
         ax = next(axes)
         ax.scatter(list(range(len(o))),o)
-        ax.set_xticks(list(range(len(o))),[f'$o_{i}$' for i in range(1,len(o)+1)])
+        ax.set_xlabel(r'$\tau$')
+        ax.set_xticks(np.arange(0,len(o)))
         ax.set_title('Observed symbols')
         ax.set_yticks([0,1,2,3])
+        ax.set_ylabel('Symbol')
