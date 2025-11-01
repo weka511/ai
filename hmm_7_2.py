@@ -149,21 +149,23 @@ def infer(A, B, D, o):
     n_steps = len(o)
     ln_A = log_stable(A)
     ln_B = log_stable(B)
-    v = np.zeros((n_states, n_steps))
     s = np.zeros((n_states, n_steps))
     s[:, 0] = D
+    v = np.zeros((n_states, n_steps))
+    v[:, 0] = log_stable(s[:, 0])
+    dv = np.zeros((n_states, n_steps))
     o_tau = np.zeros((n_symbols, n_steps))
     for tau in range(n_steps):
         o_tau[o[tau], tau] = 1
 
     tau = 0
-    v[:, 0] = log_stable(s[:, 0])
+
     for tau in range(1, n_steps):
-        dv = np.dot(ln_A, o_tau[:, tau - 1]) + 2 * np.dot(ln_B, s[:, tau - 1].T) - log_stable(s[:, tau - 1])
-        v[:, tau] = v[:, tau - 1] + dv
+        dv[:,tau] = np.dot(ln_A, o_tau[:, tau - 1]) + 2 * np.dot(ln_B, s[:, tau - 1].T) - log_stable(s[:, tau - 1])
+        v[:, tau] = v[:, tau - 1] + dv[:,tau]
         s[:, tau] = softmax(v[:, tau])
 
-    return v, s
+    return s, dv
 
 
 if __name__ == '__main__':
@@ -191,7 +193,7 @@ if __name__ == '__main__':
 
     o = np.array([0, 1, 1, 3, 0])
 
-    v, s = infer(A, B, D, o)
+    s, dv = infer(A, B, D, o)
     n_states, n_steps = s.shape
 
     with AxisIterator(figs=args.figs, title='Figure 7.2: Perceptual Processing',
@@ -202,20 +204,23 @@ if __name__ == '__main__':
             ax.plot(s[i, :], label=f'{i}')
         ax.legend(title='State')
         ax.set_title('Beliefs')
+        ax.set_xticks(np.arange(0, n_steps))
         ax.set_xlabel(r'$\tau$')
+        ax.set_ylabel(r'$s_\tau$')
 
         ax = next(axes)
         sns.heatmap(create_beliefs(A, B, D, o), annot=True, fmt=".1g", ax=ax, cmap='PuRd')
         ax.set_title('Retrospective Beliefs based on observed symbols')
         ax.set_xlabel(r'$\tau$')
-        ax.set_ylabel('State')
 
         ax = next(axes)
         for i in range(4):
-            ax.plot(v[i, :], label=f'{i}')
+            ax.plot(dv[i, :], label=f'{i}')
         ax.legend(title='State')
         ax.set_title('Free Energy Gradients')
         ax.set_xlabel(r'$\tau$')
+        ax.set_ylabel(r'$\epsilon_\tau$')
+        ax.set_xticks(np.arange(0, n_steps))
 
         ax = next(axes)
         ax.scatter(list(range(len(o))), o)
