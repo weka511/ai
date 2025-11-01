@@ -19,7 +19,16 @@
     Hidden Markov Model Example for musical notes
 
     Produce simulated inference plots to illustrate belief updating
-    based on the generative model outlined in Section 7-2 Perceptual Processing
+    based on the generative model outlined in Section 7-2 Perceptual Processing.
+
+    The program produces 5 plots, which are intended to replicate the ones
+    in Figure 7.2.
+    1. Posterior beliefs, computed by equation (4.13)
+    2. A heatmap showing beliefs computed by applying Bayes'
+       theorem to successive steps of the HMM
+    3. The epsilon terms from (4.13), used to compute graphs 1.
+    4. The notes that were actually observed.
+    5. A heatmap showing beliefs Posterior beliefs, computed by equation (4.13)
 '''
 
 from argparse import ArgumentParser
@@ -44,8 +53,8 @@ class AxisIterator:
     This class creates subplots as needed
     '''
 
-    def __init__(self, figsize=(8, 8), n_rows=2, n_columns=2, figs='figs', title='', show=False, name=Path(__file__).stem):
-        self.figsize = figsize
+    def __init__(self, n_rows=2, n_columns=3, figs='figs', title='', show=False, name=Path(__file__).stem, figsize=None):
+        self.figsize = (4*n_columns,4*n_rows) if figsize == None else figsize
         self.n_rows = n_rows
         self.n_columns = n_columns
         self.seq = 0
@@ -203,7 +212,7 @@ if __name__ == '__main__':
         for i in range(n_states):
             ax.plot(s[i, :], label=f'{i}')
         ax.legend(title='State')
-        ax.set_title('Beliefs')
+        ax.set_title('Beliefs from Free Energy Gradients')
         ax.set_xticks(np.arange(0, n_steps))
         ax.set_xlabel(r'$\tau$')
         ax.set_ylabel(r'$s_\tau$')
@@ -212,6 +221,7 @@ if __name__ == '__main__':
         sns.heatmap(create_beliefs(A, B, D, o), annot=True, fmt=".1g", ax=ax, cmap='PuRd')
         ax.set_title('Retrospective Beliefs based on observed symbols')
         ax.set_xlabel(r'$\tau$')
+        ax.set_ylabel(r'$State$')
 
         ax = next(axes)
         for i in range(4):
@@ -230,3 +240,8 @@ if __name__ == '__main__':
         ax.set_yticks([0, 1, 2, 3])
         ax.set_ylabel('Symbol')
 
+        ax = next(axes)
+        sns.heatmap(s, annot=True, fmt=".1g", ax=ax, cmap='PuRd')
+        ax.set_title('Retrospective Beliefs based on Free Energy Gradients')
+        ax.set_xlabel(r'$\tau$')
+        ax.set_ylabel(r'$State$')
