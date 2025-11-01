@@ -69,4 +69,5 @@ Library|Version
 python|3.14.0
 numpy|2.3.4
 matplotlib|3.10.7
+pymdp|0.0.7.1
 seaborn|0.13.2
