@@ -7,7 +7,8 @@ Code written to understand Karl Friston on Active Inference
 
 File|Description
 -------------------|---------------------------------------------------------------------------------------------------
-hmm_7_2.py|HMM Example from Section 7-2
+hmm_7_2.py|Hidden Markove Model Example from Section 7-2
+maze_7.3.py|Example from Section 7.3 DEcision Making and Planning as Inference
 
 ## Programs based on [Life as we Know it](https://royalsocietypublishing.org/doi/10.1098/rsif.2013.0475)
 
