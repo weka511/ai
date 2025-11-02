@@ -22,7 +22,6 @@
     https://pymdp-rtd.readthedocs.io/en/latest/notebooks/using_the_agent_class.html
 '''
 
-
 from argparse import ArgumentParser
 from os.path import join
 from pathlib import Path
@@ -93,10 +92,30 @@ class MDP_Factory:
         self.modalities = ['where', 'what']
         self.num_modalities = len(self.modalities)
 
-    def create_A(self):
+    def create_A(self,epsilon = 2.0/100.0):
         A = utils.obj_array(len(self.modalities))
         A[0] = np.zeros((len(self.obs_names), len(self.context_names), len(self.choice_names)))
-        A[1] = np.zeros((2,2,2)
+        A[0][0,0,0] = 1.0
+        A[0][2,0,1] = 1.0
+        A[0][3,0,2] = 1.0
+        A[0][4,0,3] = 1.0
+        A[0][0,1,0] = 1.0
+        A[0][1,1,1] = 1.0
+        A[0][3,1,2] = 1.0
+        A[0][4,1,3] = 1.0
+        A[1] = np.zeros((3, len(self.context_names), len(self.choice_names)))
+        A[1][0,0,0] = 1.0
+        A[1][0,0,1] = 1.0
+        A[1][1,0,2] = epsilon
+        A[1][1,0,3] = 1.0 - epsilon
+        A[1][2,0,2] = 1.0 - epsilon
+        A[1][2,0,3] = epsilon
+        A[1][0,1,0] = 1.0
+        A[1][0,1,1] = 1.0
+        A[1][1,0,2] = 1.0 - epsilon
+        A[1][1,0,3] = epsilon
+        A[1][2,0,2] = epsilon
+        A[1][2,0,3] = 1.0 - epsilon
         return A
 
 
@@ -105,7 +124,7 @@ if __name__ == '__main__':
     factory = MDP_Factory()
     A = factory.create_A()
 
-    with AxisIterator(figs=args.figs, title='Figure 7.2: Perceptual Processing',
+    with AxisIterator(figs=args.figs, title='Section 7.3: Decision Making and Planning as Inference',
                       show=args.show, name=Path(__file__).stem) as axes:
         pass
 
