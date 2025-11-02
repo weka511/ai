@@ -24,6 +24,7 @@ from pathlib import Path
 from matplotlib.pyplot import figure, show
 from matplotlib import rc
 import numpy as np
+from pymdp.maths import softmax, spm_log_single as log_stable
 
 class AxisIterator:
     '''
