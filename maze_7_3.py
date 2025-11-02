@@ -29,7 +29,7 @@ from matplotlib.pyplot import figure, show
 from matplotlib import rc
 import numpy as np
 from pymdp import utils
-
+from pymdp.maths import softmax, spm_log_single as log_stable, spm_norm as norm
 
 class AxisIterator:
     '''
@@ -87,10 +87,10 @@ class MDP_Factory:
     def __init__(self):
         self.context_names = ['Right-Attractive', 'Left-Attractive']
         self.choice_names = ['Start', 'Hint', 'Left Arm', 'Right Arm']
+        self.choice_action_names = ['Start', 'Hint', 'Left Arm', 'Right Arm']
         self.state_names = ['Start', 'Hint-Left', 'Hint_Right', 'Left Arm', 'Right Arm']
         self.obs_names = ['Start', 'Hint-Left', 'Hint_Right', 'Left Arm', 'Right Arm']
         self.modalities = ['where', 'what']
-        self.num_modalities = len(self.modalities)
 
     def create_A(self,epsilon = 2.0/100.0):
         A = utils.obj_array(len(self.modalities))
@@ -118,11 +118,47 @@ class MDP_Factory:
         A[1][2,0,3] = 1.0 - epsilon
         return A
 
+    def create_B(self):
+        B = utils.obj_array(len(self.modalities))
+        B[0] = np.zeros((len(self.choice_names), len(self.choice_names), len(self.choice_action_names)))
+        B[0][:,:,0] = np.array([[1.0, 1.0, 0.0, 0.0],
+                                [0.0, 0.0, 0.0, 0.0],
+                                [0.0, 0.0, 1.0, 0.0],
+                                [0.0, 0.0, 0.0, 1.0]])
+        B[0][:,:,1] = np.array([[0.0, 0.0, 0.0, 0.0],
+                                [1.0, 1.0, 0.0, 0.0],
+                                [0.0, 0.0, 1.0, 0.0],
+                                [0.0, 0.0, 0.0, 1.0]])
+        B[0][:,:,2] = np.array([[0.0, 0.0, 0.0, 0.0],
+                                [0.0, 0.0, 0.0, 0.0],
+                                [1.0, 1.0, 1.0, 0.0],
+                                [0.0, 0.0, 0.0, 1.0]])
+        B[0][:,:,3] = np.array([[1.0, 1.0, 0.0, 0.0],
+                                [0.0, 0.0, 0.0, 0.0],
+                                [0.0, 0.0, 1.0, 0.0],
+                                [1.0, 1.0, 0.0, 1.0]])
+        B[1] = np.eye((2))
+        return B
+
+    def create_C(self):
+        C = utils.obj_array(len(self.modalities))
+        C[0] = softmax(np.array([[-1.0],[0.0],[0.0],[0.0],[0.0]]))
+        C[1] = softmax(np.array([[0.0],[6.0],[-6.0]]))
+        return C
+
+    def create_D(self):
+        D = utils.obj_array(len(self.modalities))
+        D[0] = np.array([[1.0],[0.0],[0.0],[0.0]])
+        D[1] = norm(np.array([[1.0],[1.0]]))
+        return D
 
 if __name__ == '__main__':
     args = parse_args()
     factory = MDP_Factory()
     A = factory.create_A()
+    B = factory.create_B()
+    C = factory.create_C()
+    D = factory.create_D()
 
     with AxisIterator(figs=args.figs, title='Section 7.3: Decision Making and Planning as Inference',
                       show=args.show, name=Path(__file__).stem) as axes:
