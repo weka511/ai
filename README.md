@@ -60,6 +60,7 @@ tutorial_common.py|Common code for tutorials
 
 File  | Remarks |
 ---------------|-------------------------------------------------------------------------------------------
+ai.py|Common code shared by programs in this project
 ai.wpr|Project for Python Code
 template.py|Template for creating additional programs
 

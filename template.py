@@ -19,56 +19,10 @@
 
 
 from argparse import ArgumentParser
-from os.path import join
 from pathlib import Path
-from matplotlib.pyplot import figure, show
-from matplotlib import rc
 import numpy as np
 from pymdp.maths import softmax, spm_log_single as log_stable
-
-class AxisIterator:
-    '''
-    This class creates subplots as needed
-    '''
-
-    def __init__(self, n_rows=2, n_columns=3, figs='figs', title='', show=False, name=Path(__file__).stem, figsize=None):
-        self.figsize = (4*n_columns,4*n_rows) if figsize == None else figsize
-        self.n_rows = n_rows
-        self.n_columns = n_columns
-        self.seq = 0
-        self.title = title
-        self.figs = figs
-        self.show = show
-        self.name = name
-
-    def __iter__(self):
-        return self
-
-    def __next__(self):
-        '''
-        Used to supply subplots
-        '''
-        if self.seq < self.n_rows * self.n_columns:
-            self.seq += 1
-        else:
-            warn('Too many subplots')
-
-        return self.fig.add_subplot(self.n_rows, self.n_columns, self.seq)
-
-    def __enter__(self):
-        rc('font', **{'family': 'serif',
-                      'serif': ['Palatino'],
-                      'size': 8})
-        rc('text', usetex=True)
-        self.fig = figure(figsize=self.figsize)
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.fig.suptitle(self.title, fontsize=12)
-        self.fig.tight_layout(pad=3, h_pad=4, w_pad=3)
-        self.fig.savefig(join(self.figs, self.name))
-        if self.show:
-            show()
+from ai import AxisIterator
 
 def parse_args():
     parser = ArgumentParser(__doc__)
@@ -79,7 +33,7 @@ def parse_args():
 if __name__ == '__main__':
     args = parse_args()
 
-    with AxisIterator(figs=args.figs, title='Figure 7.2: Perceptual Processing',
+    with AxisIterator(figs=args.figs, title=__doc__,
                       show=args.show, name=Path(__file__).stem) as axes:
         pass
 
