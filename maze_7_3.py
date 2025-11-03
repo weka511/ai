@@ -23,58 +23,14 @@
 '''
 
 from argparse import ArgumentParser
-from os.path import join
 from pathlib import Path
-from matplotlib.pyplot import figure, show
-from matplotlib import rc
 import numpy as np
 from pymdp import utils
+from pymdp.agent import Agent
+from pymdp.envs import Env
 from pymdp.maths import softmax, spm_log_single as log_stable, spm_norm as norm
+from ai import AxisIterator
 
-
-class AxisIterator:
-    '''
-    This class creates subplots as needed
-    '''
-
-    def __init__(self, n_rows=2, n_columns=3, figs='figs', title='', show=False, name=Path(__file__).stem, figsize=None):
-        self.figsize = (4 * n_columns, 4 * n_rows) if figsize == None else figsize
-        self.n_rows = n_rows
-        self.n_columns = n_columns
-        self.seq = 0
-        self.title = title
-        self.figs = figs
-        self.show = show
-        self.name = name
-
-    def __iter__(self):
-        return self
-
-    def __next__(self):
-        '''
-        Used to supply subplots
-        '''
-        if self.seq < self.n_rows * self.n_columns:
-            self.seq += 1
-        else:
-            warn('Too many subplots')
-
-        return self.fig.add_subplot(self.n_rows, self.n_columns, self.seq)
-
-    def __enter__(self):
-        rc('font', **{'family': 'serif',
-                      'serif': ['Palatino'],
-                      'size': 8})
-        rc('text', usetex=True)
-        self.fig = figure(figsize=self.figsize)
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.fig.suptitle(self.title, fontsize=12)
-        self.fig.tight_layout(pad=3, h_pad=4, w_pad=3)
-        self.fig.savefig(join(self.figs, self.name))
-        if self.show:
-            show()
 
 
 class MDP_Factory:
@@ -104,10 +60,10 @@ class MDP_Factory:
                                   [0.0, 0.0, 1.0, 0.0],
                                   [0.0, 0.0, 0.0, 1.0]])
         A[1] = np.empty((3, len(self.context_names), len(self.choice_names)))
-        A[1][:, 0, :] = np.array([[1.0, 0.0, 0.0, 0.0],
+        A[1][:, 0, :] = np.array([[1.0, 1.0, 0.0, 0.0],
                                   [0.0, 0.0, epsilon, 1.0 - epsilon],
                                   [0.0, 0.0, 1.0 - epsilon, epsilon]])
-        A[1][:, 1, :] = np.array([[1.0, 0.0, 0.0, 0.0],
+        A[1][:, 1, :] = np.array([[1.0, 1.0, 0.0, 0.0],
                                   [0.0, 0.0, 1.0 - epsilon, epsilon],
                                   [0.0, 0.0, epsilon, 1.0 - epsilon]])
         return A
@@ -127,11 +83,15 @@ class MDP_Factory:
                                   [0.0, 0.0, 0.0, 0.0],
                                   [1.0, 1.0, 1.0, 0.0],
                                   [0.0, 0.0, 0.0, 1.0]])
-        B[0][:, :, 3] = np.array([[1.0, 1.0, 0.0, 0.0],
+        B[0][:, :, 3] = np.array([[0.0, 0.0, 0.0, 0.0],
                                   [0.0, 0.0, 0.0, 0.0],
                                   [0.0, 0.0, 1.0, 0.0],
                                   [1.0, 1.0, 0.0, 1.0]])
-        B[1] = np.eye((2))
+        B[1] = np.zeros((len(self.context_names), len(self.context_names), len(self.choice_action_names)))
+        B[1][:,:,0] = np.eye((len(self.context_names)))
+        B[1][:,:,1] = np.eye((len(self.context_names)))
+        B[1][:,:,2] = np.eye((len(self.context_names)))
+        B[1][:,:,3] = np.eye((len(self.context_names)))
         return B
 
     def create_C(self):
@@ -146,6 +106,9 @@ class MDP_Factory:
         D[1] = norm(np.c_[[1.0, 1.0]])
         return D
 
+class Maze(Env):
+    def __init__(self):
+        pass
 
 def parse_args():
     parser = ArgumentParser(__doc__)
@@ -157,10 +120,8 @@ def parse_args():
 if __name__ == '__main__':
     args = parse_args()
     factory = MDP_Factory()
-    A = factory.create_A()
-    B = factory.create_B()
-    C = factory.create_C()
-    D = factory.create_D()
+    agent = Agent(A=factory.create_A(), B=factory.create_B(), C=factory.create_C(), D=factory.create_D())
+    env = Env()
 
     with AxisIterator(figs=args.figs, title='Section 7.3: Decision Making and Planning as Inference',
                       show=args.show, name=Path(__file__).stem) as axes:
