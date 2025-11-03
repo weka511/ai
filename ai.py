@@ -15,7 +15,9 @@
 # You should have received a copy of the GNU General Public License
 # along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.
 
-'''Common code for file in this project'''
+'''
+    Common code for my Active Inference project
+'''
 
 from os.path import join
 from pathlib import Path
@@ -24,9 +26,8 @@ from matplotlib import rc
 
 class AxisIterator:
     '''
-    This class creates subplots as needed
+    This class creates subplots as needed. It enables me to creplot data without distraction.
     '''
-
     def __init__(self, n_rows=2, n_columns=3, figs='figs', title='', show=False, name=Path(__file__).stem, figsize=None):
         self.figsize = (4*n_columns,4*n_rows) if figsize == None else figsize
         self.n_rows = n_rows
