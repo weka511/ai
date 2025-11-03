@@ -31,6 +31,7 @@ import numpy as np
 from pymdp import utils
 from pymdp.maths import softmax, spm_log_single as log_stable, spm_norm as norm
 
+
 class AxisIterator:
     '''
     This class creates subplots as needed
@@ -76,14 +77,11 @@ class AxisIterator:
             show()
 
 
-def parse_args():
-    parser = ArgumentParser(__doc__)
-    parser.add_argument('--show', default=False, action='store_true', help='Controls whether plot will be displayed')
-    parser.add_argument('--figs', default='./figs', help='Location for storing plot files')
-    return parser.parse_args()
-
-
 class MDP_Factory:
+    '''
+    This class creates the A, B, C, and D matrices for the maze example
+    '''
+
     def __init__(self):
         self.context_names = ['Right-Attractive', 'Left-Attractive']
         self.choice_names = ['Start', 'Hint', 'Left Arm', 'Right Arm']
@@ -92,65 +90,69 @@ class MDP_Factory:
         self.obs_names = ['Start', 'Hint-Left', 'Hint_Right', 'Left Arm', 'Right Arm']
         self.modalities = ['where', 'what']
 
-    def create_A(self,epsilon = 2.0/100.0):
+    def create_A(self, epsilon=2.0 / 100.0):
         A = utils.obj_array(len(self.modalities))
-        A[0] = np.zeros((len(self.obs_names), len(self.context_names), len(self.choice_names)))
-        A[0][0,0,0] = 1.0
-        A[0][2,0,1] = 1.0
-        A[0][3,0,2] = 1.0
-        A[0][4,0,3] = 1.0
-        A[0][0,1,0] = 1.0
-        A[0][1,1,1] = 1.0
-        A[0][3,1,2] = 1.0
-        A[0][4,1,3] = 1.0
-        A[1] = np.zeros((3, len(self.context_names), len(self.choice_names)))
-        A[1][0,0,0] = 1.0
-        A[1][0,0,1] = 1.0
-        A[1][1,0,2] = epsilon
-        A[1][1,0,3] = 1.0 - epsilon
-        A[1][2,0,2] = 1.0 - epsilon
-        A[1][2,0,3] = epsilon
-        A[1][0,1,0] = 1.0
-        A[1][0,1,1] = 1.0
-        A[1][1,0,2] = 1.0 - epsilon
-        A[1][1,0,3] = epsilon
-        A[1][2,0,2] = epsilon
-        A[1][2,0,3] = 1.0 - epsilon
+        A[0] = np.empty((len(self.obs_names), len(self.context_names), len(self.choice_names)))
+        A[0][:, 0, :] = np.array([[1.0, 0.0, 0.0, 0.0],
+                                  [0.0, 0.0, 0.0, 0.0],
+                                  [0.0, 1.0, 0.0, 0.0],
+                                  [0.0, 0.0, 1.0, 0.0],
+                                  [0.0, 0.0, 0.0, 1.0]])
+        A[0][:, 1, :] = np.array([[1.0, 0.0, 0.0, 0.0],
+                                  [0.0, 1.0, 0.0, 0.0],
+                                  [0.0, 0.0, 0.0, 0.0],
+                                  [0.0, 0.0, 1.0, 0.0],
+                                  [0.0, 0.0, 0.0, 1.0]])
+        A[1] = np.empty((3, len(self.context_names), len(self.choice_names)))
+        A[1][:, 0, :] = np.array([[1.0, 0.0, 0.0, 0.0],
+                                  [0.0, 0.0, epsilon, 1.0 - epsilon],
+                                  [0.0, 0.0, 1.0 - epsilon, epsilon]])
+        A[1][:, 1, :] = np.array([[1.0, 0.0, 0.0, 0.0],
+                                  [0.0, 0.0, 1.0 - epsilon, epsilon],
+                                  [0.0, 0.0, epsilon, 1.0 - epsilon]])
         return A
 
     def create_B(self):
         B = utils.obj_array(len(self.modalities))
         B[0] = np.zeros((len(self.choice_names), len(self.choice_names), len(self.choice_action_names)))
-        B[0][:,:,0] = np.array([[1.0, 1.0, 0.0, 0.0],
-                                [0.0, 0.0, 0.0, 0.0],
-                                [0.0, 0.0, 1.0, 0.0],
-                                [0.0, 0.0, 0.0, 1.0]])
-        B[0][:,:,1] = np.array([[0.0, 0.0, 0.0, 0.0],
-                                [1.0, 1.0, 0.0, 0.0],
-                                [0.0, 0.0, 1.0, 0.0],
-                                [0.0, 0.0, 0.0, 1.0]])
-        B[0][:,:,2] = np.array([[0.0, 0.0, 0.0, 0.0],
-                                [0.0, 0.0, 0.0, 0.0],
-                                [1.0, 1.0, 1.0, 0.0],
-                                [0.0, 0.0, 0.0, 1.0]])
-        B[0][:,:,3] = np.array([[1.0, 1.0, 0.0, 0.0],
-                                [0.0, 0.0, 0.0, 0.0],
-                                [0.0, 0.0, 1.0, 0.0],
-                                [1.0, 1.0, 0.0, 1.0]])
+        B[0][:, :, 0] = np.array([[1.0, 1.0, 0.0, 0.0],
+                                  [0.0, 0.0, 0.0, 0.0],
+                                  [0.0, 0.0, 1.0, 0.0],
+                                  [0.0, 0.0, 0.0, 1.0]])
+        B[0][:, :, 1] = np.array([[0.0, 0.0, 0.0, 0.0],
+                                  [1.0, 1.0, 0.0, 0.0],
+                                  [0.0, 0.0, 1.0, 0.0],
+                                  [0.0, 0.0, 0.0, 1.0]])
+        B[0][:, :, 2] = np.array([[0.0, 0.0, 0.0, 0.0],
+                                  [0.0, 0.0, 0.0, 0.0],
+                                  [1.0, 1.0, 1.0, 0.0],
+                                  [0.0, 0.0, 0.0, 1.0]])
+        B[0][:, :, 3] = np.array([[1.0, 1.0, 0.0, 0.0],
+                                  [0.0, 0.0, 0.0, 0.0],
+                                  [0.0, 0.0, 1.0, 0.0],
+                                  [1.0, 1.0, 0.0, 1.0]])
         B[1] = np.eye((2))
         return B
 
     def create_C(self):
         C = utils.obj_array(len(self.modalities))
-        C[0] = softmax(np.array([[-1.0],[0.0],[0.0],[0.0],[0.0]]))
-        C[1] = softmax(np.array([[0.0],[6.0],[-6.0]]))
+        C[0] = softmax(np.c_[[-1.0, 0.0, 0.0, 0.0, 0.0]])
+        C[1] = softmax(np.c_[[0.0, 6.0, -6.0]])
         return C
 
     def create_D(self):
         D = utils.obj_array(len(self.modalities))
-        D[0] = np.array([[1.0],[0.0],[0.0],[0.0]])
-        D[1] = norm(np.array([[1.0],[1.0]]))
+        D[0] = np.c_[[1.0, 0.0, 0.0, 0.0]]
+        D[1] = norm(np.c_[[1.0, 1.0]])
         return D
+
+
+def parse_args():
+    parser = ArgumentParser(__doc__)
+    parser.add_argument('--show', default=False, action='store_true', help='Controls whether plot will be displayed')
+    parser.add_argument('--figs', default='./figs', help='Location for storing plot files')
+    return parser.parse_args()
+
 
 if __name__ == '__main__':
     args = parse_args()
