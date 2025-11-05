@@ -59,6 +59,16 @@ class Modality(IntEnum):
     WHERE = 0
     WHAT = 1
 
+class Stimulus(IntEnum):
+    NONE = 0
+    ATTRACTIVE = 1
+    AVERSIVE = 2
+
+class Hint(IntEnum):
+    HINT_NONE = 0
+    HINT_LEFT = 1
+    HINT_RIGHT = 2
+
 class MDP_Factory:
     '''
     This class creates the A, B, C, and D matrices for the maze example
@@ -66,23 +76,24 @@ class MDP_Factory:
     def create_A(self, probability_hint_wrong=2.0 / 100.0):
         A = utils.obj_array(len(Modality))
         A[Modality.WHERE] = np.empty((len(LocationObservation), len(Context), len(Location)))
-        A[Modality.WHERE][:, 0, :] = np.array([[1.0, 0.0, 0.0, 0.0],
-                                  [0.0, 0.0, 0.0, 0.0],
-                                  [0.0, 1.0, 0.0, 0.0],
-                                  [0.0, 0.0, 1.0, 0.0],
-                                  [0.0, 0.0, 0.0, 1.0]])
-        A[Modality.WHERE][:, 1, :] = np.array([[1.0, 0.0, 0.0, 0.0],
-                                  [0.0, 1.0, 0.0, 0.0],
-                                  [0.0, 0.0, 0.0, 0.0],
-                                  [0.0, 0.0, 1.0, 0.0],
-                                  [0.0, 0.0, 0.0, 1.0]])
-        A[Modality.WHAT] = np.empty((3, len(Context), len(Location)))
-        A[Modality.WHAT][:, 0, :] = np.array([[1.0, 1.0, 0.0, 0.0],
-                                  [0.0, 0.0, probability_hint_wrong, 1.0 - probability_hint_wrong],
-                                  [0.0, 0.0, 1.0 - probability_hint_wrong, probability_hint_wrong]])
-        A[Modality.WHAT][:, 1, :] = np.array([[1.0, 1.0, 0.0, 0.0],
-                                  [0.0, 0.0, 1.0 - probability_hint_wrong, probability_hint_wrong],
-                                  [0.0, 0.0, probability_hint_wrong, 1.0 - probability_hint_wrong]])
+        A[Modality.WHERE][:, Context.RIGHT_ATTRACTIVE, :] = np.array([[1.0, 0.0, 0.0, 0.0],
+                                                                      [0.0, 0.0, 0.0, 0.0],
+                                                                      [0.0, 1.0, 0.0, 0.0],
+                                                                      [0.0, 0.0, 1.0, 0.0],
+                                                                      [0.0, 0.0, 0.0, 1.0]])
+        A[Modality.WHERE][:, Context.LEFT_ATTRACTIVE, :] = np.array([[1.0, 0.0, 0.0, 0.0],
+                                                                     [0.0, 1.0, 0.0, 0.0],
+                                                                     [0.0, 0.0, 0.0, 0.0],
+                                                                     [0.0, 0.0, 1.0, 0.0],
+                                                                     [0.0, 0.0, 0.0, 1.0]])
+        A[Modality.WHAT] = np.empty((len(Hint), len(Context), len(Location)))
+        A[Modality.WHAT][:, Context.RIGHT_ATTRACTIVE, :] = np.array([[1.0, 1.0, 0.0, 0.0],
+                                                                     [0.0, 0.0, probability_hint_wrong, 1.0 - probability_hint_wrong],
+                                                                     [0.0, 0.0, 1.0 - probability_hint_wrong, probability_hint_wrong]])
+        A[Modality.WHAT][:, Context.LEFT_ATTRACTIVE, :] = np.array([[1.0, 1.0, 0.0, 0.0],
+                                                                    [0.0, 0.0, 1.0 - probability_hint_wrong, probability_hint_wrong],
+                                                                    [0.0, 0.0, probability_hint_wrong, 1.0 - probability_hint_wrong]])
+
         return A
 
     def create_B(self):
@@ -154,31 +165,31 @@ class MazeEnvironment(Env):
 
         match self.location:
             case Location.START:
-                return LocationObservation.AT_START,0
+                return LocationObservation.AT_START,Stimulus.NONE
 
             case Location.BOTTOM:
                 if self.context == Context.RIGHT_ATTRACTIVE:
                     if self.rng.uniform() < self.probability_hint_wrong:
-                        return LocationObservation.AT_BOTTOM_LEFT_ATTRACTIVE,0
+                        return LocationObservation.AT_BOTTOM_LEFT_ATTRACTIVE,Stimulus.NONE
                     else:
-                        return LocationObservation.AT_BOTTOM_RIGHT_ATTRACTIVE,0
+                        return LocationObservation.AT_BOTTOM_RIGHT_ATTRACTIVE,Stimulus.NONE
                 else:
                     if self.rng.uniform() < self.probability_hint_wrong:
-                        return LocationObservation.AT_BOTTOM_RIGHT_ATTRACTIVE,0
+                        return LocationObservation.AT_BOTTOM_RIGHT_ATTRACTIVE,Stimulus.NONE
                     else:
-                        return LocationObservation.AT_BOTTOM_LEFT_ATTRACTIVE,1
+                        return LocationObservation.AT_BOTTOM_LEFT_ATTRACTIVE,Stimulus.NONE
 
             case Location.LEFT:
                 if self.context == Context.RIGHT_ATTRACTIVE:
-                    return LocationObservation.AT_LEFT,2
+                    return LocationObservation.AT_LEFT,Stimulus.AVERSIVE
                 else:
-                    return LocationObservation.AT_LEFT,1
+                    return LocationObservation.AT_LEFT,Stimulus.ATTRACTIVE
 
             case Location.RIGHT:
-                if self.context == Context.RIGHT_ATTRACTIVE: # Right Attractive
-                    return LocationObservation.AT_RIGHT,1
+                if self.context == Context.RIGHT_ATTRACTIVE:
+                    return LocationObservation.AT_RIGHT,Stimulus.ATTRACTIVE
                 else:
-                    return LocationObservation.AT_RIGHT,2
+                    return LocationObservation.AT_RIGHT,Stimulus.AVERSIVE
 
 
 def parse_args():
