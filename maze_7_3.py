@@ -23,6 +23,7 @@
 '''
 
 from argparse import ArgumentParser
+from enum import IntEnum
 from pathlib import Path
 import numpy as np
 from pymdp import utils
@@ -31,76 +32,95 @@ from pymdp.envs import Env
 from pymdp.maths import softmax, spm_log_single as log_stable, spm_norm as norm
 from ai import AxisIterator
 
+class Context(IntEnum):
+    RIGHT_ATTRACTIVE = 0
+    LEFT_ATTRACTIVE = 1
+
+class Location(IntEnum):
+    START = 0
+    BOTTOM = 1
+    LEFT = 2
+    RIGHT = 3
+
+class ChoiceAction(IntEnum):
+    MOVE_START = 0
+    MOVE_BOTTOM = 1
+    MOVE_LEFT = 2
+    MOVE_RIGHT = 3
+
+class LocationObservation(IntEnum):
+    AT_START = 0
+    AT_BOTTOM_LEFT_ATTRACTIVE = 1
+    AT_BOTTOM_RIGHT_ATTRACTIVE = 2
+    AT_LEFT = 3
+    AT_RIGHT = 4
+
+class Modality(IntEnum):
+    WHERE = 0
+    WHAT = 1
 
 class MDP_Factory:
     '''
     This class creates the A, B, C, and D matrices for the maze example
     '''
-    def __init__(self):
-        self.context_names = ['Right Attractive', 'Left Attractive']
-        self.location_names = ['Start', 'Bottom', 'Left', 'Right']
-        self.choice_action_names = ['Move Start', 'Move Bottom', 'Move Left', 'Move Right']
-        self.location_obs_names = ['At Start', 'At Bottom: Left Attractive', 'At Bottom: Right Attractive', 'At Left', 'At Right']
-        self.modalities = ['where', 'what']
-
     def create_A(self, probability_hint_wrong=2.0 / 100.0):
-        A = utils.obj_array(len(self.modalities))
-        A[0] = np.empty((len(self.location_obs_names), len(self.context_names), len(self.location_names)))
-        A[0][:, 0, :] = np.array([[1.0, 0.0, 0.0, 0.0],
+        A = utils.obj_array(len(Modality))
+        A[Modality.WHERE] = np.empty((len(LocationObservation), len(Context), len(Location)))
+        A[Modality.WHERE][:, 0, :] = np.array([[1.0, 0.0, 0.0, 0.0],
                                   [0.0, 0.0, 0.0, 0.0],
                                   [0.0, 1.0, 0.0, 0.0],
                                   [0.0, 0.0, 1.0, 0.0],
                                   [0.0, 0.0, 0.0, 1.0]])
-        A[0][:, 1, :] = np.array([[1.0, 0.0, 0.0, 0.0],
+        A[Modality.WHERE][:, 1, :] = np.array([[1.0, 0.0, 0.0, 0.0],
                                   [0.0, 1.0, 0.0, 0.0],
                                   [0.0, 0.0, 0.0, 0.0],
                                   [0.0, 0.0, 1.0, 0.0],
                                   [0.0, 0.0, 0.0, 1.0]])
-        A[1] = np.empty((3, len(self.context_names), len(self.location_names)))
-        A[1][:, 0, :] = np.array([[1.0, 1.0, 0.0, 0.0],
+        A[Modality.WHAT] = np.empty((3, len(Context), len(Location)))
+        A[Modality.WHAT][:, 0, :] = np.array([[1.0, 1.0, 0.0, 0.0],
                                   [0.0, 0.0, probability_hint_wrong, 1.0 - probability_hint_wrong],
                                   [0.0, 0.0, 1.0 - probability_hint_wrong, probability_hint_wrong]])
-        A[1][:, 1, :] = np.array([[1.0, 1.0, 0.0, 0.0],
+        A[Modality.WHAT][:, 1, :] = np.array([[1.0, 1.0, 0.0, 0.0],
                                   [0.0, 0.0, 1.0 - probability_hint_wrong, probability_hint_wrong],
                                   [0.0, 0.0, probability_hint_wrong, 1.0 - probability_hint_wrong]])
         return A
 
     def create_B(self):
-        B = utils.obj_array(len(self.modalities))
-        B[0] = np.zeros((len(self.location_names), len(self.location_names), len(self.choice_action_names)))
-        B[0][:, :, 0] = np.array([[1.0, 1.0, 0.0, 0.0],
+        B = utils.obj_array(len(Modality))
+        B[Modality.WHERE] = np.zeros((len(Location), len(Location), len(ChoiceAction)))
+        B[Modality.WHERE][:, :, 0] = np.array([[1.0, 1.0, 0.0, 0.0],
                                   [0.0, 0.0, 0.0, 0.0],
                                   [0.0, 0.0, 1.0, 0.0],
                                   [0.0, 0.0, 0.0, 1.0]])
-        B[0][:, :, 1] = np.array([[0.0, 0.0, 0.0, 0.0],
+        B[Modality.WHERE][:, :, 1] = np.array([[0.0, 0.0, 0.0, 0.0],
                                   [1.0, 1.0, 0.0, 0.0],
                                   [0.0, 0.0, 1.0, 0.0],
                                   [0.0, 0.0, 0.0, 1.0]])
-        B[0][:, :, 2] = np.array([[0.0, 0.0, 0.0, 0.0],
+        B[Modality.WHERE][:, :, 2] = np.array([[0.0, 0.0, 0.0, 0.0],
                                   [0.0, 0.0, 0.0, 0.0],
                                   [1.0, 1.0, 1.0, 0.0],
                                   [0.0, 0.0, 0.0, 1.0]])
-        B[0][:, :, 3] = np.array([[0.0, 0.0, 0.0, 0.0],
+        B[Modality.WHERE][:, :, 3] = np.array([[0.0, 0.0, 0.0, 0.0],
                                   [0.0, 0.0, 0.0, 0.0],
                                   [0.0, 0.0, 1.0, 0.0],
                                   [1.0, 1.0, 0.0, 1.0]])
-        B[1] = np.zeros((len(self.context_names), len(self.context_names), len(self.choice_action_names)))
-        B[1][:, :, 0] = np.eye((len(self.context_names)))
-        B[1][:, :, 1] = np.eye((len(self.context_names)))
-        B[1][:, :, 2] = np.eye((len(self.context_names)))
-        B[1][:, :, 3] = np.eye((len(self.context_names)))
+        B[Modality.WHAT] = np.zeros((len(Context), len(Context), len(ChoiceAction)))
+        B[Modality.WHAT][:, :, 0] = np.eye((len(Context)))
+        B[Modality.WHAT][:, :, 1] = np.eye((len(Context)))
+        B[Modality.WHAT][:, :, 2] = np.eye((len(Context)))
+        B[Modality.WHAT][:, :, 3] = np.eye((len(Context)))
         return B
 
     def create_C(self):
-        C = utils.obj_array(len(self.modalities))
-        C[0] = softmax(np.c_[[-1.0, 0.0, 0.0, 0.0, 0.0]])
-        C[1] = softmax(np.c_[[0.0, 6.0, -6.0]])
+        C = utils.obj_array(len(Modality))
+        C[Modality.WHERE] = softmax(np.c_[[-1.0, 0.0, 0.0, 0.0, 0.0]])
+        C[Modality.WHAT] = softmax(np.c_[[0.0, 6.0, -6.0]])
         return C
 
     def create_D(self):
-        D = utils.obj_array(len(self.modalities))
-        D[0] = np.c_[[1.0, 0.0, 0.0, 0.0]]
-        D[1] = norm(np.c_[[1.0, 1.0]])
+        D = utils.obj_array(len(Modality))
+        D[Modality.WHERE] = np.c_[[1.0, 0.0, 0.0, 0.0]]
+        D[Modality.WHAT] = norm(np.c_[[1.0, 1.0]])
         return D
 
 
@@ -117,8 +137,8 @@ class MazeEnvironment(Env):
         which  makes Left and Right absorbing states.
         '''
         self.rng = rng
-        self.location = 0
-        self.context = self.rng.choice(len(factory.context_names))
+        self.location = Location.START
+        self.context = self.rng.choice([Context.RIGHT_ATTRACTIVE,Context.LEFT_ATTRACTIVE])
         self.AllowableTransitions = np.array([[1, 1, 0, 0],
                                               [1, 1, 0, 0],
                                               [1, 1, 1, 0],
@@ -132,30 +152,33 @@ class MazeEnvironment(Env):
         if self.AllowableTransitions[self.location,action]:
             self.location = action
 
-        match self.location: #  ['Start', 'Bottom', 'Left', 'Right']
-            case 0:      # Start
-                return 0,0 # At Start
-            case 1:      # Bottom
-                if self.context == 0: # Right Attractive
+        match self.location:
+            case Location.START:
+                return LocationObservation.AT_START,0
+
+            case Location.BOTTOM:
+                if self.context == Context.RIGHT_ATTRACTIVE:
                     if self.rng.uniform() < self.probability_hint_wrong:
-                        return 1,0 # At Bottom: Left Attractive
+                        return LocationObservation.AT_BOTTOM_LEFT_ATTRACTIVE,0
                     else:
-                        return 2,0 #  At Bottom: Right Attractive
-                else:                 #  Left Attractive
+                        return LocationObservation.AT_BOTTOM_RIGHT_ATTRACTIVE,0
+                else:
                     if self.rng.uniform() < self.probability_hint_wrong:
-                        return 2,0 #  At Bottom: Right Attractive
+                        return LocationObservation.AT_BOTTOM_RIGHT_ATTRACTIVE,0
                     else:
-                        return 1,1 # At Bottom: Left Attractive
-            case 2: # Left
-                if self.context == 0: # Right Attractive
-                    return 3,2   # At Left
+                        return LocationObservation.AT_BOTTOM_LEFT_ATTRACTIVE,1
+
+            case Location.LEFT:
+                if self.context == Context.RIGHT_ATTRACTIVE:
+                    return LocationObservation.AT_LEFT,2
                 else:
-                    return 3,1
-            case 3: # Right
-                if self.context == 0: # Right Attractive
-                    return 4,1   # At Left
+                    return LocationObservation.AT_LEFT,1
+
+            case Location.RIGHT:
+                if self.context == Context.RIGHT_ATTRACTIVE: # Right Attractive
+                    return LocationObservation.AT_RIGHT,1
                 else:
-                    return 4,2
+                    return LocationObservation.AT_RIGHT,2
 
 
 def parse_args():
