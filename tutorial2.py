@@ -28,7 +28,8 @@ import numpy as np
 from pymdp import utils
 from pymdp.maths import softmax
 from pymdp.agent import Agent
-from tutorial_common import AxisIterator, plot_likelihood, plot_grid, plot_beliefs, plot_point_on_grid
+from ai import AxisIterator
+from tutorial_common import plot_likelihood, plot_grid, plot_beliefs, plot_point_on_grid
 
 
 class TwoArmedBandit(object):

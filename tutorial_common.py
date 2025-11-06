@@ -20,58 +20,10 @@
     Common code for tutorials
 '''
 
-from os.path import join
-from pathlib import Path
-from warnings import warn
 import numpy as np
 from matplotlib import rc
 from matplotlib.pyplot import figure, show
 import seaborn as sns
-
-
-class AxisIterator:
-	'''
-	This class creates subplots as needed
-	'''
-
-	def __init__(self, figsize=(14, 14), n_rows=3, n_columns=3, figs='figs', title='', show=False, name=Path(__file__).stem):
-		self.figsize = figsize
-		self.n_rows = n_rows
-		self.n_columns = n_columns
-		self.seq = 0
-		self.title = title
-		self.figs = figs
-		self.show = show
-		self.name = name
-
-	def __iter__(self):
-		return self
-
-	def __next__(self):
-		'''
-		Used to supply subplots
-		'''
-		if self.seq < self.n_rows * self.n_columns:
-			self.seq += 1
-		else:
-			warn('Too many subplots')
-
-		return self.fig.add_subplot(self.n_rows, self.n_columns, self.seq)
-
-	def __enter__(self):
-		rc('font', **{'family': 'serif',
-                    'serif': ['Palatino'],
-                    'size': 8})
-		rc('text', usetex=True)
-		self.fig = figure(figsize=self.figsize)
-		return self
-
-	def __exit__(self, exc_type, exc_val, exc_tb):
-		self.fig.suptitle(self.title, fontsize=10)
-		self.fig.tight_layout(pad=1)
-		self.fig.savefig(join(self.figs, self.name))
-		if self.show:
-			show()
 
 
 def plot_likelihood(matrix, xlabels=None, ylabels=None, title_str='Likelihood distribution (A)', ax=None,cbar=False):
