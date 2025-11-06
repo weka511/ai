@@ -74,7 +74,7 @@ class AxisIterator:
 			show()
 
 
-def plot_likelihood(matrix, xlabels=None, ylabels=None, title_str='Likelihood distribution (A)', ax=None):
+def plot_likelihood(matrix, xlabels=None, ylabels=None, title_str='Likelihood distribution (A)', ax=None,cbar=False):
 	'''
 	Plots a 2-D likelihood matrix as a heatmap
 	'''
@@ -86,7 +86,7 @@ def plot_likelihood(matrix, xlabels=None, ylabels=None, title_str='Likelihood di
 	if not np.isclose(matrix.sum(axis=0), 1.0).all():
 		raise ValueError('Distribution not column-normalized! Please normalize (ensure matrix.sum(axis=0) == 1.0 for all columns)')
 
-	sns.heatmap(matrix, xticklabels=xlabels, yticklabels=ylabels, cmap='viridis', cbar=False, vmin=0.0, vmax=1.0, ax=ax)
+	sns.heatmap(matrix, xticklabels=xlabels, yticklabels=ylabels, cmap='viridis', cbar=cbar, vmin=0.0, vmax=1.0, ax=ax)
 	ax.set_title(title_str, fontsize=8)
 	ax.tick_params(axis='x', labelsize=8)
 	ax.tick_params(axis='y', labelsize=8)

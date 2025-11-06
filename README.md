@@ -55,6 +55,7 @@ pymdp_demo1.py|[Conor Heins et al--pymdp: A Python library for active inference 
 tutorial1.py|[Active inference from scratch](https://pymdp-rtd.readthedocs.io/en/latest/notebooks/active_inference_from_scratch.html)
 tutorial2.py|[The Agent API](https://pymdp-rtd.readthedocs.io/en/latest/notebooks/using_the_agent_class.html)
 tutorial_common.py|Common code for tutorials
+tutorial_maze.py|[Active Inference Demo: T-Maze Environment](https://pymdp-rtd.readthedocs.io/en/latest/notebooks/tmaze_demo.html)
 
 ## Miscellaneous
 
