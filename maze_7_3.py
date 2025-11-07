@@ -86,22 +86,22 @@ class MDP_Factory:
     '''
     def create_A(self, probability_hint_wrong=2.0 / 100.0):
         A = utils.obj_array(len(Modality))
-        A[Modality.WHERE] = np.empty((len(LocationObservation), len(Context), len(Location)))
-        A[Modality.WHERE][:, Context.RIGHT_ATTRACTIVE, :] = np.array([[1.0, 0.0, 0.0, 0.0],
+        A[Modality.WHERE] = np.empty((len(LocationObservation), len(Location), len(Context)))
+        A[Modality.WHERE][:, :, Context.RIGHT_ATTRACTIVE] = np.array([[1.0, 0.0, 0.0, 0.0],
                                                                       [0.0, 0.0, 0.0, 0.0],
                                                                       [0.0, 1.0, 0.0, 0.0],
                                                                       [0.0, 0.0, 1.0, 0.0],
                                                                       [0.0, 0.0, 0.0, 1.0]])
-        A[Modality.WHERE][:, Context.LEFT_ATTRACTIVE, :] = np.array([[1.0, 0.0, 0.0, 0.0],
+        A[Modality.WHERE][:, :, Context.LEFT_ATTRACTIVE] = np.array([[1.0, 0.0, 0.0, 0.0],
                                                                      [0.0, 1.0, 0.0, 0.0],
                                                                      [0.0, 0.0, 0.0, 0.0],
                                                                      [0.0, 0.0, 1.0, 0.0],
                                                                      [0.0, 0.0, 0.0, 1.0]])
-        A[Modality.WHAT] = np.empty((len(Hint), len(Context), len(Location)))
-        A[Modality.WHAT][:, Context.RIGHT_ATTRACTIVE, :] = np.array([[1.0, 1.0, 0.0, 0.0],
+        A[Modality.WHAT] = np.empty((len(Hint), len(Location), len(Context)))
+        A[Modality.WHAT][:, :, Context.RIGHT_ATTRACTIVE] = np.array([[1.0, 1.0, 0.0, 0.0],
                                                                      [0.0, 0.0, probability_hint_wrong, 1.0 - probability_hint_wrong],
                                                                      [0.0, 0.0, 1.0 - probability_hint_wrong, probability_hint_wrong]])
-        A[Modality.WHAT][:, Context.LEFT_ATTRACTIVE, :] = np.array([[1.0, 1.0, 0.0, 0.0],
+        A[Modality.WHAT][:, :, Context.LEFT_ATTRACTIVE] = np.array([[1.0, 1.0, 0.0, 0.0],
                                                                     [0.0, 0.0, 1.0 - probability_hint_wrong, probability_hint_wrong],
                                                                     [0.0, 0.0, probability_hint_wrong, 1.0 - probability_hint_wrong]])
 
@@ -141,8 +141,8 @@ class MDP_Factory:
 
     def create_D(self):
         D = utils.obj_array(len(Modality))
-        D[Modality.WHERE] = np.c_[[1.0, 0.0, 0.0, 0.0]]
-        D[Modality.WHAT] = norm(np.c_[[1.0, 1.0]])
+        D[Modality.WHERE] = np.array([1.0, 0.0, 0.0, 0.0])#c_[[1.0, 0.0, 0.0, 0.0]]
+        D[Modality.WHAT] = norm(np.array([1.0, 1.0]))#np.c_[[1.0, 1.0]])
         return D
 
 
@@ -222,6 +222,7 @@ if __name__ == '__main__':
     for t in range(T):
         o = maze.step(action)
         qs = mouse.infer_states(o)
+        print (o,qs)
 
 
     # with AxisIterator(figs=args.figs, title='Section 7.3: Decision Making and Planning as Inference',
