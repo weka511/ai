@@ -217,12 +217,15 @@ if __name__ == '__main__':
     factory = MDP_Factory()
     mouse = Agent(A=factory.create_A(), B=factory.create_B(), C=factory.create_C(), D=factory.create_D())
     maze = MazeEnvironment(factory, rng=rng)
-    T = 2
+    T = 10
     action = 0
     for t in range(T):
         o = maze.step(action)
         qs = mouse.infer_states(o)
-        print (o,qs)
+        mouse.infer_policies()
+        action = mouse.sample_action()
+        action = int(action[0])
+        print (T,action,o,qs)
 
 
     # with AxisIterator(figs=args.figs, title='Section 7.3: Decision Making and Planning as Inference',
