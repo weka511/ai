@@ -47,6 +47,17 @@ class ChoiceAction(IntEnum):
     MOVE_BOTTOM = 1
     MOVE_LEFT = 2
     MOVE_RIGHT = 3
+    @classmethod
+    def to_location(cls,action):
+        match action:
+            case ChoiceAction.MOVE_START:
+                return Location.START
+            case ChoiceAction.MOVE_BOTTOM:
+                return Location.BOTTOM
+            case ChoiceAction.MOVE_LEFT:
+                return Location.LEFT
+            case ChoiceAction.MOVE_RIGHT:
+                return Location.RIGHT
 
 class LocationObservation(IntEnum):
     AT_START = 0
@@ -161,7 +172,7 @@ class MazeEnvironment(Env):
         Update to position in response to an action
         '''
         if self.AllowableTransitions[self.location,action]:
-            self.location = action
+            self.location = ChoiceAction.to_location(action)
 
         match self.location:
             case Location.START:
@@ -204,13 +215,13 @@ if __name__ == '__main__':
     args = parse_args()
     rng = np.random.default_rng(args.seed)
     factory = MDP_Factory()
-    agent = Agent(A=factory.create_A(), B=factory.create_B(), C=factory.create_C(), D=factory.create_D())
-    env = MazeEnvironment(factory, rng=rng)
+    mouse = Agent(A=factory.create_A(), B=factory.create_B(), C=factory.create_C(), D=factory.create_D())
+    maze = MazeEnvironment(factory, rng=rng)
     T = 2
     action = 0
     for t in range(T):
-        o = env.step(action)
-        qs = agent.infer_states(o)
+        o = maze.step(action)
+        qs = mouse.infer_states(o)
 
 
     # with AxisIterator(figs=args.figs, title='Section 7.3: Decision Making and Planning as Inference',
