@@ -15,8 +15,9 @@
 # You should have received a copy of the GNU General Public License
 # along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.
 
-'''Active Inference Demo: T-Maze Environment'''
-
+'''
+    Active Inference Demo: T-Maze Environment
+'''
 
 from argparse import ArgumentParser
 from pathlib import Path
@@ -39,9 +40,15 @@ if __name__ == '__main__':
 
     reward_probabilities = [0.98, 0.02]
     env = TMazeEnv(reward_probs = reward_probabilities)
+    A = env.A
     A_gp = env.get_likelihood_dist()
+    B_gp = env.get_transition_dist()
+
     with AxisIterator(figs=args.figs, title=__doc__,
                       show=args.show, name=Path(__file__).stem) as axes:
-        plot_likelihood(A_gp[1][:,:,0],'Reward Right',ax=next(axes),cbar=True)
+        plot_likelihood(A_gp[1][:,:,0],title_str='Reward Right',ax=next(axes),cbar=True)
+        plot_likelihood(A_gp[2][:,3,:],title_str='Cue Mapping',ax=next(axes))
+        plot_likelihood(B_gp[1][:,:,0],title_str='Reward Condition Transitions',ax=next(axes))
+        plot_likelihood(B_gp[0][:,:,0],title_str='Transition likelihood for "Move to Center"',ax=next(axes))
 
 

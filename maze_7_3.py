@@ -29,37 +29,39 @@ import numpy as np
 from pymdp import utils
 from pymdp.agent import Agent
 from pymdp.envs import Env
-from pymdp.maths import softmax, spm_log_single as log_stable, spm_norm as norm
-from ai import AxisIterator
+from pymdp.maths import softmax, spm_norm as norm
+
 
 class Context(IntEnum):
+    '''
+    Indicates where atractive stimulus is located
+    '''
     RIGHT_ATTRACTIVE = 0
     LEFT_ATTRACTIVE = 1
 
 class Location(IntEnum):
+    '''
+    Location of Mouse
+    '''
     START = 0
     BOTTOM = 1
     LEFT = 2
     RIGHT = 3
 
 class ChoiceAction(IntEnum):
+    '''
+    Controls where Mouse will move.
+    It is numerically equal to new location
+    '''
     MOVE_START = 0
     MOVE_BOTTOM = 1
     MOVE_LEFT = 2
     MOVE_RIGHT = 3
-    @classmethod
-    def to_location(cls,action):
-        match action:
-            case ChoiceAction.MOVE_START:
-                return Location.START
-            case ChoiceAction.MOVE_BOTTOM:
-                return Location.BOTTOM
-            case ChoiceAction.MOVE_LEFT:
-                return Location.LEFT
-            case ChoiceAction.MOVE_RIGHT:
-                return Location.RIGHT
 
 class LocationObservation(IntEnum):
+    '''
+    This is what mouse observes
+    '''
     AT_START = 0
     AT_BOTTOM_LEFT_ATTRACTIVE = 1
     AT_BOTTOM_RIGHT_ATTRACTIVE = 2
@@ -67,6 +69,9 @@ class LocationObservation(IntEnum):
     AT_RIGHT = 4
 
 class Modality(IntEnum):
+    '''
+    There are two types of observations, location and stimulus
+    '''
     WHERE = 0
     WHAT = 1
 
@@ -164,15 +169,17 @@ class MazeEnvironment(Env):
         self.AllowableTransitions = np.array([[1, 1, 0, 0],
                                               [1, 1, 0, 0],
                                               [1, 1, 1, 0],
-                                              [1, 1, 0, 1]],dtype=bool)
+                                              [1, 1, 0, 1]],
+                                             dtype=bool)
         self.probability_hint_wrong = probability_hint_wrong
+
 
     def step(self, action):
         '''
         Update to position in response to an action
         '''
         if self.AllowableTransitions[self.location,action]:
-            self.location = ChoiceAction.to_location(action)
+            self.location = Location(action)
 
         match self.location:
             case Location.START:
@@ -202,6 +209,9 @@ class MazeEnvironment(Env):
                 else:
                     return LocationObservation.AT_RIGHT,Stimulus.AVERSIVE
 
+    def can_move_out(self,location):
+        return (self.AllowableTransitions[location,location]
+                and np.count_nonzero(self.AllowableTransitions[:,location]) > 0)
 
 def parse_args():
     parser = ArgumentParser(__doc__)
@@ -218,17 +228,17 @@ if __name__ == '__main__':
     mouse = Agent(A=factory.create_A(), B=factory.create_B(), C=factory.create_C(), D=factory.create_D())
     maze = MazeEnvironment(factory, rng=rng)
     T = 10
-    action = 0
+    action = ChoiceAction.MOVE_START
     for t in range(T):
         o = maze.step(action)
         qs = mouse.infer_states(o)
         mouse.infer_policies()
         action = mouse.sample_action()
-        action = int(action[0])
+        action = ChoiceAction(int(action[0]))
         print (T,action,o,qs)
+        if not maze.can_move_out(o[0]):
+            print ('done')
+            break
 
 
-    # with AxisIterator(figs=args.figs, title='Section 7.3: Decision Making and Planning as Inference',
-                      # show=args.show, name=Path(__file__).stem) as axes:
-        # pass
 
