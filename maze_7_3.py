@@ -29,7 +29,7 @@ import numpy as np
 from pymdp import utils
 from pymdp.agent import Agent
 from pymdp.envs import Env
-from pymdp.maths import softmax, spm_norm as norm
+from pymdp.maths import softmax, spm_norm as norm, spm_log_single as log_stable
 
 
 class Context(IntEnum):
@@ -38,6 +38,7 @@ class Context(IntEnum):
     '''
     RIGHT_ATTRACTIVE = 0
     LEFT_ATTRACTIVE = 1
+
 
 class Location(IntEnum):
     '''
@@ -48,15 +49,17 @@ class Location(IntEnum):
     LEFT = 2
     RIGHT = 3
 
-class ChoiceAction(IntEnum):
+
+class Move(IntEnum):
     '''
     Controls where Mouse will move.
     It is numerically equal to new location
     '''
-    MOVE_START = 0
-    MOVE_BOTTOM = 1
-    MOVE_LEFT = 2
-    MOVE_RIGHT = 3
+    START = 0
+    BOTTOM = 1
+    LEFT = 2
+    RIGHT = 3
+
 
 class LocationObservation(IntEnum):
     '''
@@ -68,28 +71,39 @@ class LocationObservation(IntEnum):
     AT_LEFT = 3
     AT_RIGHT = 4
 
+
 class Modality(IntEnum):
     '''
-    There are two types of observations, location and stimulus
+    There are two modalities, i.e. two types of observations, location and stimulus
     '''
     WHERE = 0
     WHAT = 1
 
+
 class Stimulus(IntEnum):
+    '''
+    Stimulus at a location
+    '''
     NONE = 0
     ATTRACTIVE = 1
     AVERSIVE = 2
 
+
 class Hint(IntEnum):
+    '''
+    Suggested location for attractive stimulus, which may be unreliable
+    '''
     HINT_NONE = 0
     HINT_LEFT = 1
     HINT_RIGHT = 2
 
-class MDP_Factory:
+
+class MazeFactory:
     '''
     This class creates the A, B, C, and D matrices for the maze example
     '''
-    def create_A(self, probability_hint_wrong=2.0 / 100.0):
+
+    def create_A(self, p_wrong=2.0 / 100.0):
         A = utils.obj_array(len(Modality))
         A[Modality.WHERE] = np.empty((len(LocationObservation), len(Location), len(Context)))
         A[Modality.WHERE][:, :, Context.RIGHT_ATTRACTIVE] = np.array([[1.0, 0.0, 0.0, 0.0],
@@ -104,38 +118,20 @@ class MDP_Factory:
                                                                      [0.0, 0.0, 0.0, 1.0]])
         A[Modality.WHAT] = np.empty((len(Hint), len(Location), len(Context)))
         A[Modality.WHAT][:, :, Context.RIGHT_ATTRACTIVE] = np.array([[1.0, 1.0, 0.0, 0.0],
-                                                                     [0.0, 0.0, probability_hint_wrong, 1.0 - probability_hint_wrong],
-                                                                     [0.0, 0.0, 1.0 - probability_hint_wrong, probability_hint_wrong]])
+                                                                     [0.0, 0.0, p_wrong, 1.0 - p_wrong],
+                                                                     [0.0, 0.0, 1.0 - p_wrong, p_wrong]])
         A[Modality.WHAT][:, :, Context.LEFT_ATTRACTIVE] = np.array([[1.0, 1.0, 0.0, 0.0],
-                                                                    [0.0, 0.0, 1.0 - probability_hint_wrong, probability_hint_wrong],
-                                                                    [0.0, 0.0, probability_hint_wrong, 1.0 - probability_hint_wrong]])
+                                                                    [0.0, 0.0, 1.0 - p_wrong, p_wrong],
+                                                                    [0.0, 0.0, p_wrong, 1.0 - p_wrong]])
 
         return A
 
-    def create_B(self):
+    def create_B(self,n_policies=4):
         B = utils.obj_array(len(Modality))
-        B[Modality.WHERE] = np.zeros((len(Location), len(Location), len(ChoiceAction)))
-        B[Modality.WHERE][:, :, 0] = np.array([[1.0, 1.0, 0.0, 0.0],
-                                  [0.0, 0.0, 0.0, 0.0],
-                                  [0.0, 0.0, 1.0, 0.0],
-                                  [0.0, 0.0, 0.0, 1.0]])
-        B[Modality.WHERE][:, :, 1] = np.array([[0.0, 0.0, 0.0, 0.0],
-                                  [1.0, 1.0, 0.0, 0.0],
-                                  [0.0, 0.0, 1.0, 0.0],
-                                  [0.0, 0.0, 0.0, 1.0]])
-        B[Modality.WHERE][:, :, 2] = np.array([[0.0, 0.0, 0.0, 0.0],
-                                  [0.0, 0.0, 0.0, 0.0],
-                                  [1.0, 1.0, 1.0, 0.0],
-                                  [0.0, 0.0, 0.0, 1.0]])
-        B[Modality.WHERE][:, :, 3] = np.array([[0.0, 0.0, 0.0, 0.0],
-                                  [0.0, 0.0, 0.0, 0.0],
-                                  [0.0, 0.0, 1.0, 0.0],
-                                  [1.0, 1.0, 0.0, 1.0]])
-        B[Modality.WHAT] = np.zeros((len(Context), len(Context), len(ChoiceAction)))
-        B[Modality.WHAT][:, :, 0] = np.eye((len(Context)))
-        B[Modality.WHAT][:, :, 1] = np.eye((len(Context)))
-        B[Modality.WHAT][:, :, 2] = np.eye((len(Context)))
-        B[Modality.WHAT][:, :, 3] = np.eye((len(Context)))
+        B[Modality.WHERE] = self.create_B_location(n_policies=n_policies)
+        B[Modality.WHAT] = np.zeros((len(Context), len(Context), n_policies))
+        for i in range(n_policies):
+            B[Modality.WHAT][:, :, i] = np.eye((len(Context)))
         return B
 
     def create_C(self):
@@ -146,99 +142,146 @@ class MDP_Factory:
 
     def create_D(self):
         D = utils.obj_array(len(Modality))
-        D[Modality.WHERE] = np.array([1.0, 0.0, 0.0, 0.0])#c_[[1.0, 0.0, 0.0, 0.0]]
-        D[Modality.WHAT] = norm(np.array([1.0, 1.0]))#np.c_[[1.0, 1.0]])
+        D[Modality.WHERE] = np.array([1.0, 0.0, 0.0, 0.0])
+        D[Modality.WHAT] = norm(np.array([1.0, 1.0]))
         return D
 
+    def create_B_location(self, detail=True,n_policies=4):
+        '''
+        Used to create the array of probabilities for move
+        Row - to state, Col - from state
 
-class MazeEnvironment(Env):
+        Parameters:
+            detail     If set to false, create array of allowable moves (ignoring state)
+            n_policies Number of policies
+        '''
+        B = np.zeros((len(Location), len(Location), n_policies))
+        B[:, :, 0] = np.array([[1.0, 1.0, 0.0, 0.0],
+                               [0.0, 0.0, 0.0, 0.0],
+                               [0.0, 0.0, 1.0, 0.0],
+                               [0.0, 0.0, 0.0, 1.0]])
+        B[:, :, 1] = np.array([[0.0, 0.0, 0.0, 0.0],
+                               [1.0, 1.0, 0.0, 0.0],
+                               [0.0, 0.0, 1.0, 0.0],
+                               [0.0, 0.0, 0.0, 1.0]])
+        B[:, :, 2] = np.array([[0.0, 0.0, 0.0, 0.0],
+                               [0.0, 0.0, 0.0, 0.0],
+                               [1.0, 1.0, 1.0, 0.0],
+                               [0.0, 0.0, 0.0, 1.0]])
+        B[:, :, 3] = np.array([[0.0, 0.0, 0.0, 0.0],
+                               [0.0, 0.0, 0.0, 0.0],
+                               [0.0, 0.0, 1.0, 0.0],
+                               [1.0, 1.0, 0.0, 1.0]])
+        if detail:
+            return B
+
+        return np.sum(B, axis=2) > 0
+
+
+class Maze(Env):
     '''
     The class represents the generative process for the maze
     '''
 
-    def __init__(self, factory, rng=np.random.default_rng(),probability_hint_wrong=2.0 / 100.0):
+    def __init__(self, factory, rng=np.random.default_rng(), p_wrong=2.0 / 100.0):
         '''
         Assign context (left or right) at random, and place mouse at starting position.
 
         Create a table of allowable transitions by or-ing the matrices from Figure 7.6,
         which  makes Left and Right absorbing states.
         '''
+        super().__init__()
         self.rng = rng
         self.location = Location.START
-        self.context = self.rng.choice([Context.RIGHT_ATTRACTIVE,Context.LEFT_ATTRACTIVE])
-        self.AllowableTransitions = np.array([[1, 1, 0, 0],
-                                              [1, 1, 0, 0],
-                                              [1, 1, 1, 0],
-                                              [1, 1, 0, 1]],
-                                             dtype=bool)
-        self.probability_hint_wrong = probability_hint_wrong
+        self.context = self.rng.choice(list(Context))
+        self.AllowableTransitions = factory.create_B_location(detail=False)
+        self.p_wrong = p_wrong
 
+    def reset(self):
+        self.location = Location.START
 
     def step(self, action):
         '''
         Update to position in response to an action
         '''
-        if self.AllowableTransitions[self.location,action]:
+        if True: #self.AllowableTransitions[action,self.location]:
             self.location = Location(action)
 
         match self.location:
             case Location.START:
-                return LocationObservation.AT_START,Stimulus.NONE
+                return LocationObservation.AT_START, Stimulus.NONE
 
             case Location.BOTTOM:
                 if self.context == Context.RIGHT_ATTRACTIVE:
-                    if self.rng.uniform() < self.probability_hint_wrong:
-                        return LocationObservation.AT_BOTTOM_LEFT_ATTRACTIVE,Stimulus.NONE
+                    if self.rng.uniform() < self.p_wrong:
+                        return LocationObservation.AT_BOTTOM_LEFT_ATTRACTIVE, Stimulus.NONE
                     else:
-                        return LocationObservation.AT_BOTTOM_RIGHT_ATTRACTIVE,Stimulus.NONE
+                        return LocationObservation.AT_BOTTOM_RIGHT_ATTRACTIVE, Stimulus.NONE
                 else:
-                    if self.rng.uniform() < self.probability_hint_wrong:
-                        return LocationObservation.AT_BOTTOM_RIGHT_ATTRACTIVE,Stimulus.NONE
+                    if self.rng.uniform() < self.p_wrong:
+                        return LocationObservation.AT_BOTTOM_RIGHT_ATTRACTIVE, Stimulus.NONE
                     else:
-                        return LocationObservation.AT_BOTTOM_LEFT_ATTRACTIVE,Stimulus.NONE
+                        return LocationObservation.AT_BOTTOM_LEFT_ATTRACTIVE, Stimulus.NONE
 
             case Location.LEFT:
                 if self.context == Context.RIGHT_ATTRACTIVE:
-                    return LocationObservation.AT_LEFT,Stimulus.AVERSIVE
+                    return LocationObservation.AT_LEFT, Stimulus.AVERSIVE
                 else:
-                    return LocationObservation.AT_LEFT,Stimulus.ATTRACTIVE
+                    return LocationObservation.AT_LEFT, Stimulus.ATTRACTIVE
 
             case Location.RIGHT:
                 if self.context == Context.RIGHT_ATTRACTIVE:
-                    return LocationObservation.AT_RIGHT,Stimulus.ATTRACTIVE
+                    return LocationObservation.AT_RIGHT, Stimulus.ATTRACTIVE
                 else:
-                    return LocationObservation.AT_RIGHT,Stimulus.AVERSIVE
+                    return LocationObservation.AT_RIGHT, Stimulus.AVERSIVE
 
-    def can_move_out(self,location):
-        return (self.AllowableTransitions[location,location]
-                and np.count_nonzero(self.AllowableTransitions[:,location]) > 0)
+    def can_move_out(self, location):
+        return (self.AllowableTransitions[location, location]
+                and np.count_nonzero(self.AllowableTransitions[:, location]) > 0)
+
 
 def parse_args():
     parser = ArgumentParser(__doc__)
     parser.add_argument('--show', default=False, action='store_true', help='Controls whether plot will be displayed')
     parser.add_argument('--figs', default='./figs', help='Location for storing plot files')
     parser.add_argument('--seed', default=None, type=int, help='Initialize random number generator')
+    parser.add_argument('-T', '--Tau', default=5, type=int, help='Number of time steps')
     return parser.parse_args()
+
+
+def infer_states(observation_index, A, prior):
+
+    log_likelihood = log_stable(A[observation_index, :])
+
+    log_prior = log_stable(prior)
+
+    qs = softmax(log_likelihood + log_prior)
+
+    return qs
 
 
 if __name__ == '__main__':
     args = parse_args()
     rng = np.random.default_rng(args.seed)
-    factory = MDP_Factory()
-    mouse = Agent(A=factory.create_A(), B=factory.create_B(), C=factory.create_C(), D=factory.create_D())
-    maze = MazeEnvironment(factory, rng=rng)
-    T = 10
-    action = ChoiceAction.MOVE_START
-    for t in range(T):
+    factory = MazeFactory()
+    mouse = Agent(A=factory.create_A(),
+                  B=factory.create_B(),
+                  C=factory.create_C(),
+                  D=factory.create_D(),
+                  policy_len=1,
+                  inference_horizon=4)
+    maze = Maze(factory, rng=rng)
+    maze.reset()
+    action = Move.START
+    prior = mouse.D.copy()
+    for tau in range(args.Tau):
         o = maze.step(action)
         qs = mouse.infer_states(o)
-        mouse.infer_policies()
-        action = mouse.sample_action()
-        action = ChoiceAction(int(action[0]))
-        print (T,action,o,qs)
-        if not maze.can_move_out(o[0]):
-            print ('done')
-            break
+        q_pi, G = mouse.infer_policies()
+        next_action = mouse.sample_action()
+        action = Move(int(next_action[0]))
+        z = 0
+
 
 
 
