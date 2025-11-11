@@ -34,7 +34,7 @@ from pymdp.maths import softmax, spm_norm as norm, spm_log_single as log_stable
 
 class Context(IntEnum):
     '''
-    Indicates where atractive stimulus is located
+    Determines where attractive stimulus is located
     '''
     RIGHT_ATTRACTIVE = 0
     LEFT_ATTRACTIVE = 1

@@ -35,6 +35,7 @@ from argparse import ArgumentParser
 from pathlib import Path
 import numpy as np
 from pymdp.maths import softmax, spm_log_single as log_stable
+from pymdp.utils import norm_dist
 import seaborn as sns
 from ai import AxisIterator
 
@@ -135,18 +136,19 @@ if __name__ == '__main__':
     args = parse_args()
 
     # Emission matrix, the probability of one particular output given the state.
-    # Each row represents an output, and the coumns represent states
-    A = 0.1 * np.array([[7, 1, 1, 1],
-                        [1, 7, 1, 1],
-                        [1, 1, 7, 1],
-                        [1, 1, 1, 7]])
+    # Each row represents an output, and the columns represent states
+    A = norm_dist(np.array([[7, 1, 1, 1],
+                            [1, 7, 1, 1],
+                            [1, 1, 7, 1],
+                            [1, 1, 1, 7]]))
 
-    # Transition matrix, each row being the probabilty of one particular state as a transition from previous state
+    # Transition matrix, each row being the probabilty of one particular
+    # state as a transition from the state specified by the column
 
-    B = 0.01 * np.array([[1, 1, 1, 97],
-                         [97, 1, 1, 1],
-                         [1, 97, 1, 1],
-                         [1, 1, 97, 1]])
+    B = norm_dist(np.array([[1, 1, 1, 97],
+                            [97, 1, 1, 1],
+                            [1, 97, 1, 1],
+                            [1, 1, 97, 1]]))
 
     # Prior probabilities for each state
 
