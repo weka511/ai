@@ -23,6 +23,7 @@ from os.path import join
 from pathlib import Path
 from matplotlib.pyplot import figure, show
 from matplotlib import rc
+from warnings import warn
 
 class AxisIterator:
     '''
