@@ -16,7 +16,11 @@
 # along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.
 
 '''
-    Example from Section 7.3 Decision Making and Planning as Inference
+    Example from Section 7.3 Decision Making and Planning as Inference. A mouse is placed
+    at the start of a T maze, with an attractive stimulus in either the left branch
+    or the right one, and an aversive stimulus on the otehr side. A hint is placed at the bottom
+    of the T. The mouse has to decide whther to sample the hint (which is less that 100% reliable)
+    or seek the stimulus directly.
 
     Code adapted from Tutorial 2: the Agent API
     https://pymdp-rtd.readthedocs.io/en/latest/notebooks/using_the_agent_class.html
@@ -30,7 +34,7 @@ from pymdp import utils
 from pymdp.agent import Agent
 from pymdp.envs import Env
 from pymdp.maths import softmax, spm_norm as norm, spm_log_single as log_stable
-
+from ai import AxisIterator
 
 class Context(IntEnum):
     '''
@@ -149,6 +153,10 @@ class MazeFactory:
         '''
         Set up Prior Preferences
         Columns correspond to time steps
+
+        Parameters:
+            c
+            n_steps
         '''
         C = utils.obj_array(len(Modality))
         C[Modality.WHERE] = np.zeros((len(LocationObservation),n_steps))
@@ -239,28 +247,37 @@ class Maze(Env):
                 return LocationObservation.AT_START, Stimulus.NONE
 
             case Location.BOTTOM:
-                if self.context == Context.RIGHT_ATTRACTIVE:
-                    if self.rng.uniform() < self.p_wrong:
-                        return LocationObservation.AT_BOTTOM_LEFT_ATTRACTIVE, Stimulus.NONE
-                    else:
-                        return LocationObservation.AT_BOTTOM_RIGHT_ATTRACTIVE, Stimulus.NONE
-                else:
-                    if self.rng.uniform() < self.p_wrong:
-                        return LocationObservation.AT_BOTTOM_RIGHT_ATTRACTIVE, Stimulus.NONE
-                    else:
-                        return LocationObservation.AT_BOTTOM_LEFT_ATTRACTIVE, Stimulus.NONE
+                match self.context:
+                    case Context.RIGHT_ATTRACTIVE:
+                        if self.mislead():
+                            return LocationObservation.AT_BOTTOM_LEFT_ATTRACTIVE, Stimulus.NONE
+                        else:
+                            return LocationObservation.AT_BOTTOM_RIGHT_ATTRACTIVE, Stimulus.NONE
+                    case Context.LEFT_ATTRACTIVE:
+                        if self.mislead():
+                            return LocationObservation.AT_BOTTOM_RIGHT_ATTRACTIVE, Stimulus.NONE
+                        else:
+                            return LocationObservation.AT_BOTTOM_LEFT_ATTRACTIVE, Stimulus.NONE
 
             case Location.LEFT:
-                if self.context == Context.RIGHT_ATTRACTIVE:
-                    return LocationObservation.AT_LEFT, Stimulus.AVERSIVE
-                else:
-                    return LocationObservation.AT_LEFT, Stimulus.ATTRACTIVE
+                match(self.context):
+                    case Context.RIGHT_ATTRACTIVE:
+                        return LocationObservation.AT_LEFT, Stimulus.AVERSIVE
+                    case Context.LEFT_ATTRACTIVE:
+                        return LocationObservation.AT_LEFT, Stimulus.ATTRACTIVE
 
             case Location.RIGHT:
-                if self.context == Context.RIGHT_ATTRACTIVE:
-                    return LocationObservation.AT_RIGHT, Stimulus.ATTRACTIVE
-                else:
-                    return LocationObservation.AT_RIGHT, Stimulus.AVERSIVE
+                match(self.context):
+                    case Context.RIGHT_ATTRACTIVE:
+                        return LocationObservation.AT_RIGHT, Stimulus.ATTRACTIVE
+                    case Context.LEFT_ATTRACTIVE:
+                        return LocationObservation.AT_RIGHT, Stimulus.AVERSIVE
+
+    def mislead(self):
+        '''
+        Do the opposite of hint, so interchange Left and Right
+        '''
+        return self.rng.uniform() < self.p_wrong
 
     def can_move_out(self, action):
         '''
@@ -289,27 +306,38 @@ def parse_args():
 if __name__ == '__main__':
     args = parse_args()
     rng = np.random.default_rng(args.seed)
-    factory = MazeFactory()
-    mouse = Agent(A=factory.create_A(),
-                  B=factory.create_B(),
-                  C=factory.create_C(n_steps=args.n_steps),
-                  D=factory.create_D(),
-                  policy_len = args.n_steps,
-                  inference_horizon = args.n_steps)
-    maze = Maze(factory, rng=rng)
-    maze.reset()
-    action = Move.START
-    prior = mouse.D.copy()
-    for tau in range(args.Tau):
-        o = maze.step(action)
-        qs = mouse.infer_states(o)
-        q_pi, G = mouse.infer_policies()
-        if not maze.can_move_out(action):
-            print (o,qs)
-            break
-        next_action = mouse.sample_action()
-        action = Move(int(next_action[0]))
-        print (o,qs,action)
+    with AxisIterator(figs=args.figs, title='Example from Section 7.3 Decision Making and Planning as Inference.',n_rows=3,
+                      show=args.show, name=Path(__file__).stem) as axes:
+
+        factory = MazeFactory()
+        mouse = Agent(A=factory.create_A(),
+                      B=factory.create_B(),
+                      C=factory.create_C(n_steps=args.n_steps),
+                      D=factory.create_D(),
+                      policy_len = args.n_steps,
+                      inference_horizon = args.n_steps)
+        maze = Maze(factory, rng=rng)
+        maze.reset()
+        action = Move.START
+        prior = mouse.D.copy()
+        for tau in range(args.Tau):
+            o = maze.step(action)
+            qs = mouse.infer_states(o)
+            ax = next(axes)
+            ax.bar(range(len(qs[0])),qs[0],facecolor='xkcd:blue',label='Location')
+            ax.bar([t+0.5 for t in range(len(qs[1]))],qs[1],facecolor='xkcd:red',label='Context')
+            ax.legend()
+            q_pi, G = mouse.infer_policies()
+            ax = next(axes)
+            ax.bar(range(len(q_pi)),q_pi,facecolor='xkcd:blue')
+            ax = next(axes)
+            ax.plot(G,color='xkcd:red')
+            if not maze.can_move_out(action):
+                print (o,qs)
+                break
+            next_action = mouse.sample_action()
+            action = Move(int(next_action[0]))
+            print (o,qs,action)
 
 
 
