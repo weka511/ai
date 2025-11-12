@@ -306,7 +306,8 @@ def parse_args():
 if __name__ == '__main__':
     args = parse_args()
     rng = np.random.default_rng(args.seed)
-    with AxisIterator(figs=args.figs, title='Example from Section 7.3 Decision Making and Planning as Inference.',n_rows=3,
+    with AxisIterator(figs=args.figs, title='Example from Section 7.3 Decision Making and Planning as Inference.',
+                      n_rows=3, n_columns=4,
                       show=args.show, name=Path(__file__).stem) as axes:
 
         factory = MazeFactory()
@@ -323,19 +324,31 @@ if __name__ == '__main__':
         for tau in range(args.Tau):
             o = maze.step(action)
             qs = mouse.infer_states(o)
+            q_pi, G = mouse.infer_policies()
+
             ax = next(axes)
             ax.bar(range(len(qs[0])),qs[0],facecolor='xkcd:blue',label='Location')
             ax.bar([t+0.5 for t in range(len(qs[1]))],qs[1],facecolor='xkcd:red',label='Context')
             ax.legend()
-            q_pi, G = mouse.infer_policies()
+            ax.set_title(fr'$\tau=${tau}')
+
             ax = next(axes)
-            ax.bar(range(len(q_pi)),q_pi,facecolor='xkcd:blue')
-            ax = next(axes)
-            ax.plot(G,color='xkcd:red')
+            ax.bar(range(len(q_pi)),q_pi,facecolor='xkcd:purple',label=r'$q_{\pi}$')
+            ax.set_ylabel(r'$q_{\pi}$')
+            ax.set_title(f'Infer policies: {len(q_pi)} policies considered')
+            ax1 = ax.twinx()
+            ax1.plot(G,color='xkcd:green',label='$G$')
+            ax1.set_ylabel('$G$')
+            ax.legend(loc='upper right')
+            ax1.legend(loc='lower right')
+
             if not maze.can_move_out(action):
                 print (o,qs)
                 break
             next_action = mouse.sample_action()
+            ax = next(axes)
+            ax.bar(range(len(next_action)),next_action,facecolor='xkcd:yellow',edgecolor='xkcd:black',label='$actions$')
+            ax.legend()
             action = Move(int(next_action[0]))
             print (o,qs,action)
 
