@@ -145,24 +145,25 @@ class MazeFactory:
             B[Modality.WHAT][:, :, i] = np.eye((len(Context)))
         return B
 
-    def create_C(self,c=6.0):
+    def create_C(self,c=6.0,n_steps=3):
         '''
         Set up Prior Preferences
         Columns correspond to time steps
         '''
         C = utils.obj_array(len(Modality))
-        C[Modality.WHERE] = np.array([[-1, -1, -1],
-                                      [0,   0,  0],
-                                      [0,   0,  0],
-                                      [0,   0,   0],
-                                      [0,   0, 0]])
-        C[Modality.WHAT] = np.array([[ 0,  0,  0],
-                                     [ c,  c,  c],
-                                     [-c, -c, -c]])
+        C[Modality.WHERE] = np.zeros((len(LocationObservation),n_steps))
+        C[Modality.WHERE][0,:] = -1
+
+        C[Modality.WHAT] =np.zeros((len(Stimulus),n_steps))
+        C[Modality.WHAT][Stimulus.ATTRACTIVE,:] = c
+        C[Modality.WHAT][Stimulus.AVERSIVE,:] = -c
 
         return C
 
     def create_D(self):
+        '''
+        Setup prior
+        '''
         D = utils.obj_array(len(Modality))
         D[Modality.WHERE] = np.array([1.0, 0.0, 0.0, 0.0])
         D[Modality.WHAT] = norm(np.array([1.0, 1.0]))
@@ -231,8 +232,7 @@ class Maze(Env):
         '''
         Update to position in response to an action
         '''
-        if True: #self.AllowableTransitions[action,self.location]:
-            self.location = Location(action)
+        self.location = Location(action)
 
         match self.location:
             case Location.START:
@@ -281,7 +281,8 @@ def parse_args():
     parser.add_argument('--show', default=False, action='store_true', help='Controls whether plot will be displayed')
     parser.add_argument('--figs', default='./figs', help='Location for storing plot files')
     parser.add_argument('--seed', default=None, type=int, help='Initialize random number generator')
-    parser.add_argument('-T', '--Tau', default=5, type=int, help='Number of time steps')
+    parser.add_argument('-T', '--Tau', default=5, type=int, help='Number of time steps for run')
+    parser.add_argument('-n', '--n_steps', default=3, type=int, help='Number of time steps for planning')
     return parser.parse_args()
 
 
@@ -289,14 +290,12 @@ if __name__ == '__main__':
     args = parse_args()
     rng = np.random.default_rng(args.seed)
     factory = MazeFactory()
-    C=factory.create_C()
-    _,n_steps = C[0].shape
     mouse = Agent(A=factory.create_A(),
                   B=factory.create_B(),
-                  C=C,
+                  C=factory.create_C(n_steps=args.n_steps),
                   D=factory.create_D(),
-                  policy_len = n_steps,
-                  inference_horizon = n_steps)
+                  policy_len = args.n_steps,
+                  inference_horizon = args.n_steps)
     maze = Maze(factory, rng=rng)
     maze.reset()
     action = Move.START
