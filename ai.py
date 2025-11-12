@@ -26,7 +26,7 @@ from matplotlib import rc
 
 class AxisIterator:
     '''
-    This class creates subplots as needed. It enables me to creplot data without distraction.
+    This class creates subplots as needed. It enables me to plot data without distraction.
     '''
     def __init__(self, n_rows=2, n_columns=3, figs='figs', title='', show=False, name=Path(__file__).stem, figsize=None):
         self.figsize = (4*n_columns,4*n_rows) if figsize == None else figsize
