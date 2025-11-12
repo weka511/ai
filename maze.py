@@ -104,7 +104,9 @@ class MazeFactory:
     '''
 
     def create_A(self, a = 0.98, b = 0.02):
-
+        '''
+        Set up Likelihood Matrix
+        '''
         A = utils.obj_array(len(Modality))
         A[Modality.WHERE] = np.empty((len(LocationObservation), len(Location), len(Context)))
         A[Modality.WHERE][:, :, Context.RIGHT_ATTRACTIVE] = np.array([[1, 0, 0, 0],
@@ -133,6 +135,9 @@ class MazeFactory:
         return A
 
     def create_B(self,n_policies=4):
+        '''
+        Set up Transition Probabilities
+        '''
         B = utils.obj_array(len(Modality))
         B[Modality.WHERE] = self.create_B_location(n_policies=n_policies)
         B[Modality.WHAT] = np.zeros((len(Context), len(Context), n_policies))
@@ -141,17 +146,20 @@ class MazeFactory:
         return B
 
     def create_C(self,c=6.0):
+        '''
+        Set up Prior Preferences
+        Columns correspond to time steps
+        '''
         C = utils.obj_array(len(Modality))
-        C[Modality.WHERE] = np.array([[-1,-1,-1],
-                                      [0, 0, 0],
-                                      [0, 0, 0],
-                                      [0, 0, 0],
-                                      [0, 0, 0]])
-        C[Modality.WHAT] = np.array([[0, 0, 0],
-                                     [c, c, c],
+        C[Modality.WHERE] = np.array([[-1, -1, -1],
+                                      [0,   0,  0],
+                                      [0,   0,  0],
+                                      [0,   0,   0],
+                                      [0,   0, 0]])
+        C[Modality.WHAT] = np.array([[ 0,  0,  0],
+                                     [ c,  c,  c],
                                      [-c, -c, -c]])
-        # C[Modality.WHERE] = softmax(np.c_[[-1.0, 0.0, 0.0, 0.0, 0.0]])
-        # C[Modality.WHAT] = softmax(np.c_[[0.0, 6.0, -6.0]])
+
         return C
 
     def create_D(self):
@@ -255,9 +263,17 @@ class Maze(Env):
                     return LocationObservation.AT_RIGHT, Stimulus.AVERSIVE
 
     def can_move_out(self, action):
+        '''
+        Verify that the B matrix allows at least one transition to some other state.
+
+        Parameters:
+            action  Causes move into some state
+
+        Returns:
+            True if we can move to some other state than the one determined by `action`
+        '''
         possible_moves = self.AllowableTransitions[:,action]  > 0
-        number_possible = possible_moves.sum()
-        return number_possible > 1 or not possible_moves[possible_moves]
+        return possible_moves.sum() > 1 or not possible_moves[possible_moves]
 
 
 def parse_args():
@@ -273,12 +289,14 @@ if __name__ == '__main__':
     args = parse_args()
     rng = np.random.default_rng(args.seed)
     factory = MazeFactory()
+    C=factory.create_C()
+    _,n_steps = C[0].shape
     mouse = Agent(A=factory.create_A(),
                   B=factory.create_B(),
-                  C=factory.create_C(),
+                  C=C,
                   D=factory.create_D(),
-                  policy_len = 3,
-                  inference_horizon = 3)
+                  policy_len = n_steps,
+                  inference_horizon = n_steps)
     maze = Maze(factory, rng=rng)
     maze.reset()
     action = Move.START
