@@ -103,26 +103,32 @@ class MazeFactory:
     This class creates the A, B, C, and D matrices for the maze example
     '''
 
-    def create_A(self, p_wrong=2.0 / 100.0):
+    def create_A(self, a = 0.98, b = 0.02):
+
         A = utils.obj_array(len(Modality))
         A[Modality.WHERE] = np.empty((len(LocationObservation), len(Location), len(Context)))
-        A[Modality.WHERE][:, :, Context.RIGHT_ATTRACTIVE] = np.array([[1.0, 0.0, 0.0, 0.0],
-                                                                      [0.0, 0.0, 0.0, 0.0],
-                                                                      [0.0, 1.0, 0.0, 0.0],
-                                                                      [0.0, 0.0, 1.0, 0.0],
-                                                                      [0.0, 0.0, 0.0, 1.0]])
-        A[Modality.WHERE][:, :, Context.LEFT_ATTRACTIVE] = np.array([[1.0, 0.0, 0.0, 0.0],
-                                                                     [0.0, 1.0, 0.0, 0.0],
-                                                                     [0.0, 0.0, 0.0, 0.0],
-                                                                     [0.0, 0.0, 1.0, 0.0],
-                                                                     [0.0, 0.0, 0.0, 1.0]])
+        A[Modality.WHERE][:, :, Context.RIGHT_ATTRACTIVE] = np.array([[1, 0, 0, 0],
+                                                                      [0, 0, 0, 0],
+                                                                      [0, 1, 0, 0],
+                                                                      [0, 0, 1, 0],
+                                                                      [0, 0, 0, 1]],
+                                                                     dtype=float)
+        A[Modality.WHERE][:, :, Context.LEFT_ATTRACTIVE] = np.array([[1, 0, 0, 0],
+                                                                     [0, 1, 0, 0],
+                                                                     [0, 0, 0, 0],
+                                                                     [0, 0, 1, 0],
+                                                                     [0, 0, 0, 1]],
+                                                                    dtype=float)
+
         A[Modality.WHAT] = np.empty((len(Hint), len(Location), len(Context)))
-        A[Modality.WHAT][:, :, Context.RIGHT_ATTRACTIVE] = np.array([[1.0, 1.0, 0.0, 0.0],
-                                                                     [0.0, 0.0, p_wrong, 1.0 - p_wrong],
-                                                                     [0.0, 0.0, 1.0 - p_wrong, p_wrong]])
-        A[Modality.WHAT][:, :, Context.LEFT_ATTRACTIVE] = np.array([[1.0, 1.0, 0.0, 0.0],
-                                                                    [0.0, 0.0, 1.0 - p_wrong, p_wrong],
-                                                                    [0.0, 0.0, p_wrong, 1.0 - p_wrong]])
+        A[Modality.WHAT][:, :, Context.RIGHT_ATTRACTIVE] = np.array([[1, 1, 0, 0],
+                                                                     [0, 0, a, b],
+                                                                     [0, 0, b, a]],
+                                                                    dtype=float)
+        A[Modality.WHAT][:, :, Context.LEFT_ATTRACTIVE] = np.array([[1, 1, 0, 0],
+                                                                    [0, 0, b, a],
+                                                                    [0, 0, a, b]],
+                                                                    dtype=float)
 
         return A
 
@@ -134,10 +140,18 @@ class MazeFactory:
             B[Modality.WHAT][:, :, i] = np.eye((len(Context)))
         return B
 
-    def create_C(self):
+    def create_C(self,c=6.0):
         C = utils.obj_array(len(Modality))
-        C[Modality.WHERE] = softmax(np.c_[[-1.0, 0.0, 0.0, 0.0, 0.0]])
-        C[Modality.WHAT] = softmax(np.c_[[0.0, 6.0, -6.0]])
+        C[Modality.WHERE] = np.array([[-1,-1,-1],
+                                      [0, 0, 0],
+                                      [0, 0, 0],
+                                      [0, 0, 0],
+                                      [0, 0, 0]])
+        C[Modality.WHAT] = np.array([[0, 0, 0],
+                                     [c, c, c],
+                                     [-c, -c, -c]])
+        # C[Modality.WHERE] = softmax(np.c_[[-1.0, 0.0, 0.0, 0.0, 0.0]])
+        # C[Modality.WHAT] = softmax(np.c_[[0.0, 6.0, -6.0]])
         return C
 
     def create_D(self):
@@ -156,26 +170,30 @@ class MazeFactory:
             n_policies Number of policies
         '''
         B = np.zeros((len(Location), len(Location), n_policies))
-        B[:, :, 0] = np.array([[1.0, 1.0, 0.0, 0.0],
-                               [0.0, 0.0, 0.0, 0.0],
-                               [0.0, 0.0, 1.0, 0.0],
-                               [0.0, 0.0, 0.0, 1.0]])
-        B[:, :, 1] = np.array([[0.0, 0.0, 0.0, 0.0],
-                               [1.0, 1.0, 0.0, 0.0],
-                               [0.0, 0.0, 1.0, 0.0],
-                               [0.0, 0.0, 0.0, 1.0]])
-        B[:, :, 2] = np.array([[0.0, 0.0, 0.0, 0.0],
-                               [0.0, 0.0, 0.0, 0.0],
-                               [1.0, 1.0, 1.0, 0.0],
-                               [0.0, 0.0, 0.0, 1.0]])
-        B[:, :, 3] = np.array([[0.0, 0.0, 0.0, 0.0],
-                               [0.0, 0.0, 0.0, 0.0],
-                               [0.0, 0.0, 1.0, 0.0],
-                               [1.0, 1.0, 0.0, 1.0]])
+        B[:, :, 0] = np.array([[1, 1, 0, 0],
+                               [0, 0, 0, 0],
+                               [0, 0, 1, 0],
+                               [0, 0, 0, 1]],
+                              dtype=float)
+        B[:, :, 1] = np.array([[0, 0, 0, 0],
+                               [1, 1, 0, 0],
+                               [0, 0, 1, 0],
+                               [0, 0, 0, 1]],
+                              dtype=float)
+        B[:, :, 2] = np.array([[0, 0, 0, 0],
+                               [0, 0, 0, 0],
+                               [1, 1, 1, 0],
+                               [0, 0, 0, 1]],
+                              dtype=float)
+        B[:, :, 3] = np.array([[0, 0, 0, 0],
+                               [0, 0, 0, 0],
+                               [0, 0, 1, 0],
+                               [1, 1, 0, 1]],
+                              dtype=float)
         if detail:
             return B
 
-        return np.sum(B, axis=2) > 0
+        return np.sum(B, axis=2)
 
 
 class Maze(Env):
@@ -193,7 +211,8 @@ class Maze(Env):
         super().__init__()
         self.rng = rng
         self.location = Location.START
-        self.context = self.rng.choice(list(Context))
+        self.context = Context(self.rng.choice(list(Context)))
+        print (f'Context={self.context.name}')
         self.AllowableTransitions = factory.create_B_location(detail=False)
         self.p_wrong = p_wrong
 
@@ -235,9 +254,10 @@ class Maze(Env):
                 else:
                     return LocationObservation.AT_RIGHT, Stimulus.AVERSIVE
 
-    def can_move_out(self, location):
-        return (self.AllowableTransitions[location, location]
-                and np.count_nonzero(self.AllowableTransitions[:, location]) > 0)
+    def can_move_out(self, action):
+        possible_moves = self.AllowableTransitions[:,action]  > 0
+        number_possible = possible_moves.sum()
+        return number_possible > 1 or not possible_moves[possible_moves]
 
 
 def parse_args():
@@ -249,17 +269,6 @@ def parse_args():
     return parser.parse_args()
 
 
-def infer_states(observation_index, A, prior):
-
-    log_likelihood = log_stable(A[observation_index, :])
-
-    log_prior = log_stable(prior)
-
-    qs = softmax(log_likelihood + log_prior)
-
-    return qs
-
-
 if __name__ == '__main__':
     args = parse_args()
     rng = np.random.default_rng(args.seed)
@@ -268,8 +277,8 @@ if __name__ == '__main__':
                   B=factory.create_B(),
                   C=factory.create_C(),
                   D=factory.create_D(),
-                  policy_len=1,
-                  inference_horizon=4)
+                  policy_len = 3,
+                  inference_horizon = 3)
     maze = Maze(factory, rng=rng)
     maze.reset()
     action = Move.START
@@ -278,9 +287,13 @@ if __name__ == '__main__':
         o = maze.step(action)
         qs = mouse.infer_states(o)
         q_pi, G = mouse.infer_policies()
+        if not maze.can_move_out(action):
+            print (o,qs)
+            break
         next_action = mouse.sample_action()
         action = Move(int(next_action[0]))
-        z = 0
+        print (o,qs,action)
+
 
 
 
