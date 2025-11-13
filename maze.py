@@ -177,13 +177,12 @@ class MazeFactory:
         D[Modality.WHAT] = norm(np.array([1.0, 1.0]))
         return D
 
-    def create_B_location(self, detail=True,n_policies=4):
+    def create_B_location(self, n_policies=4):
         '''
         Used to create the array of probabilities for move
-        Row - to state, Col - from state
+        Rows represent the state to move to, Columns the state to move from
 
         Parameters:
-            detail     If set to false, create array of allowable moves (ignoring state)
             n_policies Number of policies
         '''
         B = np.zeros((len(Location), len(Location), n_policies))
@@ -207,10 +206,7 @@ class MazeFactory:
                                [0, 0, 1, 0],
                                [1, 1, 0, 1]],
                               dtype=float)
-        if detail:
-            return B
-
-        return np.sum(B, axis=2)
+        return B
 
 
 class Maze(Env):
@@ -218,19 +214,19 @@ class Maze(Env):
     The class represents the generative process for the maze
     '''
 
-    def __init__(self, factory, rng=np.random.default_rng(), p_wrong=2.0 / 100.0):
+    def __init__(self, B_location, rng=np.random.default_rng(), p_wrong=2.0 / 100.0):
         '''
         Assign context (left or right) at random, and place mouse at starting position.
 
         Create a table of allowable transitions by or-ing the matrices from Figure 7.6,
-        which  makes Left and Right absorbing states.
+        thereby making Left and Right absorbing states.
         '''
         super().__init__()
         self.rng = rng
         self.location = Location.START
         self.context = Context(self.rng.choice(list(Context)))
         print (f'Context={self.context.name}')
-        self.AllowableTransitions = factory.create_B_location(detail=False)
+        self.AllowableTransitions = np.sum(B_location, axis=2)
         self.p_wrong = p_wrong
 
     def reset(self):
@@ -292,16 +288,16 @@ class Maze(Env):
         possible_moves = self.AllowableTransitions[:,action]  > 0
         return possible_moves.sum() > 1 or not possible_moves[possible_moves]
 
-
 def parse_args():
     parser = ArgumentParser(__doc__)
     parser.add_argument('--show', default=False, action='store_true', help='Controls whether plot will be displayed')
     parser.add_argument('--figs', default='./figs', help='Location for storing plot files')
     parser.add_argument('--seed', default=None, type=int, help='Initialize random number generator')
     parser.add_argument('-T', '--Tau', default=5, type=int, help='Number of time steps for run')
-    parser.add_argument('-n', '--n_steps', default=3, type=int, help='Number of time steps for planning')
+    parser.add_argument( '--policy_len', default=3, type=int, help='Number of time steps for planning')
+    parser.add_argument( '--inference_horizon', default=3, type=int, help='Number of time steps for planning')
+    parser.add_argument('--sampling_mode', default ='marginal')
     return parser.parse_args()
-
 
 if __name__ == '__main__':
     args = parse_args()
@@ -311,13 +307,15 @@ if __name__ == '__main__':
                       show=args.show, name=Path(__file__).stem) as axes:
 
         factory = MazeFactory()
+        B = factory.create_B()
         mouse = Agent(A=factory.create_A(),
-                      B=factory.create_B(),
-                      C=factory.create_C(n_steps=args.n_steps),
+                      B=B,
+                      C=factory.create_C(n_steps=args.policy_len),
                       D=factory.create_D(),
-                      policy_len = args.n_steps,
-                      inference_horizon = args.n_steps)
-        maze = Maze(factory, rng=rng)
+                      policy_len = args.policy_len,
+                      inference_horizon = args.inference_horizon,
+                      sampling_mode = args.sampling_mode)
+        maze = Maze(B[Modality.WHERE], rng=rng)
         maze.reset()
         action = Move.START
         prior = mouse.D.copy()
@@ -342,17 +340,14 @@ if __name__ == '__main__':
             ax.legend(loc='upper right')
             ax1.legend(loc='lower right')
 
-            if not maze.can_move_out(action):
-                print (o,qs)
-                break
+            if not maze.can_move_out(action): break
             next_action = mouse.sample_action()
             ax = next(axes)
-            ax.bar(range(len(next_action)),next_action,facecolor='xkcd:yellow',edgecolor='xkcd:black',label='$actions$')
-            ax.legend()
+            ax.scatter(['Location','Context'],next_action,c=next_action)
+            y0,_ = ax.get_ylim()
+            ax.set_ylim((0,4))
+            ax.set_title('Actions')
             action = Move(int(next_action[0]))
             print (o,qs,action)
 
-
-
-
-
+        print (o,qs)
