@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright (C) 2025 Simon Crase  simon@greenweaves.nz
+# Copyright (C) 2026 Simon Crase  simon@greenweaves.nz
 
 # This is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -15,8 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.
 
-'''Template for Python code'''
-
+'''Read and display MNIST data'''
 
 from argparse import ArgumentParser
 from os.path import join
@@ -75,52 +74,6 @@ def parse_args():
     return parser.parse_args()
 
 
-def show_images(images, title_texts):
-    cols = 5
-    rows = int(len(images) / cols) + 1
-    for index, x in enumerate(zip(images, title_texts)):
-        image = x[0]
-        title_text = x[1]
-        plt.subplot(rows, cols, index + 1)
-        plt.imshow(image, cmap=plt.cm.gray)
-        if (title_text != ''):
-            plt.title(title_text, fontsize=15)
-
-
-def equalize(raw, L=256):
-    '''
-    Histogram equalization after wikipedia
-
-    https://en.wikipedia.org/wiki/Histogram_equalization
-    '''
-    def create_histogram(pixels):
-        Count = {}
-        for value in np.nditer(pixels):
-            pixel_value = int(value)
-            if not pixel_value in Count:
-                Count[pixel_value] = 0
-            Count[pixel_value] += 1
-        return Count
-
-    def create_Cdf(Count):
-        NonZeros = sorted([Count.keys()])
-        Cdf = {}
-        running_total = 0
-        for key, count in Count.items():
-            running_total += count
-            Cdf[key] = running_total
-        return Cdf
-
-    def equalize_cdf(Cdf, mn):
-        h = {}
-        for key, count in Cdf.items():
-            h[key] = int((L - 1) * (count - Cdf[0]) / (mn - Cdf[0]) + 0.5)
-        return h
-
-    pixels = np.array(raw)
-    m, n = pixels.shape
-    h = equalize_cdf(create_Cdf(create_histogram(pixels)), m * n)
-    return np.fromfunction(np.vectorize(lambda i, j: h[pixels[i, j]]), pixels.shape, dtype=int)
 
 
 def histeq(im, nbr_bins=256):
@@ -138,10 +91,11 @@ if __name__ == '__main__':
                   'serif': ['Palatino'],
                   'size': 8})
     rc('text', usetex=True)
-    fig = figure(figsize=(24, 12))
+    fig = figure(figsize=(8, 12))
     args = parse_args()
+    rng = np.random.default_rng()
 
-    input_path = kagglehub.dataset_download("hojjatk/mnist-dataset")
+    input_path = './data'
 
     training_images_filepath = join(input_path, 'train-images-idx3-ubyte/train-images-idx3-ubyte')
     training_labels_filepath = join(input_path, 'train-labels-idx1-ubyte/train-labels-idx1-ubyte')
@@ -150,28 +104,24 @@ if __name__ == '__main__':
     mnist_dataloader = MnistDataloader(training_images_filepath, training_labels_filepath, test_images_filepath, test_labels_filepath)
 
     (x_train, y_train), (x_test, y_test) = mnist_dataloader.load_data()
-    equalized = equalize_hist(np.array(x_train[0]))
-    equalized0 = equalize(np.array(x_train[0]))
+    m = 8
+    for i in range(m):
+        k = rng.choice(len(x_train))
+        img = resize(np.array(x_train[k]),(32,32))
 
-    img = resize(np.array(x_train[0]),(32,32))
-    ax11 = fig.add_subplot(2, 4, 1)
-    ax11.imshow(img, cmap=cm.gray)
-    ax11.set_title('Raw')
-    ax21 = fig.add_subplot(2, 4, 5)
-    ax21.hist(img)
+        ax1 = fig.add_subplot(m, 4, 4*i+1)
+        ax1.axis('off')
+        ax1.imshow(img, cmap=cm.gray)
+        ax2 = fig.add_subplot(m, 4, 4*i+2)
+        ax2.hist(img)
 
-    ax13 = fig.add_subplot(2, 4, 3)
-    ax13.imshow(histeq(img), cmap=cm.gray)
-    ax13.set_title('janeriksolem')
-    ax23 = fig.add_subplot(2, 4, 7)
-    ax23.hist(histeq(img))
+        ax3 = fig.add_subplot(m, 4, 4*i+3)
+        ax3.imshow(equalize_hist(img), cmap=cm.gray)
+        ax1.axis('off')
+        ax4 = fig.add_subplot(m, 4, 4*i+4)
+        ax4.hist(equalize_hist(img))
 
-    ax14 = fig.add_subplot(2, 4, 4)
-    ax14.imshow(equalize_hist(img), cmap=cm.gray)
-    ax14.set_title('Skimage')
-    ax24 = fig.add_subplot(2, 4, 8)
-    ax24.hist(equalize_hist(img))
-
+        fig.tight_layout(pad=3,h_pad=3,w_pad=3)
     fig.savefig('Equalize')
 
     if args.show:
