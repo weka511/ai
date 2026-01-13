@@ -19,17 +19,18 @@
 
 
 from argparse import ArgumentParser
-from os.path  import join
+from os.path import join
 from pathlib import Path
 import struct
 from array import array
 import numpy as np
 from matplotlib.pyplot import figure, show
-from matplotlib import rc,cm
+from matplotlib import rc, cm
 import kagglehub
 
+
 class MnistDataloader(object): # snarfed from https://www.kaggle.com/code/hojjatk/read-mnist-dataset
-    def __init__(self, training_images_filepath,training_labels_filepath,
+    def __init__(self, training_images_filepath, training_labels_filepath,
                  test_images_filepath, test_labels_filepath):
         self.training_images_filepath = training_images_filepath
         self.training_labels_filepath = training_labels_filepath
@@ -62,7 +63,8 @@ class MnistDataloader(object): # snarfed from https://www.kaggle.com/code/hojjat
     def load_data(self):
         x_train, y_train = self.read_images_labels(self.training_images_filepath, self.training_labels_filepath)
         x_test, y_test = self.read_images_labels(self.test_images_filepath, self.test_labels_filepath)
-        return (x_train, y_train),(x_test, y_test)
+        return (x_train, y_train), (x_test, y_test)
+
 
 def parse_args():
     parser = ArgumentParser(__doc__)
@@ -70,18 +72,20 @@ def parse_args():
     parser.add_argument('--figs', default='./figs', help='Location for storing plot files')
     return parser.parse_args()
 
+
 def show_images(images, title_texts):
     cols = 5
-    rows = int(len(images)/cols) + 1
-    for index,x in enumerate(zip(images, title_texts)):
+    rows = int(len(images) / cols) + 1
+    for index, x in enumerate(zip(images, title_texts)):
         image = x[0]
         title_text = x[1]
-        plt.subplot(rows, cols, index+1)
+        plt.subplot(rows, cols, index + 1)
         plt.imshow(image, cmap=plt.cm.gray)
         if (title_text != ''):
-            plt.title(title_text, fontsize = 15);
+            plt.title(title_text, fontsize=15)
 
-def equalize(raw,L=256):
+
+def equalize(raw, L=256):
     '''
     Histogram equalization after wikipedia
 
@@ -97,24 +101,34 @@ def equalize(raw,L=256):
         return Count
 
     def create_Cdf(Count):
-        NonZeros = sorted([Count.keys()] )
+        NonZeros = sorted([Count.keys()])
         Cdf = {}
         running_total = 0
-        for key,count in Count.items():
+        for key, count in Count.items():
             running_total += count
             Cdf[key] = running_total
         return Cdf
 
-    def equalize_cdf(Cdf,mn):
+    def equalize_cdf(Cdf, mn):
         h = {}
-        for key,count in Cdf.items():
-            h[key] = int((L-1)* (count-Cdf[0])/(mn-Cdf[0])+0.5)
+        for key, count in Cdf.items():
+            h[key] = int((L - 1) * (count - Cdf[0]) / (mn - Cdf[0]) + 0.5)
         return h
 
     pixels = np.array(raw)
-    m,n = pixels.shape
-    h = equalize_cdf(create_Cdf(create_histogram(pixels)),m*n)
-    return np.fromfunction(np.vectorize(lambda i,j:h[pixels[i,j]]),pixels.shape,dtype=int)
+    m, n = pixels.shape
+    h = equalize_cdf(create_Cdf(create_histogram(pixels)), m * n)
+    return np.fromfunction(np.vectorize(lambda i, j: h[pixels[i, j]]), pixels.shape, dtype=int)
+
+
+def histeq(im, nbr_bins=256):
+    '''
+    Histogram equalization after https://www.janeriksolem.net/histogram-equalization-with-python-and.html
+    '''
+    imhist, bins = np.histogram(im.flatten(), nbr_bins)
+    cdf = np.cumsum(imhist)
+    cdf = 255 * cdf / cdf[-1]
+    return np.interp(im.flatten(), bins[:-1], cdf).reshape(im.shape)
 
 
 if __name__ == '__main__':
@@ -125,7 +139,7 @@ if __name__ == '__main__':
     fig = figure(figsize=(24, 12))
     args = parse_args()
 
-    input_path  = kagglehub.dataset_download("hojjatk/mnist-dataset")
+    input_path = kagglehub.dataset_download("hojjatk/mnist-dataset")
 
     training_images_filepath = join(input_path, 'train-images-idx3-ubyte/train-images-idx3-ubyte')
     training_labels_filepath = join(input_path, 'train-labels-idx1-ubyte/train-labels-idx1-ubyte')
@@ -134,16 +148,21 @@ if __name__ == '__main__':
     mnist_dataloader = MnistDataloader(training_images_filepath, training_labels_filepath, test_images_filepath, test_labels_filepath)
 
     (x_train, y_train), (x_test, y_test) = mnist_dataloader.load_data()
-    equalized = equalize(x_train[0])
+    equalized = histeq(np.array(x_train[0]))
+    equalized0 = equalize(np.array(x_train[0]))
 
-    ax1 = fig.add_subplot(1,4,1)
-    ax1.imshow( x_train[0], cmap=cm.gray)
-    ax2 = fig.add_subplot(1,4,2)
-    ax2.imshow( equalized, cmap=cm.gray)
-    ax3 = fig.add_subplot(1,4,3)
+    ax1 = fig.add_subplot(1, 6, 1)
+    ax1.imshow(x_train[0], cmap=cm.gray)
+    ax2 = fig.add_subplot(1, 6, 2)
+    ax2.imshow(equalized, cmap=cm.gray)
+    ax2a = fig.add_subplot(1, 6, 3)
+    ax2a.imshow(equalized0, cmap=cm.gray)
+    ax3 = fig.add_subplot(1, 6, 4)
     ax3.hist(x_train[0])
-    ax4 = fig.add_subplot(1,4,4)
+    ax4 = fig.add_subplot(1, 6, 5)
     ax4.hist(equalized)
+    ax4a = fig.add_subplot(1, 6, 6)
+    ax4a.hist(equalized0)
 
     if args.show:
         show()
