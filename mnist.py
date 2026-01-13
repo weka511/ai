@@ -26,6 +26,7 @@ from array import array
 import numpy as np
 from matplotlib.pyplot import figure, show
 from matplotlib import rc, cm
+from skimage.exposure import equalize_hist
 import kagglehub
 
 
@@ -127,7 +128,7 @@ def histeq(im, nbr_bins=256):
     '''
     imhist, bins = np.histogram(im.flatten(), nbr_bins)
     cdf = np.cumsum(imhist)
-    cdf = 255 * cdf / cdf[-1]
+    cdf = (nbr_bins - 1) * cdf / cdf[-1]
     return np.interp(im.flatten(), bins[:-1], cdf).reshape(im.shape)
 
 
@@ -148,21 +149,34 @@ if __name__ == '__main__':
     mnist_dataloader = MnistDataloader(training_images_filepath, training_labels_filepath, test_images_filepath, test_labels_filepath)
 
     (x_train, y_train), (x_test, y_test) = mnist_dataloader.load_data()
-    equalized = histeq(np.array(x_train[0]))
+    equalized = equalize_hist(np.array(x_train[0]))
     equalized0 = equalize(np.array(x_train[0]))
 
-    ax1 = fig.add_subplot(1, 6, 1)
-    ax1.imshow(x_train[0], cmap=cm.gray)
-    ax2 = fig.add_subplot(1, 6, 2)
-    ax2.imshow(equalized, cmap=cm.gray)
-    ax2a = fig.add_subplot(1, 6, 3)
-    ax2a.imshow(equalized0, cmap=cm.gray)
-    ax3 = fig.add_subplot(1, 6, 4)
-    ax3.hist(x_train[0])
-    ax4 = fig.add_subplot(1, 6, 5)
-    ax4.hist(equalized)
-    ax4a = fig.add_subplot(1, 6, 6)
-    ax4a.hist(equalized0)
+    ax11 = fig.add_subplot(2, 4, 1)
+    ax11.imshow(x_train[0], cmap=cm.gray)
+    ax11.set_title('Raw')
+    ax21 = fig.add_subplot(2, 4, 5)
+    ax21.hist(x_train[0])
+
+    ax12 = fig.add_subplot(2, 4, 2)
+    ax12.imshow(equalize(np.array(x_train[0])), cmap=cm.gray)
+    ax12.set_title('Wikipedia')
+    ax22 = fig.add_subplot(2, 4, 6)
+    ax22.hist(equalize(np.array(x_train[0])))
+
+    ax13 = fig.add_subplot(2, 4, 3)
+    ax13.imshow(histeq(np.array(x_train[0])), cmap=cm.gray)
+    ax13.set_title('janeriksolem')
+    ax23 = fig.add_subplot(2, 4, 7)
+    ax23.hist(histeq(np.array(x_train[0])))
+
+    ax14 = fig.add_subplot(2, 4, 4)
+    ax14.imshow(equalize_hist(np.array(x_train[0])), cmap=cm.gray)
+    ax14.set_title('Skimage')
+    ax24 = fig.add_subplot(2, 4, 8)
+    ax24.hist(equalize_hist(np.array(x_train[0])))
+
+    fig.savefig('Equalize')
 
     if args.show:
         show()
