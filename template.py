@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright (C) 2025 Simon Crase  simon@greenweaves.nz
+# Copyright (C) 2026 Simon Crase  simon@greenweaves.nz
 
 # This is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
