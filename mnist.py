@@ -82,20 +82,40 @@ def show_images(images, title_texts):
             plt.title(title_text, fontsize = 15);
 
 def equalize(raw,L=256):
-    raw = np.array(raw)
-    m,n = raw.shape
-    hist,edges = np.histogram(raw,bins=np.arange(0,256))
-    v = edges[:-1]
-    cdf = np.cumsum(np.append(hist,[0]))
-    i = 0
-    while cdf[i] == 0: i += 1
-    cdf_min = cdf[i]
-    h = np.round((L-1)* (cdf-cdf_min)/(m*n-cdf_min))
-    result = np.zeros((m,n))
-    for i in range(m):
-        for j in range(n):
-            result[i,j] =h[raw[i,j]]
-    return result
+    '''
+    Histogram equalization after wikipedia
+
+    https://en.wikipedia.org/wiki/Histogram_equalization
+    '''
+    def create_histogram(pixels):
+        Count = {}
+        for value in np.nditer(pixels):
+            pixel_value = int(value)
+            if not pixel_value in Count:
+                Count[pixel_value] = 0
+            Count[pixel_value] += 1
+        return Count
+
+    def create_Cdf(Count):
+        NonZeros = sorted([Count.keys()] )
+        Cdf = {}
+        running_total = 0
+        for key,count in Count.items():
+            running_total += count
+            Cdf[key] = running_total
+        return Cdf
+
+    def equalize_cdf(Cdf,mn):
+        h = {}
+        for key,count in Cdf.items():
+            h[key] = int((L-1)* (count-Cdf[0])/(mn-Cdf[0])+0.5)
+        return h
+
+    pixels = np.array(raw)
+    m,n = pixels.shape
+    h = equalize_cdf(create_Cdf(create_histogram(pixels)),m*n)
+    return np.fromfunction(np.vectorize(lambda i,j:h[pixels[i,j]]),pixels.shape,dtype=int)
+
 
 if __name__ == '__main__':
     rc('font', **{'family': 'serif',
