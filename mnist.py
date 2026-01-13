@@ -27,6 +27,7 @@ import numpy as np
 from matplotlib.pyplot import figure, show
 from matplotlib import rc, cm
 from skimage.exposure import equalize_hist
+from skimage.transform import resize
 import kagglehub
 
 
@@ -152,29 +153,24 @@ if __name__ == '__main__':
     equalized = equalize_hist(np.array(x_train[0]))
     equalized0 = equalize(np.array(x_train[0]))
 
+    img = resize(np.array(x_train[0]),(32,32))
     ax11 = fig.add_subplot(2, 4, 1)
-    ax11.imshow(x_train[0], cmap=cm.gray)
+    ax11.imshow(img, cmap=cm.gray)
     ax11.set_title('Raw')
     ax21 = fig.add_subplot(2, 4, 5)
-    ax21.hist(x_train[0])
-
-    ax12 = fig.add_subplot(2, 4, 2)
-    ax12.imshow(equalize(np.array(x_train[0])), cmap=cm.gray)
-    ax12.set_title('Wikipedia')
-    ax22 = fig.add_subplot(2, 4, 6)
-    ax22.hist(equalize(np.array(x_train[0])))
+    ax21.hist(img)
 
     ax13 = fig.add_subplot(2, 4, 3)
-    ax13.imshow(histeq(np.array(x_train[0])), cmap=cm.gray)
+    ax13.imshow(histeq(img), cmap=cm.gray)
     ax13.set_title('janeriksolem')
     ax23 = fig.add_subplot(2, 4, 7)
-    ax23.hist(histeq(np.array(x_train[0])))
+    ax23.hist(histeq(img))
 
     ax14 = fig.add_subplot(2, 4, 4)
-    ax14.imshow(equalize_hist(np.array(x_train[0])), cmap=cm.gray)
+    ax14.imshow(equalize_hist(img), cmap=cm.gray)
     ax14.set_title('Skimage')
     ax24 = fig.add_subplot(2, 4, 8)
-    ax24.hist(equalize_hist(np.array(x_train[0])))
+    ax24.hist(equalize_hist(img))
 
     fig.savefig('Equalize')
 
