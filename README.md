@@ -7,16 +7,15 @@ Code written to understand Karl Friston on Active Inference
 
 File|Description
 -------------------|---------------------------------------------------------------------------------------------------
-
 hmm.py|Hidden Markove Model Example from Section 7-2
 maze.py|Example from Section 7.3 Decision Making and Planning as Inference
 
 ## After Karl Friston et al - [Supervised structure learning](https://arxiv.org/abs/2311.10300) and [From pixels to planning: scale-free active inference](https://arxiv.org/abs/2407.20292)
 
 File|Description
--------------------------------------|
-establish_most_informative_pixels.py|
-mnist.py
+-------------------------------------|-----------------------------------------------------------------------------------------
+establish_most_informative_pixels.py|Determine which pixels are most relevant to classification
+mnist.py|Functions for accessing MNIST data
 
 ## Programs based on [Life as we Know it](https://royalsocietypublishing.org/doi/10.1098/rsif.2013.0475)
 
