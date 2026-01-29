@@ -15,7 +15,9 @@
 #  You should have received a copy of the GNU General Public License
 #  along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-'''Extract subsets of MNIST to facilitate replication'''
+'''
+    Extract subsets of MNIST to facilitate replication
+'''
 
 from argparse import ArgumentParser
 from os.path import splitext, join
@@ -61,7 +63,7 @@ if __name__ == '__main__':
         else:
             if np.min(class_counts) == args.n:
                 break
-    np.save(join(args.data, args.out), classes)
+    np.save(join(args.data, args.out), np.reshape(classes,-1))
     elapsed = time() - start
     minutes = int(elapsed / 60)
     seconds = elapsed - 60 * minutes
