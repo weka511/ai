@@ -38,6 +38,7 @@ def parse_args():
     parser.add_argument('--show', default=False, action='store_true', help='Controls whether plot will be displayed')
     parser.add_argument('--figs', default='./figs', help='Location for storing plot files')
     parser.add_argument('--data', default='./data', help='Location for storing data files')
+    parser.add_argument('--indices', default='establish_subset.npy', help='Location for storing data files')
     return parser.parse_args()
 
 def create_entropies(x_train,selector,bins=11,m=32):
@@ -69,10 +70,12 @@ if __name__ == '__main__':
     fig = figure(figsize=(24, 12))
     start = time()
     args = parse_args()
+    indices = np.load(join(args.data,args.indices)).astype(int)
 
     mnist_dataloader = MnistDataloader.create(data=args.data)
     (x_train, _), _ = mnist_dataloader.load_data()
-    entropies = create_entropies(x_train,list(range(len(x_train))))
+    x_train = np.array(x_train)
+    entropies = create_entropies(x_train[indices],list(range(len(indices))))
     ax = fig.add_subplot(1,1,1)
     fig.colorbar(
         ax.imshow(np.reshape(entropies,(32,32)),
