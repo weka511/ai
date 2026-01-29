@@ -30,7 +30,20 @@ from skimage.transform import resize
 import kagglehub
 
 
-class MnistDataloader(object): # snarfed from https://www.kaggle.com/code/hojjatk/read-mnist-dataset
+class MnistDataloader(object):
+    '''
+    Read MNIST data
+
+    snarfed from https://www.kaggle.com/code/hojjatk/read-mnist-dataset
+    '''
+    @staticmethod
+    def create(data = './data'):
+        training_images_filepath = join(data, 'train-images-idx3-ubyte/train-images-idx3-ubyte')
+        training_labels_filepath = join(data, 'train-labels-idx1-ubyte/train-labels-idx1-ubyte')
+        test_images_filepath = join(data, 't10k-images-idx3-ubyte/t10k-images-idx3-ubyte')
+        test_labels_filepath = join(data, 't10k-labels-idx1-ubyte/t10k-labels-idx1-ubyte')
+        return MnistDataloader(training_images_filepath, training_labels_filepath, test_images_filepath, test_labels_filepath)
+
     def __init__(self, training_images_filepath, training_labels_filepath,
                  test_images_filepath, test_labels_filepath):
         self.training_images_filepath = training_images_filepath
@@ -95,13 +108,7 @@ if __name__ == '__main__':
     args = parse_args()
     rng = np.random.default_rng()
 
-    input_path = './data'
-
-    training_images_filepath = join(input_path, 'train-images-idx3-ubyte/train-images-idx3-ubyte')
-    training_labels_filepath = join(input_path, 'train-labels-idx1-ubyte/train-labels-idx1-ubyte')
-    test_images_filepath = join(input_path, 't10k-images-idx3-ubyte/t10k-images-idx3-ubyte')
-    test_labels_filepath = join(input_path, 't10k-labels-idx1-ubyte/t10k-labels-idx1-ubyte')
-    mnist_dataloader = MnistDataloader(training_images_filepath, training_labels_filepath, test_images_filepath, test_labels_filepath)
+    mnist_dataloader = MnistDataloader.create()
 
     (x_train, y_train), (x_test, y_test) = mnist_dataloader.load_data()
     m = 8
@@ -122,7 +129,7 @@ if __name__ == '__main__':
         ax4.hist(equalize_hist(img))
 
         fig.tight_layout(pad=3,h_pad=3,w_pad=3)
-    fig.savefig('Equalize')
+    fig.savefig(join(args.figs,'Equalize'))
 
     if args.show:
         show()
