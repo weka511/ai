@@ -67,7 +67,7 @@ if __name__ == '__main__':
                   'serif': ['Palatino'],
                   'size': 8})
     rc('text', usetex=True)
-    fig = figure(figsize=(24, 12))
+    fig = figure(figsize=(12, 12))
     start = time()
     args = parse_args()
     indices = np.load(join(args.data,args.indices)).astype(int)
@@ -81,7 +81,7 @@ if __name__ == '__main__':
         ax.imshow(np.reshape(entropies,(32,32)),
                   cmap='viridis'),
         label='Entropy')
-
+    ax.set_title(f'Information based on {args.indices}, {len(indices//10)} images per class')
     fig.savefig(join(args.figs,Path(__file__).stem))
     elapsed = time() - start
     minutes = int(elapsed/60)
