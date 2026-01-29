@@ -42,17 +42,23 @@ def parse_args():
 
 def create_entropies(x_train,selector,bins=11,m=32):
     n = len(selector)
-    m2 = 32*32
-    images1d = np.zeros((n,m2))
-    for i in selector:
-        img = equalize_hist(resize(np.array(x_train[i]),(32,32)))
-        images1d[i] = np.reshape(img,-1)
-    product = np.zeros((m2))
-    for i in range((m2)):
-        hist,edges = np.histogram(images1d[i],bins=bins,density=True)
-        pdf = hist/np.sum(hist)
-        product[i] = entropy(pdf)
-    return product
+    m2 = m*m
+    def create_1d_images():
+        product = np.zeros((n,m2))
+        for i in selector:
+            img = equalize_hist(resize(np.array(x_train[i]),(m,m)))
+            product[i] = np.reshape(img,-1)
+        return product
+
+    def create_entropies_from_1d_images(images1d):
+        product = np.zeros((m2))
+        for i in range((m2)):
+            hist,edges = np.histogram(images1d[i],bins=bins,density=True)
+            pdf = hist/np.sum(hist)
+            product[i] = entropy(pdf)
+        return product
+
+    return create_entropies_from_1d_images(create_1d_images())
 
 
 if __name__ == '__main__':
