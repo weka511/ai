@@ -16,7 +16,7 @@ maze.py|Example from Section 7.3 Decision Making and Planning as Inference
 
 File|Description
 -------------------------------------|-----------------------------------------------------------------------------------------
-establish_most_informative_pixels.py|Determine which pixels are most relevant to classification
+establish_most_informative_pixels.py|Determine which pixels are most relevant to classifying images
 mnist.py|Functions for accessing MNIST data
 
 ## Programs based on [Life as we Know it](https://royalsocietypublishing.org/doi/10.1098/rsif.2013.0475)
