@@ -10,7 +10,9 @@ File|Description
 hmm.py|Hidden Markove Model Example from Section 7-2
 maze.py|Example from Section 7.3 Decision Making and Planning as Inference
 
-## After Karl Friston et al - [Supervised structure learning](https://arxiv.org/abs/2311.10300) and [From pixels to planning: scale-free active inference](https://arxiv.org/abs/2407.20292)
+## Exploring use of Active Inference for Pattern Recognition. The inspiriation comes from the following papers by Friston et al:
+- [Supervised structure learning](https://arxiv.org/abs/2311.10300)
+- [From pixels to planning: scale-free active inference](https://arxiv.org/abs/2407.20292)
 
 File|Description
 -------------------------------------|-----------------------------------------------------------------------------------------
