@@ -341,3 +341,4 @@ fee x*.png
 ActiveInference.pdf
 selforg*.png
 figs/
+*.npy
