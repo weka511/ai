@@ -19,9 +19,8 @@
     Determine which pixels are most relevant to classifying images
 '''
 
-
 from argparse import ArgumentParser
-from os.path import splitext,join
+from os.path import join
 from pathlib import Path
 from time import time
 from matplotlib.pyplot import figure, show
@@ -39,21 +38,36 @@ def parse_args():
     parser.add_argument('--figs', default='./figs', help='Location for storing plot files')
     parser.add_argument('--data', default='./data', help='Location for storing data files')
     parser.add_argument('--indices', default='establish_subset.npy', help='Location for storing data files')
+    parser.add_argument('--bins', default=17, type=int, help='Number of bins for histogram')
     return parser.parse_args()
 
-def create_entropies(x_train,selector,bins=11,m=32):
+def create_entropies(images,selector,bins=20,m=32):
+    '''
+    Used to determine which pixels have the most information
+
+    Parameters:
+        images     Raw images from NIST
+        selector   Indices of images that need to be included
+        bins       Number of bins
+        m          We will standardize images to be mxm
+    '''
     n = len(selector)
-    m2 = m*m
     def create_1d_images():
-        product = np.zeros((n,m2))
+        '''
+        Convert images to be mxm, equalize, then convert to 1d
+        '''
+        product = np.zeros((n, m*m))
         for i in selector:
-            img = equalize_hist(resize(np.array(x_train[i]),(m,m)))
+            img = equalize_hist(resize(np.array(images[i]),(m,m)))
             product[i] = np.reshape(img,-1)
         return product
 
     def create_entropies_from_1d_images(images1d):
-        product = np.zeros((m2))
-        for i in range((m2)):
+        '''
+        Calculate probability density for each pixel, then calculate entropy
+        '''
+        product = np.zeros((m*m))
+        for i in range((m*m)):
             hist,edges = np.histogram(images1d[i],bins=bins,density=True)
             pdf = hist/np.sum(hist)
             product[i] = entropy(pdf)
@@ -61,6 +75,54 @@ def create_entropies(x_train,selector,bins=11,m=32):
 
     return create_entropies_from_1d_images(create_1d_images())
 
+def show_image(entropies,ax=None,fig=None,cmap='Blues'):
+    '''
+    Show the distribution of entropies over images
+
+    Parameters:
+        entropies  An array of entropies, with one entry for each pixel
+        ax         Axis for displaying data
+        fig        Figure to be displayed
+    '''
+    fig.colorbar(
+        ax.imshow(entropies,cmap=cmap),label='Entropy')
+    ax.set_title('All pixels')
+
+def show_culled(entropies,n,mu,sigma,min0,ax=None,cmap='Blues'):
+    '''
+    Cull data and display
+
+    Parameters:
+        entropies  An array of entropies, with one entry for each pixel
+        n          Threshold for culling: number of standard deviations below mean
+        mu         Mean entropy
+        sigma      Standard deviation for entropy
+        min0       Minimum entropy over all pixels
+        ax         Axis for displaying data
+    '''
+    culled_img = np.copy(entropies)
+    culled_img[culled_img < mu + n*sigma] = min0
+    ax.imshow(culled_img,cmap=cmap)
+    ax.set_title(rf'Culled {abs(n)}$\sigma$ below $\mu$' if n != 0 else r'Culled all below $\mu$')
+
+def show_histogram(entropies,mu,sigma,ax=None):
+    '''
+    Show histogram of entropies.
+
+    Parameters:
+        entropies  An array of entropies, with one entry for each pixel
+        mu         Mean entropy
+        sigma      Standard deviation for entropy
+        ax         Axis for displaying data
+    '''
+    ax.hist(img.reshape(-1),bins='fd',density=True,color='xkcd:blue',label='Histogram')
+    ax.set_xlabel('H')
+    ax.set_ylabel('Frequency')
+    ax.set_title('Entropy of pixels')
+    ax.axvline(mu,c='xkcd:red',ls='-',label=r'$\mu$')
+    ax.axvline(mu-sigma,c='xkcd:red',ls='--',label=r'$\mu-\sigma$')
+    ax.axvline(mu-2.0*sigma,c='xkcd:red',ls=':',label=r'$\mu-2\sigma$')
+    ax.legend()
 
 if __name__ == '__main__':
     rc('font', **{'family': 'serif',
@@ -75,13 +137,20 @@ if __name__ == '__main__':
     mnist_dataloader = MnistDataloader.create(data=args.data)
     (x_train, _), _ = mnist_dataloader.load_data()
     x_train = np.array(x_train)
-    entropies = create_entropies(x_train[indices],list(range(len(indices))))
-    ax = fig.add_subplot(1,1,1)
-    fig.colorbar(
-        ax.imshow(np.reshape(entropies,(32,32)),
-                  cmap='viridis'),
-        label='Entropy')
-    ax.set_title(f'Information based on {args.indices}, {len(indices//10)} images per class')
+    entropies = create_entropies(x_train[indices],list(range(len(indices))),bins=args.bins)
+    mu = np.mean(entropies)
+    sigma = np.std(entropies)
+    min0 = np.min(entropies)
+    img = np.reshape(entropies,(32,32))
+    cmap='seismic'
+    show_image(img,ax=fig.add_subplot(2,3,1),fig=fig,cmap=cmap)
+    show_culled(img,-2,mu,sigma,min0,ax = fig.add_subplot(2,3,2),cmap=cmap)
+    show_culled(img,-1,mu,sigma,min0,ax = fig.add_subplot(2,3,3),cmap=cmap)
+    show_culled(img,-0.5,mu,sigma,min0,ax = fig.add_subplot(2,3,4),cmap=cmap)
+    show_culled(img,0,mu,sigma,min0,ax = fig.add_subplot(2,3,5),cmap=cmap)
+    show_histogram(img,mu,sigma,ax=fig.add_subplot(2,3,6))
+
+    fig.suptitle(r'Information based on \emph{' + f'{args.indices}' + ',} ' + f'{len(indices//10):,d} images per class, {args.bins} bins')
     fig.savefig(join(args.figs,Path(__file__).stem))
     elapsed = time() - start
     minutes = int(elapsed/60)
