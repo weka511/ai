@@ -47,7 +47,7 @@ if __name__ == '__main__':
                   'serif': ['Palatino'],
                   'size': 8})
     rc('text', usetex=True)
-    fig = figure(figsize=(20, 12))
+    fig = figure(figsize=(20, 8))
     start = time()
     args = parse_args()
     indices = np.load(join(args.data,args.indices)).astype(int)
@@ -65,7 +65,7 @@ if __name__ == '__main__':
             ax.imshow(equalize_hist(img), cmap=cm.gray)
             ax.axis('off')
 
-    fig.tight_layout(pad=3,h_pad=3,w_pad=3)
+    fig.tight_layout(pad=2,h_pad=2,w_pad=2)
     fig.savefig(join(args.figs,Path(__file__).stem))
 
     if args.show:
