@@ -132,7 +132,7 @@ if __name__ == '__main__':
     fig = figure(figsize=(12, 12))
     start = time()
     args = parse_args()
-    indices = np.load(join(args.data,args.indices)).astype(int)
+    indices = np.load(join(args.data,args.indices)).astype(int).reshape(-1)
 
     mnist_dataloader = MnistDataloader.create(data=args.data)
     (x_train, _), _ = mnist_dataloader.load_data()
@@ -150,8 +150,11 @@ if __name__ == '__main__':
     show_culled(img,0,mu,sigma,min0,ax = fig.add_subplot(2,3,5),cmap=cmap)
     show_histogram(img,mu,sigma,ax=fig.add_subplot(2,3,6))
 
-    fig.suptitle(r'Information based on \emph{' + f'{args.indices}' + ',} ' + f'{len(indices//10):,d} images per class, {args.bins} bins')
+    fig.suptitle(r'Processed \emph{' + f'{args.indices}'
+                 ',} '  f'{len(indices) // 10:,d} images per class, {args.bins} bins')
     fig.savefig(join(args.figs,Path(__file__).stem))
+
+    print(f'Processed {args.indices}, {len(indices) // 10:,d} images per class, {args.bins} bins')
     elapsed = time() - start
     minutes = int(elapsed/60)
     seconds = elapsed - 60*minutes

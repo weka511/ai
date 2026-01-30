@@ -69,7 +69,10 @@ if __name__ == '__main__':
     mnist_dataloader = MnistDataloader.create(data=args.data)
     (_, ytrain), _ = mnist_dataloader.load_data()
     classes = extract(ytrain, n=args.n, rng=np.random.default_rng(args.seed))
-    np.save(join(args.data, args.out), np.reshape(classes, -1))
+    m,n = classes.shape
+    file = Path(join(args.data, args.out)).with_suffix('.npy')
+    np.save(file, classes)
+    print (f'Saved {m} labels for each of {n} classes in {file.resolve()}')
     elapsed = time() - start
     minutes = int(elapsed / 60)
     seconds = elapsed - 60 * minutes
