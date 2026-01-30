@@ -38,28 +38,38 @@ def parse_args():
     parser.add_argument('--seed', default=None, type=int, help='Seed for random number generator')
     return parser.parse_args()
 
-def extract( ytrain, rng = np.random.default_rng(),nclasses = 10,n=1000):
+
+def extract(y, nclasses=10, n=1000, rng=np.random.default_rng()):
     '''
-    Create list of indices
+    Create list of indices for data points ensuring that there are
+    precisely n points from each class.
+
+    Parameters:
+        y          Vector of labels
+        rng        Random number generator
+        nclasses   Number of classes
+        n          Number of points per class
     '''
     classes = np.zeros((n, nclasses), dtype=int)
     class_counts = np.zeros((nclasses), dtype=int)
-    for k in rng.permutation(len(ytrain)):
-        image_class = ytrain[k]
+    for k in rng.permutation(len(y)):
+        image_class = y[k]
         i = class_counts[image_class]
         if i < n:
             classes[i, image_class] = k
             class_counts[image_class] += 1
         else:
-            if np.min(class_counts) == n: return classes
+            if np.min(class_counts) == n:  return classes
+    raise RuntimeError(f'Failed to find {n} labels in {nclasses} classes')
+
 
 if __name__ == '__main__':
     start = time()
     args = parse_args()
     mnist_dataloader = MnistDataloader.create(data=args.data)
     (_, ytrain), _ = mnist_dataloader.load_data()
-    classes=extract( ytrain, rng=np.random.default_rng(args.seed),n=args.n)
-    np.save(join(args.data, args.out), np.reshape(classes,-1))
+    classes = extract(ytrain, n=args.n, rng=np.random.default_rng(args.seed))
+    np.save(join(args.data, args.out), np.reshape(classes, -1))
     elapsed = time() - start
     minutes = int(elapsed / 60)
     seconds = elapsed - 60 * minutes
