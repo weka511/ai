@@ -128,8 +128,8 @@ if __name__ == '__main__':
         ax4 = fig.add_subplot(m, 4, 4*i+4)
         ax4.hist(equalize_hist(img))
 
-        fig.tight_layout(pad=3,h_pad=3,w_pad=3)
-    fig.savefig(join(args.figs,'Equalize'))
+    fig.tight_layout(pad=3,h_pad=3,w_pad=3)
+    fig.savefig(join(args.figs,Path(__file__).stem))
 
     if args.show:
         show()
