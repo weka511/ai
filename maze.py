@@ -26,10 +26,17 @@
     https://pymdp-rtd.readthedocs.io/en/latest/notebooks/using_the_agent_class.html
 '''
 
+# If the two lines starting "import sys" are commented out,
+# we will use the installed pymdp
+# Remove comments to use version from github instead.
+# import sys
+# sys.path.insert(1,'../pymdp')
+
 from argparse import ArgumentParser
 from enum import IntEnum
 from pathlib import Path
 import numpy as np
+import pymdp
 from pymdp import utils
 from pymdp.agent import Agent
 from pymdp.envs import Env

@@ -40,7 +40,7 @@ if __name__ == '__main__':
 
     reward_probabilities = [0.98, 0.02]
     env = TMazeEnv(reward_probs = reward_probabilities)
-    A = env.A
+    # A = env.A
     A_gp = env.get_likelihood_dist()
     B_gp = env.get_transition_dist()
 
