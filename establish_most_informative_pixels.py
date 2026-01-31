@@ -127,9 +127,9 @@ def show_culled(entropies,n,mu,sigma,min0,ax=None,cmap='Blues'):
     ax.imshow(cull(entropies,n,mu,sigma,min0),cmap=cmap)
     ax.set_title(rf'Culled {abs(n)}$\sigma$ below $\mu$' if n != 0 else r'Culled all below $\mu$')
 
-def show_mask(mask,cmap='Blues',ax=None):
+def show_mask(mask,cmap='Blues',ax=None,size=28):
     ax.imshow(mask,cmap=cmap)
-    ax.set_title(rf'Mask preserving {int(100*mask.sum()/(32*32))}\% of pixels')
+    ax.set_title(rf'Mask preserving {int(100*mask.sum()/(size**2))}\% of pixels')
 
 def show_histogram(entropies,mu,sigma,threshold=0.5,ax=None):
     '''
@@ -173,7 +173,7 @@ if __name__ == '__main__':
 
     show_image(img,ax=fig.add_subplot(2,2,1),fig=fig,cmap=args.cmap)
     show_culled(img,-args.threshold,mu,sigma,min0,ax = fig.add_subplot(2,2,2),cmap=args.cmap)
-    show_mask(mask,cmap=args.cmap,ax = fig.add_subplot(2,2,3))
+    show_mask(mask,cmap=args.cmap,ax = fig.add_subplot(2,2,3),size=args.size)
     show_histogram(img,mu,sigma,threshold=args.threshold,ax=fig.add_subplot(2,2,4))
 
     fig.suptitle(r'Processed \emph{' + f'{args.indices}'
