@@ -40,6 +40,7 @@ def parse_args():
     parser.add_argument('--data', default='./data', help='Location for storing data files')
     parser.add_argument('--indices', default='establish_subset.npy', help='Location for storing data files')
     parser.add_argument('--m', default=20, type=int, help='Number of images for each class')
+    parser.add_argument('--mask',default=None,help='Name of mask file (omit for no mask)')
     return parser.parse_args()
 
 if __name__ == '__main__':
@@ -51,6 +52,11 @@ if __name__ == '__main__':
     start = time()
     args = parse_args()
     indices = np.load(join(args.data,args.indices)).astype(int)
+    mask = np.ones((32,32))
+    if args.mask != None:
+        mask_file = Path(join(args.data, args.mask)).with_suffix('.npy')
+        mask = np.load(mask_file)
+        print (f'Loaded mask from {mask_file}')
     m,n = indices.shape
     m = min(m,args.m)     # Number of columns
     mnist_dataloader = MnistDataloader.create(data=args.data)
@@ -61,9 +67,13 @@ if __name__ == '__main__':
         for j in range(m):
             k += 1
             ax = fig.add_subplot(n,m,k)
-            img = x_train[indices[j,i]]
-            ax.imshow(equalize_hist(img), cmap=cm.gray)
+            img = resize(x_train[indices[j,i]],(32,32))
+            ax.imshow(np.multiply(img,mask), cmap=cm.Blues)
             ax.axis('off')
+    if mask_file == None:
+        fig.suptitle('No mask')
+    else:
+        fig.suptitle(rf'Mask preserving {int(100*mask.sum()/(32*32))}\% of pixels')
 
     fig.tight_layout(pad=2,h_pad=2,w_pad=2)
     fig.savefig(join(args.figs,Path(__file__).stem))
