@@ -10,7 +10,7 @@ File|Description
 hmm.py|Hidden Markove Model Example from Section 7-2
 maze.py|Example from Section 7.3 Decision Making and Planning as Inference
 
-## Exploring use of Active Inference for Pattern Recognition. 
+## Exploring use of Active Inference for Pattern Recognition.
 
 The inspiration comes from the following papers by Friston et al:
 - [Supervised structure learning](https://arxiv.org/abs/2311.10300)
@@ -19,6 +19,7 @@ The inspiration comes from the following papers by Friston et al:
 File|Description
 -------------------------------------|-----------------------------------------------------------------------------------------
 eda.py|Exploratory Data Analysis for MNIST
+eda_mi.py|Exploratory Data Analysis for MNIST: figure out variability of mutual information withn and between classes
 establish_subset.py|Extract subsets of MNIST to facilitate replication
 establish_most_informative_pixels.py|Determine which pixels are most relevant to classifying images
 mnist.py|Functions for accessing MNIST data
