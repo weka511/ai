@@ -86,9 +86,6 @@ def parse_args():
     parser.add_argument('--figs', default='./figs', help='Location for storing plot files')
     return parser.parse_args()
 
-
-
-
 def histeq(im, nbr_bins=256):
     '''
     Histogram equalization after https://www.janeriksolem.net/histogram-equalization-with-python-and.html
@@ -97,6 +94,22 @@ def histeq(im, nbr_bins=256):
     cdf = np.cumsum(imhist)
     cdf = (nbr_bins - 1) * cdf / cdf[-1]
     return np.interp(im.flatten(), bins[:-1], cdf).reshape(im.shape)
+
+def create_mask(mask_file=None,data='../data',size=28):
+    '''
+    Create a mask by reading from a file, if a name is provided.
+    If there is no mask file, return all ones.
+
+    Parameters:
+        mask_file   File name
+        data        Location for storing data files
+        size        Mask will be size x size pixels
+    '''
+    if mask_file == None:  return np.ones((size,size))
+    mask_path = Path(join(data, mask_file)).with_suffix('.npy')
+    product = np.load(mask_path)
+    print (f'Loaded mask from {mask_path}')
+    return product
 
 
 if __name__ == '__main__':

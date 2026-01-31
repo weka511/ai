@@ -18,8 +18,6 @@
 '''
     Exploratory Data Analysis for MNIST
 '''
-
-
 from argparse import ArgumentParser
 from os.path import join
 from pathlib import Path
@@ -28,10 +26,8 @@ from matplotlib.pyplot import figure, show
 from matplotlib import rc, cm
 import numpy as np
 from scipy.stats import entropy
-from pymdp.maths import softmax, spm_log_single as log_stable
-from skimage.exposure import equalize_hist
 from skimage.transform import resize
-from mnist import MnistDataloader, equalize_hist
+from mnist import MnistDataloader, create_mask
 
 def parse_args():
     parser = ArgumentParser(__doc__)
@@ -44,6 +40,23 @@ def parse_args():
     parser.add_argument('--size', default=28, type=int, help='Number of row/cols in each image  will be mxm')
     return parser.parse_args()
 
+def generate_images(x,indices,n=10,m=20,size=28):
+    '''
+    Used to iterate through all the images that need to be displayed
+
+    Parameters:
+        x          Data to be plotted
+        indices    Indices for selecting data
+        n          Number of classes
+        m          Number of images for each class
+        size       Size of image size x size
+    '''
+    k = 0
+    for i in range(n):
+        for j in range(m):
+            k += 1
+            yield k,resize(x[indices[j,i]],(size,size))
+
 if __name__ == '__main__':
     rc('font', **{'family': 'serif',
                   'serif': ['Palatino'],
@@ -53,28 +66,20 @@ if __name__ == '__main__':
     start = time()
     args = parse_args()
     indices = np.load(join(args.data,args.indices)).astype(int)
-    mask = np.ones((args.size,args.size))
-    if args.mask != None:
-        mask_file = Path(join(args.data, args.mask)).with_suffix('.npy')
-        mask = np.load(mask_file)
-        print (f'Loaded mask from {mask_file}')
     m,n = indices.shape
-    m = min(m,args.m)     # Number of columns
+    m = min(m,args.m)     # Number of columns for showing images
     mnist_dataloader = MnistDataloader.create(data=args.data)
     (x_train, _), _ = mnist_dataloader.load_data()
     x_train = np.array(x_train)
-    k = 0
-    for i in range(n):
-        for j in range(m):
-            k += 1
-            ax = fig.add_subplot(n,m,k)
-            img = resize(x_train[indices[j,i]],(args.size,args.size))
-            ax.imshow(np.multiply(img,mask), cmap=cm.Blues)
-            ax.axis('off')
-    if mask_file == None:
-        fig.suptitle('No mask')
-    else:
-        fig.suptitle(rf'Mask preserving {int(100*mask.sum()/(args.size*args.size))}\% of pixels')
+    mask = create_mask(mask_file=args.mask,data=args.data,size=args.size)
+
+    for k,img in generate_images(x_train,indices,n=n,m=m,size=args.size):
+        ax = fig.add_subplot(n,m,k)
+        ax.imshow(np.multiply(img,mask), cmap=cm.Blues)
+        ax.axis('off')
+
+    fig.suptitle(('No mask' if args.mask == None
+                  else rf'Mask preserving {int(100*mask.sum()/(args.size*args.size))}\% of pixels'))
 
     fig.tight_layout(pad=2,h_pad=2,w_pad=2)
     fig.savefig(join(args.figs,Path(__file__).stem))
