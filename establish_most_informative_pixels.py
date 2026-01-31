@@ -42,6 +42,7 @@ def parse_args():
     parser.add_argument('--threshold',default=0.5, type=float,help='Used to cut off data that has too little information')
     parser.add_argument('--out',default='mask',help='Name of mask file.')
     parser.add_argument('--cmap',default='Blues',help='Colour map')
+    parser.add_argument('--size', default=28, type=int, help='Number of row/cols in each image  will be mxm')
     return parser.parse_args()
 
 def create_entropies(images,selector,bins=20,m=32):
@@ -59,9 +60,11 @@ def create_entropies(images,selector,bins=20,m=32):
         '''
         Convert images to be mxm, equalize, then convert to 1d
         '''
+        m0,_ = images[0].shape
         product = np.zeros((n, m*m))
         for i in selector:
-            img = equalize_hist(resize(np.array(images[i]),(m,m)))
+            right_sized_image = images[i] if m == m0 else resize(np.array(images[i]),(m,m))
+            img = equalize_hist(right_sized_image)
             product[i] = np.reshape(img,-1)
         return product
 
@@ -159,12 +162,12 @@ if __name__ == '__main__':
     mnist_dataloader = MnistDataloader.create(data=args.data)
     (x_train, _), _ = mnist_dataloader.load_data()
     x_train = np.array(x_train)
-    entropies = create_entropies(x_train[indices],list(range(len(indices))),bins=args.bins)
+    entropies = create_entropies(x_train[indices],list(range(len(indices))),bins=args.bins,m=args.size) # Issue 30
     mu = np.mean(entropies)
     sigma = np.std(entropies)
     min0 = np.min(entropies)
-    img = np.reshape(entropies,(32,32))
-    mask = cull(entropies,-args.threshold,mu,sigma,mask=True).reshape(32,32)
+    img = np.reshape(entropies,(args.size,args.size)) # Issue 30
+    mask = cull(entropies,-args.threshold,mu,sigma,mask=True).reshape(args.size,args.size) # Issue 30
     file = Path(join(args.data, args.out)).with_suffix('.npy')
     np.save(file, mask)
 
