@@ -39,6 +39,9 @@ def parse_args():
     parser.add_argument('--data', default='./data', help='Location for storing data files')
     parser.add_argument('--indices', default='establish_subset.npy', help='Location for storing data files')
     parser.add_argument('--bins', default=17, type=int, help='Number of bins for histogram')
+    parser.add_argument('--threshold',default=0.5, type=float,help='Used to cut off data that has too little information')
+    parser.add_argument('--out',default='mask')
+    parser.add_argument('--cmap',default='Blues')
     return parser.parse_args()
 
 def create_entropies(images,selector,bins=20,m=32):
@@ -75,6 +78,24 @@ def create_entropies(images,selector,bins=20,m=32):
 
     return create_entropies_from_1d_images(create_1d_images())
 
+def cull(img,n,mu,sigma,min0=0,mask=False):
+    '''
+    Cull data and display
+
+    Parameters:
+        img    An array of entropies, with one entry for each pixel
+        n      Threshold for culling: number of standard deviations below mean
+        mu     Mean entropy
+        sigma  Standard deviation for entropy
+        min0   Minimum entropy over all pixels
+        ax     Axis for displaying data
+    '''
+    product = np.copy(img)
+    product[product < mu + n*sigma] = min0
+    if mask:
+        product[product >= mu + n*sigma] = 1
+    return product
+
 def show_image(entropies,ax=None,fig=None,cmap='Blues'):
     '''
     Show the distribution of entropies over images
@@ -100,12 +121,14 @@ def show_culled(entropies,n,mu,sigma,min0,ax=None,cmap='Blues'):
         min0       Minimum entropy over all pixels
         ax         Axis for displaying data
     '''
-    culled_img = np.copy(entropies)
-    culled_img[culled_img < mu + n*sigma] = min0
-    ax.imshow(culled_img,cmap=cmap)
+    ax.imshow(cull(entropies,n,mu,sigma,min0),cmap=cmap)
     ax.set_title(rf'Culled {abs(n)}$\sigma$ below $\mu$' if n != 0 else r'Culled all below $\mu$')
 
-def show_histogram(entropies,mu,sigma,ax=None):
+def show_mask(mask,cmap='Blues',ax=None):
+    ax.imshow(mask,cmap=cmap)
+    ax.set_title(rf'Mask preserving {int(100*mask.sum()/(32*32))}\% of pixels')
+
+def show_histogram(entropies,mu,sigma,threshold=0.5,ax=None):
     '''
     Show histogram of entropies.
 
@@ -120,8 +143,7 @@ def show_histogram(entropies,mu,sigma,ax=None):
     ax.set_ylabel('Frequency')
     ax.set_title('Entropy of pixels')
     ax.axvline(mu,c='xkcd:red',ls='-',label=r'$\mu$')
-    ax.axvline(mu-sigma,c='xkcd:red',ls='--',label=r'$\mu-\sigma$')
-    ax.axvline(mu-2.0*sigma,c='xkcd:red',ls=':',label=r'$\mu-2\sigma$')
+    ax.axvline(mu-threshold*sigma,c='xkcd:red',ls=':',label=r'$\mu' f'{-threshold}' r'\sigma$')
     ax.legend()
 
 if __name__ == '__main__':
@@ -142,13 +164,14 @@ if __name__ == '__main__':
     sigma = np.std(entropies)
     min0 = np.min(entropies)
     img = np.reshape(entropies,(32,32))
-    cmap='seismic'
-    show_image(img,ax=fig.add_subplot(2,3,1),fig=fig,cmap=cmap)
-    show_culled(img,-2,mu,sigma,min0,ax = fig.add_subplot(2,3,2),cmap=cmap)
-    show_culled(img,-1,mu,sigma,min0,ax = fig.add_subplot(2,3,3),cmap=cmap)
-    show_culled(img,-0.5,mu,sigma,min0,ax = fig.add_subplot(2,3,4),cmap=cmap)
-    show_culled(img,0,mu,sigma,min0,ax = fig.add_subplot(2,3,5),cmap=cmap)
-    show_histogram(img,mu,sigma,ax=fig.add_subplot(2,3,6))
+    mask = cull(entropies,-args.threshold,mu,sigma,mask=True).reshape(32,32)
+    file = Path(join(args.data, args.out)).with_suffix('.npy')
+    np.save(file, mask)
+
+    show_image(img,ax=fig.add_subplot(2,2,1),fig=fig,cmap=args.cmap)
+    show_culled(img,-args.threshold,mu,sigma,min0,ax = fig.add_subplot(2,2,2),cmap=args.cmap)
+    show_mask(mask,cmap=args.cmap,ax = fig.add_subplot(2,2,3))
+    show_histogram(img,mu,sigma,threshold=args.threshold,ax=fig.add_subplot(2,2,4))
 
     fig.suptitle(r'Processed \emph{' + f'{args.indices}'
                  ',} '  f'{len(indices) // 10:,d} images per class, {args.bins} bins')
