@@ -16,7 +16,7 @@
 # along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.
 
 '''
-    Exploratory Data Analysis for MNIST
+    Exploratory Data Analysis for MNIST: plot some raw data, with and without masking
 '''
 from argparse import ArgumentParser
 from os.path import join
