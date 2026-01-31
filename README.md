@@ -10,7 +10,9 @@ File|Description
 hmm.py|Hidden Markove Model Example from Section 7-2
 maze.py|Example from Section 7.3 Decision Making and Planning as Inference
 
-## Exploring use of Active Inference for Pattern Recognition. The inspiriation comes from the following papers by Friston et al:
+## Exploring use of Active Inference for Pattern Recognition. 
+
+The inspiration comes from the following papers by Friston et al:
 - [Supervised structure learning](https://arxiv.org/abs/2311.10300)
 - [From pixels to planning: scale-free active inference](https://arxiv.org/abs/2407.20292)
 
@@ -21,7 +23,7 @@ establish_subset.py|Extract subsets of MNIST to facilitate replication
 establish_most_informative_pixels.py|Determine which pixels are most relevant to classifying images
 mnist.py|Functions for accessing MNIST data
 
-## Programs based on [Life as we Know it](https://royalsocietypublishing.org/doi/10.1098/rsif.2013.0475)
+## [Life as we Know it](https://royalsocietypublishing.org/doi/10.1098/rsif.2013.0475)
 
 File|Description
 -------------------|---------------------------------------------------------------------------------------------------
@@ -30,7 +32,7 @@ ai.tex|Derivations of equations
 selforg.py|Replication of Figure 2, Self Organization and the emergence of macroscopic behaviour, from Friston & Ao, [Free Energy, Value, and Attractor](https://www.hindawi.com/journals/cmmm/2012/937860/)
 huygens.py|Test for Huyghens oscillator in selforg.py
 
-## Programs based on [A Step-by-Step Tutorial on Active Inference and its Application to Empirical Data](https://www.researchgate.net/publication/348153427_A_Step-by-Step_Tutorial_on_Active_Inference_and_its_Application_to_Empirical_Data)
+## [A Step-by-Step Tutorial on Active Inference and its Application to Empirical Data](https://www.researchgate.net/publication/348153427_A_Step-by-Step_Tutorial_on_Active_Inference_and_its_Application_to_Empirical_Data)
 
 File|Description
 -------------------|---------------------------------------------------------------------------------------------------
@@ -41,7 +43,7 @@ message_passing.py|Ported from [Message_passing_example.m](https://github.com/rs
 pomdp.py|POMDP example and library for solvers
 pomdp_driver.py|POMDP example
 
-## Programs based on [A tutorial on the free-energy framework for modelling perception and learning, by Rafal Bogacz](https://www.sciencedirect.com/science/article/pii/S0022249615000759)
+## [A tutorial on the free-energy framework for modelling perception and learning, by Rafal Bogacz](https://www.sciencedirect.com/science/article/pii/S0022249615000759)
 
  File  | Remarks |
 ---------------|-------------------------------------------------------------------------------------------
