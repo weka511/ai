@@ -40,8 +40,8 @@ def parse_args():
     parser.add_argument('--indices', default='establish_subset.npy', help='Location for storing data files')
     parser.add_argument('--bins', default=17, type=int, help='Number of bins for histogram')
     parser.add_argument('--threshold',default=0.5, type=float,help='Used to cut off data that has too little information')
-    parser.add_argument('--out',default='mask')
-    parser.add_argument('--cmap',default='Blues')
+    parser.add_argument('--out',default='mask',help='Name of mask file.')
+    parser.add_argument('--cmap',default='Blues',help='Colour map')
     return parser.parse_args()
 
 def create_entropies(images,selector,bins=20,m=32):
