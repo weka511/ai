@@ -14,7 +14,8 @@
 # along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.
 
 '''
-    Exploratory Data Analysis for MNIST: figure out variability of mutual information withn and between classes
+    Exploratory Data Analysis for MNIST: figure out variability of
+    mutual information within and between classes
 '''
 from argparse import ArgumentParser
 from os.path import join
@@ -23,8 +24,7 @@ from time import time
 from matplotlib.pyplot import figure, show
 from matplotlib import rc, cm
 import numpy as np
-from scipy.stats import entropy
-from skimage.transform import resize
+from sklearn.feature_selection import mutual_info_classif
 from mnist import MnistDataloader, create_mask
 
 def parse_args():
@@ -38,21 +38,39 @@ def parse_args():
     parser.add_argument('--size', default=28, type=int, help='Number of row/cols in each image  will be mxm')
     return parser.parse_args()
 
+def columnize(x):
+    x1 = np.array(x)
+    N,n_rows,n_cols=x1.shape
+    assert n_rows == n_cols
+    x_img_no_last = np.transpose(x1,[1,2,0])
+    x_columnized_img_no_last = np.reshape(x_img_no_last, (n_rows*n_cols, -1))
+    return np.transpose(x_columnized_img_no_last,[1,0])
+
 if __name__ == '__main__':
     rc('font', **{'family': 'serif',
                   'serif': ['Palatino'],
                   'size': 8})
     rc('text', usetex=True)
-    fig = figure(figsize=(20, 8))
+    fig = figure(figsize=(8, 8))
     start = time()
     args = parse_args()
     indices = np.load(join(args.data,args.indices)).astype(int)
-    m,n = indices.shape
-    m = min(m,args.m)     # Number of columns for showing images
+    n_examples,n_classes = indices.shape
+
     mnist_dataloader = MnistDataloader.create(data=args.data)
     (x_train, _), _ = mnist_dataloader.load_data()
-    x_train = np.array(x_train)
-    mask = create_mask(mask_file=args.mask,data=args.data,size=args.size)
+    x = columnize(x_train)
+    a,b = x.shape
+    mask = create_mask(mask_file=args.mask,data=args.data,size=args.size).reshape(-1)
+    exemplar_indices = indices[0,:]
+    Exemplars = [ x[i,:] for i in exemplar_indices]
+    mm = 5
+    k = 1
+    for i in range(len(Exemplars)):
+        ax = fig.add_subplot(len(Exemplars), mm,k)
+        ax.imshow(Exemplars[i].reshape(28,28))
+        ax.axis('off')
+        k += mm
 
 
     fig.tight_layout(pad=2,h_pad=2,w_pad=2)
