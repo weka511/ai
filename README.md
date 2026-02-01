@@ -25,6 +25,10 @@ establish_subset.py|Extract subsets of MNIST to facilitate replication
 establish_most_informative_pixels.py|Determine which pixels are most relevant to classifying images
 mnist.py|Functions for accessing MNIST data
 
+Folder|Description
+-------|---------------------------------------------------------------------------------------------------
+bogacz|Code based on[A tutorial on the free-energy framework for modelling perception and learning, by Rafal Bogacz](https://www.sciencedirect.com/science/article/pii/S0022249615000759)
+
 ## [Life as we Know it](https://royalsocietypublishing.org/doi/10.1098/rsif.2013.0475)
 
 File|Description
@@ -45,14 +49,7 @@ message_passing.py|Ported from [Message_passing_example.m](https://github.com/rs
 pomdp.py|POMDP example and library for solvers
 pomdp_driver.py|POMDP example
 
-## [A tutorial on the free-energy framework for modelling perception and learning, by Rafal Bogacz](https://www.sciencedirect.com/science/article/pii/S0022249615000759)
 
- File  | Remarks |
----------------|-------------------------------------------------------------------------------------------
-feex1.py| Exercise 1--posterior probabilities
-feex2.py| Exercise 2--most likely size
-feex3.py| Exercise 3--neural implementation
-feex5.py| Exercise 5--learn variance
 
 ## ODE solvers
 
