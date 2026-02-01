@@ -26,6 +26,7 @@ from time import time
 from matplotlib.pyplot import figure, show
 from matplotlib import rc, cm
 import numpy as np
+from seaborn import lineplot
 from sklearn.feature_selection import mutual_info_classif
 from mnist import MnistDataloader, create_mask
 
@@ -39,6 +40,7 @@ def parse_args():
     parser.add_argument('--mask',default=None,help='Name of mask file (omit for no mask)')
     parser.add_argument('--size', default=28, type=int, help='Number of row/cols in each image: shape will be will be mxm')
     parser.add_argument('--classes',default=[8],type=int,nargs='+',help='List of digit classes')
+    parser.add_argument('--bins', default=12, type=int, help='Number of bins for histograms')
     return parser.parse_args()
 
 def columnize(x):
@@ -75,20 +77,26 @@ if __name__ == '__main__':
     x = np.multiply(x,mask)
     m,n = indices.shape  # images,classes
     npairs = min(m,args.npairs)
+    bins = np.linspace(0,1,num=args.bins+1)
     assert n == 10
+    frequencies = np.zeros((10,len(bins)-1))
     for i_class in args.classes:
+        print (f'Class {i_class}')
         fig = figure(figsize=(8, 8))
         MI = np.zeros((npairs))
         for i in range(npairs):
             K = rng.choice(m,size=2)
-            xx = x[indices[K,i_class],:]
-            mi = mutual_info_classif(xx.T,xx[0,:])
+            x_class = x[indices[K,i_class],:]
+            mi = mutual_info_classif(x_class.T,x_class[0,:])
             MI[i] = mi[-1]
         ax = fig.add_subplot(1,1,1)
-        ax.hist(MI)
+        frequencies[i_class,:],_,_= ax.hist(MI,bins,density=True)
         ax.set_title(f'Mutual Information distribution for class {i_class}')
         fig.savefig(join(args.figs,Path(__file__).stem + str(i_class)))
-
+    fig = figure(figsize=(8, 8))
+    ax = fig.add_subplot(1,1,1)
+    for i_class in args.classes:
+        ax.plot(0.5*(bins[:-1] + bins[1:]), frequencies[i_class,:])
     elapsed = time() - start
     minutes = int(elapsed/60)
     seconds = elapsed - 60*minutes
