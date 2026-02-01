@@ -50,6 +50,11 @@ def create_exemplars(indices,x):
     exemplar_indices = indices[0,:]
     return np.array( [ x[i,:] for i in exemplar_indices])
 
+def create_companions(iclass,indices,x,n_comparison=7):
+    ss=indices.shape
+    companion_indices = indices[1:n_comparison+1,iclass]
+    return np.array( [ x[i,:] for i in companion_indices])
+
 if __name__ == '__main__':
     rc('font', **{'family': 'serif',
                   'serif': ['Palatino'],
@@ -68,12 +73,24 @@ if __name__ == '__main__':
     mask = create_mask(mask_file=args.mask,data=args.data,size=args.size).reshape(-1)
 
     Exemplars = create_exemplars(indices,x)
-    MI = np.zeros((n_classes,n_classes))
+    MI_between_classes = np.zeros((n_classes,n_classes))
     for i in range(n_classes):
-        MI[i] = mutual_info_classif(Exemplars.T,Exemplars[i,:])
-    ax = fig.add_subplot(1,2,1)
-    heatmap_img = ax.imshow(MI, cmap='Blues', interpolation='nearest')
-    fig.colorbar(heatmap_img, orientation='vertical')
+        MI_between_classes[i] = mutual_info_classif(Exemplars.T,Exemplars[i,:])
+
+    MI_within_classes = np.zeros((n_classes,args.m))
+    for i in range(n_classes):
+        companions = create_companions(i,indices,x,n_comparison=args.m)
+        MI_within_classes[i] = mutual_info_classif(companions.T,Exemplars[i,:])
+
+    ax1 = fig.add_subplot(1,2,1)
+    fig.colorbar(ax1.imshow(MI_between_classes, cmap='Blues', interpolation='nearest'),
+                 orientation='vertical')
+    ax1.set_title('Mutual Information between classes')
+
+    ax2 = fig.add_subplot(1,2,2)
+    fig.colorbar(ax2.imshow(MI_within_classes.T, cmap='Reds', interpolation='nearest'),
+                 orientation='vertical')
+    ax2.set_title('Mutual Information within classes')
 
     fig.tight_layout(pad=2,h_pad=2,w_pad=2)
     fig.savefig(join(args.figs,Path(__file__).stem))
