@@ -118,6 +118,7 @@ if __name__ == '__main__':
                   'size': 8})
     rc('text', usetex=True)
     fig = figure(figsize=(8, 12))
+    start = time()
     args = parse_args()
     rng = np.random.default_rng()
 
@@ -143,6 +144,11 @@ if __name__ == '__main__':
 
     fig.tight_layout(pad=3,h_pad=3,w_pad=3)
     fig.savefig(join(args.figs,Path(__file__).stem))
+
+    elapsed = time() - start
+    minutes = int(elapsed/60)
+    seconds = elapsed - 60*minutes
+    print (f'Elapsed Time {minutes} m {seconds:.2f} s')
 
     if args.show:
         show()
