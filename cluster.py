@@ -16,7 +16,7 @@
 # along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.
 
 '''
-    Cluster Analysis for MNIST: figure out variability of
+    Cluster Analysis for MNIST: establish variability of
     mutual information within and between classes
 '''
 from argparse import ArgumentParser
