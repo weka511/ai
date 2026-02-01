@@ -39,7 +39,7 @@ def parse_args():
     parser.add_argument('--npairs', default=128, type=int, help='Number of pairs for each class')
     parser.add_argument('--mask',default=None,help='Name of mask file (omit for no mask)')
     parser.add_argument('--size', default=28, type=int, help='Number of row/cols in each image: shape will be will be mxm')
-    parser.add_argument('--classes',default=[8],type=int,nargs='+',help='List of digit classes')
+    parser.add_argument('--classes',default=list(range(10)),type=int,nargs='+',help='List of digit classes')
     parser.add_argument('--bins', default=12, type=int, help='Number of bins for histograms')
     return parser.parse_args()
 
@@ -80,21 +80,22 @@ if __name__ == '__main__':
     npairs = min(m,args.npairs)
     bins = np.linspace(0,1,num=args.bins+1)
     assert n == 10
-    # frequencies = np.zeros((10,len(bins)-1))
     ax = fig.add_subplot(1,1,1)
     for i_class in args.classes:
         print (f'Class {i_class}')
-        # fig = figure(figsize=(8, 8))
         MI = np.zeros((npairs))
         for i in range(npairs):
             K = rng.choice(m,size=2)
             x_class = x[indices[K,i_class],:]
             mi = mutual_info_classif(x_class.T,x_class[0,:])
             MI[i] = mi[-1]
-        # ax = fig.add_subplot(1,1,1)
+
         frequencies,_= np.histogram(MI,bins,density=True)
         ax.plot(0.5*(bins[:-1] + bins[1:]), frequencies,label=str(i_class))
-        # ax.set_title(f'Mutual Information distribution for class {i_class}')
+    ax.set_xlabel('Mutual Information')
+    ax.set_ylabel('Frequency')
+    ax.set_title(f'Mutual Information within classes based on {128} pairs')
+    ax.legend(title='Digit classes')
     fig.savefig(join(args.figs,Path(__file__).stem))
 
 
