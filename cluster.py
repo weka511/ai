@@ -66,6 +66,7 @@ if __name__ == '__main__':
     start = time()
     args = parse_args()
     rng = np.random.default_rng()
+    fig = figure(figsize=(8, 8))
     indices = np.load(join(args.data,args.indices)).astype(int)
     n_examples,n_classes = indices.shape
 
@@ -79,24 +80,25 @@ if __name__ == '__main__':
     npairs = min(m,args.npairs)
     bins = np.linspace(0,1,num=args.bins+1)
     assert n == 10
-    frequencies = np.zeros((10,len(bins)-1))
+    # frequencies = np.zeros((10,len(bins)-1))
+    ax = fig.add_subplot(1,1,1)
     for i_class in args.classes:
         print (f'Class {i_class}')
-        fig = figure(figsize=(8, 8))
+        # fig = figure(figsize=(8, 8))
         MI = np.zeros((npairs))
         for i in range(npairs):
             K = rng.choice(m,size=2)
             x_class = x[indices[K,i_class],:]
             mi = mutual_info_classif(x_class.T,x_class[0,:])
             MI[i] = mi[-1]
-        ax = fig.add_subplot(1,1,1)
-        frequencies[i_class,:],_,_= ax.hist(MI,bins,density=True)
-        ax.set_title(f'Mutual Information distribution for class {i_class}')
-        fig.savefig(join(args.figs,Path(__file__).stem + str(i_class)))
-    fig = figure(figsize=(8, 8))
-    ax = fig.add_subplot(1,1,1)
-    for i_class in args.classes:
-        ax.plot(0.5*(bins[:-1] + bins[1:]), frequencies[i_class,:])
+        # ax = fig.add_subplot(1,1,1)
+        frequencies,_= np.histogram(MI,bins,density=True)
+        ax.plot(0.5*(bins[:-1] + bins[1:]), frequencies,label=str(i_class))
+        # ax.set_title(f'Mutual Information distribution for class {i_class}')
+    fig.savefig(join(args.figs,Path(__file__).stem))
+
+
+
     elapsed = time() - start
     minutes = int(elapsed/60)
     seconds = elapsed - 60*minutes
