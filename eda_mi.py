@@ -46,14 +46,9 @@ def columnize(x):
     x_columnized_img_no_last = np.reshape(x_img_no_last, (n_rows*n_cols, -1))
     return np.transpose(x_columnized_img_no_last,[1,0])
 
-def create_exemplars(indices,x,n_classes=10):
+def create_exemplars(indices,x):
     exemplar_indices = indices[0,:]
-    Exemplars = [ x[i,:] for i in exemplar_indices]
-    Product = np.zeros((n_classes,28*28))
-    for i in range(n_classes):
-        for j in range(28*28):
-            Product[i,j] = Exemplars[i][j]
-    return Product
+    return np.array( [ x[i,:] for i in exemplar_indices])
 
 if __name__ == '__main__':
     rc('font', **{'family': 'serif',
@@ -72,7 +67,7 @@ if __name__ == '__main__':
 
     mask = create_mask(mask_file=args.mask,data=args.data,size=args.size).reshape(-1)
 
-    Exemplars = create_exemplars(indices,x,n_classes=n_classes)
+    Exemplars = create_exemplars(indices,x)
     MI = np.zeros((n_classes,n_classes))
     for i in range(n_classes):
         MI[i] = mutual_info_classif(Exemplars.T,Exemplars[i,:])
