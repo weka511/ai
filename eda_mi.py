@@ -46,12 +46,21 @@ def columnize(x):
     x_columnized_img_no_last = np.reshape(x_img_no_last, (n_rows*n_cols, -1))
     return np.transpose(x_columnized_img_no_last,[1,0])
 
+def create_exemplars(indices,x,n_classes=10):
+    exemplar_indices = indices[0,:]
+    Exemplars = [ x[i,:] for i in exemplar_indices]
+    Product = np.zeros((n_classes,28*28))
+    for i in range(n_classes):
+        for j in range(28*28):
+            Product[i,j] = Exemplars[i][j]
+    return Product
+
 if __name__ == '__main__':
     rc('font', **{'family': 'serif',
                   'serif': ['Palatino'],
                   'size': 8})
     rc('text', usetex=True)
-    fig = figure(figsize=(8, 8))
+    fig = figure(figsize=(20, 8))
     start = time()
     args = parse_args()
     indices = np.load(join(args.data,args.indices)).astype(int)
@@ -60,31 +69,17 @@ if __name__ == '__main__':
     mnist_dataloader = MnistDataloader.create(data=args.data)
     (x_train, _), _ = mnist_dataloader.load_data()
     x = columnize(x_train)
-    a,b = x.shape
+
     mask = create_mask(mask_file=args.mask,data=args.data,size=args.size).reshape(-1)
-    exemplar_indices = indices[0,:]
-    Exemplars0 = [ x[i,:] for i in exemplar_indices]
-    Exemplars = np.zeros((10,28*28))
-    for i in range(10):
-        for j in range(28*28):
-            Exemplars[i,j] = Exemplars0[i][j]
-    MI = np.zeros((10,10))
-    for i in range(10):
+
+    Exemplars = create_exemplars(indices,x,n_classes=n_classes)
+    MI = np.zeros((n_classes,n_classes))
+    for i in range(n_classes):
         MI[i] = mutual_info_classif(Exemplars.T,Exemplars[i,:])
-    ax = fig.add_subplot(1,1,1)
+    ax = fig.add_subplot(1,2,1)
     heatmap_img = ax.imshow(MI, cmap='Blues', interpolation='nearest')
     fig.colorbar(heatmap_img, orientation='vertical')
 
-    # m01 = mutual_info_classif(Exemplars[0],Exemplars[1])
-    # mm = 5
-    # k = 1
-    # for i in range(len(Exemplars)):
-        # ax = fig.add_subplot(len(Exemplars), mm,k)
-        # ax.imshow(Exemplars[i].reshape(28,28))
-        # ax.axis('off')
-        # k += mm
-    # m00 = mutual_info_classif(Exemplars[0],Exemplars[0])
-    # m01 = mutual_info_classif(Exemplars[0],Exemplars[1])
     fig.tight_layout(pad=2,h_pad=2,w_pad=2)
     fig.savefig(join(args.figs,Path(__file__).stem))
 
