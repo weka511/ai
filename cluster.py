@@ -35,10 +35,10 @@ def parse_args():
     parser.add_argument('--figs', default='./figs', help='Location for storing plot files')
     parser.add_argument('--data', default='./data', help='Location for storing data files')
     parser.add_argument('--indices', default='establish_subset.npy', help='Location for storing data files')
-    parser.add_argument('--m', default=12, type=int, help='Number of images for each class')
+    parser.add_argument('--npairs', default=128, type=int, help='Number of pairs for each class')
     parser.add_argument('--mask',default=None,help='Name of mask file (omit for no mask)')
     parser.add_argument('--size', default=28, type=int, help='Number of row/cols in each image: shape will be will be mxm')
-    parser.add_argument('--classes',default=8,type=int,help='List of digit classes')
+    parser.add_argument('--classes',default=[8],type=int,nargs='+',help='List of digit classes')
     return parser.parse_args()
 
 def columnize(x):
@@ -55,43 +55,6 @@ def columnize(x):
     x_columnized_img_no_last = np.reshape(x_img_no_last, (n_rows*n_cols, -1))
     return np.transpose(x_columnized_img_no_last,[1,0])
 
-def create_exemplars(indices,x):
-    '''
-    Create an array containing one element from each class
-
-    Parameters:
-        indices
-        x
-    '''
-    exemplar_indices = indices[0,:]
-    return np.array( [ x[i,:] for i in exemplar_indices])
-
-def create_companions(iclass,indices,x,n_comparison=7):
-    '''
-    Create a collection of vectors belonging to same class
-
-    Parameters:
-        iclass
-        indices
-        x
-        n_comparison
-    '''
-    companion_indices = indices[1:n_comparison+1,iclass]
-    return np.array( [ x[i,:] for i in companion_indices])
-
-def annotate(MI,ax=None,color='k'):
-    '''
-    Annotate heatmap with values of mutual information
-
-    Parameters:
-        MI
-        ax
-        color
-    '''
-    m,n = MI.shape
-    for i in range(m):
-        for j in range(n):
-            ax.text(j, i, f'{MI[i,j]:.2e}',ha='center', va='center', color='k')
 
 if __name__ == '__main__':
     rc('font', **{'family': 'serif',
@@ -100,6 +63,7 @@ if __name__ == '__main__':
     rc('text', usetex=True)
     start = time()
     args = parse_args()
+    rng = np.random.default_rng()
     indices = np.load(join(args.data,args.indices)).astype(int)
     n_examples,n_classes = indices.shape
 
@@ -109,33 +73,21 @@ if __name__ == '__main__':
 
     mask = create_mask(mask_file=args.mask,data=args.data,size=args.size).reshape(-1)
     x = np.multiply(x,mask)
-    for i_class in classes:
+    m,n = indices.shape  # images,classes
+    npairs = min(m,args.npairs)
+    assert n == 10
+    for i_class in args.classes:
         fig = figure(figsize=(8, 8))
-
-        fig.tight_layout(pad=2,h_pad=2,w_pad=2)
+        MI = np.zeros((npairs))
+        for i in range(npairs):
+            K = rng.choice(m,size=2)
+            xx = x[indices[K,i_class],:]
+            mi = mutual_info_classif(xx.T,xx[0,:])
+            MI[i] = mi[-1]
+        ax = fig.add_subplot(1,1,1)
+        ax.hist(MI)
+        ax.set_title(f'Mutual Information distribution for class {i_class}')
         fig.savefig(join(args.figs,Path(__file__).stem + str(i_class)))
-
-    Exemplars = create_exemplars(indices,x)
-    MI_between_classes = np.zeros((n_classes,n_classes))
-    for i in range(n_classes):
-        MI_between_classes[i] = mutual_info_classif(Exemplars.T,Exemplars[i,:])
-
-    # MI_within_classes = np.zeros((n_classes,args.m))
-    # for i in range(n_classes):
-        # companions = create_companions(i,indices,x,n_comparison=args.m)
-        # MI_within_classes[i] = mutual_info_classif(companions.T,Exemplars[i,:])
-
-    # ax1 = fig.add_subplot(1,2,1)
-    # fig.colorbar(ax1.imshow(MI_between_classes, cmap='Blues', interpolation='nearest'),
-                 # orientation='vertical')
-    # ax1.set_title('Mutual Information between classes')
-    # annotate(MI_between_classes,ax=ax1)
-
-    # ax2 = fig.add_subplot(1,2,2)
-    # fig.colorbar(ax2.imshow(MI_within_classes.T, cmap='Reds', interpolation='nearest'),
-                 # orientation='vertical')
-    # ax2.set_title('Mutual Information within classes')
-    # annotate(MI_within_classes.T,ax=ax2)
 
     elapsed = time() - start
     minutes = int(elapsed/60)
