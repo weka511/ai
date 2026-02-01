@@ -111,6 +111,19 @@ def create_mask(mask_file=None,data='../data',size=28):
     print (f'Loaded mask from {mask_path}')
     return product
 
+def columnize(x):
+    '''
+    Convert list of images into an array of column vectors, one column per image
+
+    Parameters:
+         x        List of images
+    '''
+    x1 = np.array(x)
+    _,n_rows,n_cols=x1.shape
+    assert n_rows == n_cols
+    x_img_no_last = np.transpose(x1,[1,2,0])
+    x_columnized_img_no_last = np.reshape(x_img_no_last, (n_rows*n_cols, -1))
+    return np.transpose(x_columnized_img_no_last,[1,0])
 
 if __name__ == '__main__':
     rc('font', **{'family': 'serif',

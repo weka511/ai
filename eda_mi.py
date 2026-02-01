@@ -27,7 +27,7 @@ from matplotlib.pyplot import figure, show
 from matplotlib import rc, cm
 import numpy as np
 from sklearn.feature_selection import mutual_info_classif
-from mnist import MnistDataloader, create_mask
+from mnist import MnistDataloader, create_mask, columnize
 
 def parse_args():
     parser = ArgumentParser(__doc__)
@@ -40,19 +40,7 @@ def parse_args():
     parser.add_argument('--size', default=28, type=int, help='Number of row/cols in each image: shape will be will be mxm')
     return parser.parse_args()
 
-def columnize(x):
-    '''
-    Convert list of images into an array of column vectors, one column per image
 
-    Parameters:
-         x        List of images
-    '''
-    x1 = np.array(x)
-    _,n_rows,n_cols=x1.shape
-    assert n_rows == n_cols
-    x_img_no_last = np.transpose(x1,[1,2,0])
-    x_columnized_img_no_last = np.reshape(x_img_no_last, (n_rows*n_cols, -1))
-    return np.transpose(x_columnized_img_no_last,[1,0])
 
 def create_exemplars(indices,x):
     '''
