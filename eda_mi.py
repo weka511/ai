@@ -37,12 +37,12 @@ def parse_args():
     parser.add_argument('--indices', default='establish_subset.npy', help='Location for storing data files')
     parser.add_argument('--m', default=12, type=int, help='Number of images for each class')
     parser.add_argument('--mask',default=None,help='Name of mask file (omit for no mask)')
-    parser.add_argument('--size', default=28, type=int, help='Number of row/cols in each image  will be mxm')
+    parser.add_argument('--size', default=28, type=int, help='Number of row/cols in each image: shape will be will be mxm')
     return parser.parse_args()
 
 def columnize(x):
     '''
-    Convert list of immages into an array of column vectors, one column per image
+    Convert list of images into an array of column vectors, one column per image
 
     Parameters:
          x        List of images
@@ -80,7 +80,12 @@ def create_companions(iclass,indices,x,n_comparison=7):
 
 def annotate(MI,ax=None,color='k'):
     '''
-    Annotate heatmap with values of mutual informatiolues
+    Annotate heatmap with values of mutual information
+
+    Parameters:
+        MI
+        ax
+        color
     '''
     m,n = MI.shape
     for i in range(m):
@@ -103,7 +108,7 @@ if __name__ == '__main__':
     x = columnize(x_train)
 
     mask = create_mask(mask_file=args.mask,data=args.data,size=args.size).reshape(-1)
-
+    x = np.multiply(x,mask)
     Exemplars = create_exemplars(indices,x)
     MI_between_classes = np.zeros((n_classes,n_classes))
     for i in range(n_classes):
