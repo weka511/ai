@@ -27,7 +27,6 @@ from matplotlib.pyplot import figure, show
 from matplotlib import rc
 import numpy as np
 from scipy.stats import entropy
-from pymdp.maths import softmax, spm_log_single as log_stable
 from skimage.exposure import equalize_hist
 from skimage.transform import resize
 from mnist import MnistDataloader
