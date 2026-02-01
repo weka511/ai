@@ -1,6 +1,6 @@
-# lawki
+# Life as we Know it
 
-[Life as we Know it](https://royalsocietypublishing.org/doi/10.1098/rsif.2013.0475)
+Based on [Life as we Know it](https://royalsocietypublishing.org/doi/10.1098/rsif.2013.0475) by Karl Friston
 
 File|Description
 -------------------|---------------------------------------------------------------------------------------------------

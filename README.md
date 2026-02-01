@@ -35,6 +35,8 @@ ai.py| Common code for my Active Inference project
 ai.wpr|Project for Python Code
 template.py|Template for creating additional programs
 
+## Subfolders
+
 Folder|Description
 -------|---------------------------------------------------------------------------------------------------
 bogacz|Code based on[A tutorial on the free-energy framework for modelling perception and learning, by Rafal Bogacz](https://www.sciencedirect.com/science/article/pii/S0022249615000759)
