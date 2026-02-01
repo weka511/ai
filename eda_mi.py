@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 # Copyright (C) 2026 Simon Crase  simon@greenweaves.nz
 
 # This is free software: you can redistribute it and/or modify
@@ -33,27 +35,57 @@ def parse_args():
     parser.add_argument('--figs', default='./figs', help='Location for storing plot files')
     parser.add_argument('--data', default='./data', help='Location for storing data files')
     parser.add_argument('--indices', default='establish_subset.npy', help='Location for storing data files')
-    parser.add_argument('--m', default=20, type=int, help='Number of images for each class')
+    parser.add_argument('--m', default=12, type=int, help='Number of images for each class')
     parser.add_argument('--mask',default=None,help='Name of mask file (omit for no mask)')
     parser.add_argument('--size', default=28, type=int, help='Number of row/cols in each image  will be mxm')
     return parser.parse_args()
 
 def columnize(x):
+    '''
+    Convert list of immages into an array of column vectors, one column per image
+
+    Parameters:
+         x        List of images
+    '''
     x1 = np.array(x)
-    N,n_rows,n_cols=x1.shape
+    _,n_rows,n_cols=x1.shape
     assert n_rows == n_cols
     x_img_no_last = np.transpose(x1,[1,2,0])
     x_columnized_img_no_last = np.reshape(x_img_no_last, (n_rows*n_cols, -1))
     return np.transpose(x_columnized_img_no_last,[1,0])
 
 def create_exemplars(indices,x):
+    '''
+    Create an array containing one element from each class
+
+    Parameters:
+        indices
+        x
+    '''
     exemplar_indices = indices[0,:]
     return np.array( [ x[i,:] for i in exemplar_indices])
 
 def create_companions(iclass,indices,x,n_comparison=7):
-    ss=indices.shape
+    '''
+    Create a collection of vectors belonging to same class
+
+    Parameters:
+        iclass
+        indices
+        x
+        n_comparison
+    '''
     companion_indices = indices[1:n_comparison+1,iclass]
     return np.array( [ x[i,:] for i in companion_indices])
+
+def annotate(MI,ax=None,color='k'):
+    '''
+    Annotate heatmap with values of mutual informatiolues
+    '''
+    m,n = MI.shape
+    for i in range(m):
+        for j in range(n):
+            ax.text(j, i, f'{MI[i,j]:.2e}',ha='center', va='center', color='k')
 
 if __name__ == '__main__':
     rc('font', **{'family': 'serif',
@@ -86,14 +118,21 @@ if __name__ == '__main__':
     fig.colorbar(ax1.imshow(MI_between_classes, cmap='Blues', interpolation='nearest'),
                  orientation='vertical')
     ax1.set_title('Mutual Information between classes')
+    annotate(MI_between_classes,ax=ax1)
 
     ax2 = fig.add_subplot(1,2,2)
     fig.colorbar(ax2.imshow(MI_within_classes.T, cmap='Reds', interpolation='nearest'),
                  orientation='vertical')
     ax2.set_title('Mutual Information within classes')
+    annotate(MI_within_classes.T,ax=ax2)
 
     fig.tight_layout(pad=2,h_pad=2,w_pad=2)
     fig.savefig(join(args.figs,Path(__file__).stem))
+
+    elapsed = time() - start
+    minutes = int(elapsed/60)
+    seconds = elapsed - 60*minutes
+    print (f'Elapsed Time {minutes} m {seconds:.2f} s')
 
     if args.show:
         show()
