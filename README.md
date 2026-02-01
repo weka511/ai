@@ -18,6 +18,7 @@ The inspiration comes from the following papers by Friston et al:
 
 File|Description
 -------------------------------------|-----------------------------------------------------------------------------------------
+cluster.py|Cluster Analysis for MNIST
 eda.py|Exploratory Data Analysis for MNIST
 eda_mi.py|Exploratory Data Analysis for MNIST: figure out variability of mutual information within and between classes
 establish_subset.py|Extract subsets of MNIST to facilitate replication
