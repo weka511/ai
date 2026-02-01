@@ -24,6 +24,17 @@ establish_subset.py|Extract subsets of MNIST to facilitate replication
 establish_most_informative_pixels.py|Determine which pixels are most relevant to classifying images
 mnist.py|Functions for accessing MNIST data
 
+
+## Miscellaneous
+
+File  | Remarks |
+---------------|-------------------------------------------------------------------------------------------
+ai.bib|Bibliography
+ai.tex|Derivations of equations
+ai.py| Common code for my Active Inference project
+ai.wpr|Project for Python Code
+template.py|Template for creating additional programs
+
 Folder|Description
 -------|---------------------------------------------------------------------------------------------------
 bogacz|Code based on[A tutorial on the free-energy framework for modelling perception and learning, by Rafal Bogacz](https://www.sciencedirect.com/science/article/pii/S0022249615000759)
