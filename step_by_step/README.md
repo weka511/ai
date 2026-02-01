@@ -1,4 +1,6 @@
-## [A Step-by-Step Tutorial on Active Inference and its Application to Empirical Data](https://www.researchgate.net/publication/348153427_A_Step-by-Step_Tutorial_on_Active_Inference_and_its_Application_to_Empirical_Data)
+# step_by_step
+
+[A Step-by-Step Tutorial on Active Inference and its Application to Empirical Data](https://www.researchgate.net/publication/348153427_A_Step-by-Step_Tutorial_on_Active_Inference_and_its_Application_to_Empirical_Data)
 
 File|Description
 -------------------|---------------------------------------------------------------------------------------------------
