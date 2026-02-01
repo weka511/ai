@@ -63,16 +63,28 @@ if __name__ == '__main__':
     a,b = x.shape
     mask = create_mask(mask_file=args.mask,data=args.data,size=args.size).reshape(-1)
     exemplar_indices = indices[0,:]
-    Exemplars = [ x[i,:] for i in exemplar_indices]
-    mm = 5
-    k = 1
-    for i in range(len(Exemplars)):
-        ax = fig.add_subplot(len(Exemplars), mm,k)
-        ax.imshow(Exemplars[i].reshape(28,28))
-        ax.axis('off')
-        k += mm
+    Exemplars0 = [ x[i,:] for i in exemplar_indices]
+    Exemplars = np.zeros((10,28*28))
+    for i in range(10):
+        for j in range(28*28):
+            Exemplars[i,j] = Exemplars0[i][j]
+    MI = np.zeros((10,10))
+    for i in range(10):
+        MI[i] = mutual_info_classif(Exemplars.T,Exemplars[i,:])
+    ax = fig.add_subplot(1,1,1)
+    heatmap_img = ax.imshow(MI, cmap='Blues', interpolation='nearest')
+    fig.colorbar(heatmap_img, orientation='vertical')
 
-
+    # m01 = mutual_info_classif(Exemplars[0],Exemplars[1])
+    # mm = 5
+    # k = 1
+    # for i in range(len(Exemplars)):
+        # ax = fig.add_subplot(len(Exemplars), mm,k)
+        # ax.imshow(Exemplars[i].reshape(28,28))
+        # ax.axis('off')
+        # k += mm
+    # m00 = mutual_info_classif(Exemplars[0],Exemplars[0])
+    # m01 = mutual_info_classif(Exemplars[0],Exemplars[1])
     fig.tight_layout(pad=2,h_pad=2,w_pad=2)
     fig.savefig(join(args.figs,Path(__file__).stem))
 
