@@ -4,7 +4,6 @@ Code written to understand Karl Friston on Active Inference
 
 ## Programs based on [Parr, Pezzulo, Friston 2022 Textbook](https://direct.mit.edu/books/oa-monograph/5299/Active-InferenceThe-Free-Energy-Principle-in-Mind)
 
-
 File|Description
 -------------------|---------------------------------------------------------------------------------------------------
 hmm.py|Hidden Markove Model Example from Section 7-2
@@ -30,31 +29,7 @@ Folder|Description
 bogacz|Code based on[A tutorial on the free-energy framework for modelling perception and learning, by Rafal Bogacz](https://www.sciencedirect.com/science/article/pii/S0022249615000759)
 pymdp_demos|Various pydmp demos
 step_by_step|[A Step-by-Step Tutorial on Active Inference and its Application to Empirical Data](https://www.researchgate.net/publication/348153427_A_Step-by-Step_Tutorial_on_Active_Inference_and_its_Application_to_Empirical_Data)
-
-## [Life as we Know it](https://royalsocietypublishing.org/doi/10.1098/rsif.2013.0475)
-
-File|Description
--------------------|---------------------------------------------------------------------------------------------------
-ai.bib|Bibliography
-ai.tex|Derivations of equations
-selforg.py|Replication of Figure 2, Self Organization and the emergence of macroscopic behaviour, from Friston & Ao, [Free Energy, Value, and Attractor](https://www.hindawi.com/journals/cmmm/2012/937860/)
-huygens.py|Test for Huyghens oscillator in selforg.py
-
-## ODE solvers
-
-File  | Remarks |
----------------|-------------------------------------------------------------------------------------------
-euler.py|Euler's method
-rk4.py|Workhorse Runge-Kutta 4th order
-sde.py|Euler-Maruyama method
-
-## Miscellaneous
-
-File  | Remarks |
----------------|-------------------------------------------------------------------------------------------
-ai.py| Common code for my Active Inference project
-ai.wpr|Project for Python Code
-template.py|Template for creating additional programs
+lawki|[Life as we Know it](https://royalsocietypublishing.org/doi/10.1098/rsif.2013.0475)
 
 ## The code has been developed and tested using the following versions of Python and its libraries.
 
