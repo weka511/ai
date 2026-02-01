@@ -19,7 +19,7 @@ The inspiration comes from the following papers by Friston et al:
 File|Description
 -------------------------------------|-----------------------------------------------------------------------------------------
 eda.py|Exploratory Data Analysis for MNIST
-eda_mi.py|Exploratory Data Analysis for MNIST: figure out variability of mutual information withn and between classes
+eda_mi.py|Exploratory Data Analysis for MNIST: figure out variability of mutual information within and between classes
 establish_subset.py|Extract subsets of MNIST to facilitate replication
 establish_most_informative_pixels.py|Determine which pixels are most relevant to classifying images
 mnist.py|Functions for accessing MNIST data
