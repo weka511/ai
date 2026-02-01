@@ -59,7 +59,8 @@ if __name__ == '__main__':
     (x_train, _), _ = mnist_dataloader.load_data()
     x = columnize(x_train)
 
-    mask = create_mask(mask_file=args.mask,data=args.data,size=args.size).reshape(-1)
+    mask,mask_text = create_mask(mask_file=args.mask,data=args.data,size=args.size)
+    mask = mask.reshape(-1)
     x = np.multiply(x,mask)
     m,n = indices.shape  # images,classes
     npairs = min(m,args.npairs)
@@ -79,11 +80,9 @@ if __name__ == '__main__':
         ax.plot(0.5*(bins[:-1] + bins[1:]), frequencies,label=str(i_class))
     ax.set_xlabel('Mutual Information')
     ax.set_ylabel('Frequency')
-    ax.set_title(f'Mutual Information within classes based on {128} pairs')
+    ax.set_title(f'Mutual Information within classes based on {128} pairs, {mask_text}')
     ax.legend(title='Digit classes')
     fig.savefig(join(args.figs,Path(__file__).stem))
-
-
 
     elapsed = time() - start
     minutes = int(elapsed/60)

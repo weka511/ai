@@ -71,7 +71,7 @@ if __name__ == '__main__':
     mnist_dataloader = MnistDataloader.create(data=args.data)
     (x_train, _), _ = mnist_dataloader.load_data()
     x_train = np.array(x_train)
-    mask = create_mask(mask_file=args.mask,data=args.data,size=args.size)
+    mask,_ = create_mask(mask_file=args.mask,data=args.data,size=args.size)
 
     for k,img in generate_images(x_train,indices,n=n,m=m,size=args.size):
         ax = fig.add_subplot(n,m,k)

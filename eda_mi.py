@@ -95,7 +95,8 @@ if __name__ == '__main__':
     (x_train, _), _ = mnist_dataloader.load_data()
     x = columnize(x_train)
 
-    mask = create_mask(mask_file=args.mask,data=args.data,size=args.size).reshape(-1)
+    mask,_ = create_mask(mask_file=args.mask,data=args.data,size=args.size)
+    mask = mask.reshape(-1)
     x = np.multiply(x,mask)
     Exemplars = create_exemplars(indices,x)
     MI_between_classes = np.zeros((n_classes,n_classes))

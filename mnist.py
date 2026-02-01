@@ -104,12 +104,16 @@ def create_mask(mask_file=None,data='../data',size=28):
         mask_file   File name
         data        Location for storing data files
         size        Mask will be size x size pixels
+
+    Returns:
+        An array containing the actual mask
+        Text showing mask file name
     '''
-    if mask_file == None:  return np.ones((size,size))
+    if mask_file == None:  return np.ones((size,size)),'no mask'
     mask_path = Path(join(data, mask_file)).with_suffix('.npy')
     product = np.load(mask_path)
     print (f'Loaded mask from {mask_path}')
-    return product
+    return product,f'Mask = {mask_file}'
 
 def columnize(x):
     '''
