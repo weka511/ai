@@ -37,6 +37,9 @@ class Style(object):
         self.exemplar_index = exemplar_index
         self.indices = [exemplar_index]
 
+    def __len__(self):
+        return len(self.indices)
+
     def add(self,new_index):
         self.indices.append(new_index)
 
@@ -44,6 +47,9 @@ class StyleList(object):
     def  __init__(self,x_class):
         self.styles = []
         self.x_class = x_class
+
+    def __len__(self):
+        return len(self.styles)
 
     def add(self,style):
         self.styles.append(style)
@@ -72,6 +78,7 @@ def parse_args():
     parser.add_argument('--size', default=28, type=int, help='Number of row/cols in each image: shape will be will be mxm')
     parser.add_argument('--classes',default=list(range(10)),type=int,nargs='+',help='List of digit classes')
     parser.add_argument('--bins', default=12, type=int, help='Number of bins for histograms')
+    parser.add_argument('--mi_threshold', default = 0.1,type=float)
     return parser.parse_args()
 
 if __name__ == '__main__':
@@ -82,7 +89,6 @@ if __name__ == '__main__':
     start = time()
     args = parse_args()
     rng = np.random.default_rng()
-    fig = figure(figsize=(8, 8))
     indices = np.load(join(args.data,args.indices)).astype(int)
     n_examples,n_classes = indices.shape
 
@@ -96,23 +102,24 @@ if __name__ == '__main__':
     m,n = indices.shape  # images,classes
 
     assert n == 10
-    ax = fig.add_subplot(1,1,1)
-    threshold = 0.1
+
     for i_class in args.classes:
         print (f'Class {i_class}')
+        fig = figure(figsize=(8, 8))
         x_class = x[indices[:,i_class],:]   # All vectors in this digit-class
         style_list = StyleList(x_class)
-        for j in range(m):
+        for j in range(n):  # n
             matching_style,mi = style_list.get_best_match(j)
-            if matching_style == None or mi < threshold:
+            if matching_style == None or mi < args.mi_threshold:
                 style_list.add(Style(j))
-                print (j)
             else:
                 matching_style.add(j)
-                print (j,matching_style.exemplar_index)
 
-
-    # fig.savefig(join(args.figs,Path(__file__).stem))
+        ax1 = fig.add_subplot(1,1,1)
+        ax1.hist([len(style) for style in style_list.styles])
+        ax1.set_title(f'Lengths of style for {len(style_list)} styles')
+        fig.suptitle(f'Digit Class = {i_class}, threshold={args.mi_threshold}')
+        fig.savefig(join(args.figs,Path(__file__).stem + str(i_class)))
 
     elapsed = time() - start
     minutes = int(elapsed/60)
