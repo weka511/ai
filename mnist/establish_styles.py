@@ -44,6 +44,19 @@ class Style(object):
         self.indices.append(new_index)
 
 class StyleList(object):
+
+    @staticmethod
+    def build(x,i_class,n=10,threshold=0.1):
+        x_class = x[indices[:,i_class],:]   # All vectors in this digit-class
+        style_list = StyleList(x_class)
+        for j in range(n):
+            matching_style,mi = style_list.get_best_match(j)
+            if matching_style == None or mi < args.threshold:
+                style_list.add(Style(j))
+            else:
+                matching_style.add(j)
+        return style_list
+
     def  __init__(self,x_class):
         self.styles = []
         self.x_class = x_class
@@ -78,7 +91,7 @@ def parse_args():
     parser.add_argument('--size', default=28, type=int, help='Number of row/cols in each image: shape will be will be mxm')
     parser.add_argument('--classes',default=list(range(10)),type=int,nargs='+',help='List of digit classes')
     parser.add_argument('--bins', default=12, type=int, help='Number of bins for histograms')
-    parser.add_argument('--mi_threshold', default = 0.1,type=float)
+    parser.add_argument('--threshold', default = 0.1,type=float)
     return parser.parse_args()
 
 if __name__ == '__main__':
@@ -105,20 +118,12 @@ if __name__ == '__main__':
 
     for i_class in args.classes:
         print (f'Class {i_class}')
+        style_list = StyleList.build(x,i_class,n=10,threshold= args.threshold)
         fig = figure(figsize=(8, 8))
-        x_class = x[indices[:,i_class],:]   # All vectors in this digit-class
-        style_list = StyleList(x_class)
-        for j in range(n):  # n
-            matching_style,mi = style_list.get_best_match(j)
-            if matching_style == None or mi < args.mi_threshold:
-                style_list.add(Style(j))
-            else:
-                matching_style.add(j)
-
         ax1 = fig.add_subplot(1,1,1)
         ax1.hist([len(style) for style in style_list.styles])
         ax1.set_title(f'Lengths of style for {len(style_list)} styles')
-        fig.suptitle(f'Digit Class = {i_class}, threshold={args.mi_threshold}')
+        fig.suptitle(f'Digit Class = {i_class}, threshold={args.threshold}')
         fig.savefig(join(args.figs,Path(__file__).stem + str(i_class)))
 
     elapsed = time() - start
