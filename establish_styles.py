@@ -29,6 +29,38 @@ from seaborn import lineplot
 from sklearn.feature_selection import mutual_info_classif
 from mnist import MnistDataloader, create_mask,columnize
 
+class Style(object):
+    '''
+    This class assigns images to Styles
+    '''
+    def __init__(self,exemplar_index):
+        self.exemplar_index = exemplar_index
+        self.indices = [exemplar_index]
+
+    def add(self,new_index):
+        self.indices.append(new_index)
+
+class StyleList(object):
+    def  __init__(self,x_class):
+        self.styles = []
+        self.x_class = x_class
+
+    def add(self,style):
+        self.styles.append(style)
+
+    def get_best_match(self,index):
+        matching_style = None
+        mi = 0
+        X = self.x_class[index,:].reshape(-1,1)
+        for i in range(len(self.styles)):
+            candidate_style = self.styles[i]
+            y = self.x_class[candidate_style.exemplar_index]
+            mi_canditate = mutual_info_classif(X,y)
+            if mi_canditate > mi:
+                mi = mi_canditate
+                matching_style = candidate_style
+        return  matching_style,mi
+
 def parse_args():
     parser = ArgumentParser(__doc__)
     parser.add_argument('--show', default=False, action='store_true', help='Controls whether plot will be displayed')
@@ -62,12 +94,23 @@ if __name__ == '__main__':
     mask = mask.reshape(-1)
     x = np.multiply(x,mask)
     m,n = indices.shape  # images,classes
-    npairs = min(m,args.npairs)
-    bins = np.linspace(0,1,num=args.bins+1)
+
     assert n == 10
     ax = fig.add_subplot(1,1,1)
+    threshold = 0.1
     for i_class in args.classes:
         print (f'Class {i_class}')
+        x_class = x[indices[:,i_class],:]   # All vectors in this digit-class
+        style_list = StyleList(x_class)
+        for j in range(m):
+            matching_style,mi = style_list.get_best_match(j)
+            if matching_style == None or mi < threshold:
+                style_list.add(Style(j))
+                print (j)
+            else:
+                matching_style.add(j)
+                print (j,matching_style.exemplar_index)
+
 
     # fig.savefig(join(args.figs,Path(__file__).stem))
 
