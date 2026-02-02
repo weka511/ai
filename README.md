@@ -20,7 +20,7 @@ File  | Remarks |
 ---------------|-------------------------------------------------------------------------------------------
 ai.bib|Bibliography
 ai.tex|Derivations of equations
-ai.py| Common code for my Active Inference project
+
 ai.wpr|Project for Python Code
 template.py|Template for creating additional programs
 
