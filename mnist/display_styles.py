@@ -16,7 +16,7 @@
 # along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.
 
 '''
-    Establish styles within classes using mutual information
+    Display representatives of all styles created by establish_styles.py
 '''
 from argparse import ArgumentParser
 from os.path import join
@@ -42,7 +42,7 @@ def parse_args():
     parser.add_argument('--classes', default=list(range(10)), type=int, nargs='+', help='List of digit classes')
     parser.add_argument('--bins', default=12, type=int, help='Number of bins for histograms')
     parser.add_argument('--threshold', default=0.1, type=float,help='Include image in same style if mutual information exceeds threshold')
-    parser.add_argument('--out', default=Path(__file__).stem, help='Location for storing styles')
+    parser.add_argument('--styles', default=Path(__file__).stem, help='Location where styles have been stored')
     return parser.parse_args()
 
 
@@ -68,25 +68,9 @@ if __name__ == '__main__':
 
     assert n == 10
 
-    for i_class in args.classes:
-        style_list = StyleList.build(x, indices,
-                                     i_class=i_class,
-                                     nimages=m if args.nimages == None else args.nimages,
-                                     threshold=args.threshold)
-        print(f'Styles for Class {i_class} has length length= {len(style_list)}')
-        fig = figure(figsize=(8, 8))
-        ax1 = fig.add_subplot(1, 1, 1)
-        ax1.hist([len(style) for style in style_list.styles])
-        ax1.set_title(f'Lengths of style for {len(style_list)} styles')
-        fig.suptitle(f'Digit Class = {i_class}, threshold={args.threshold}')
-        fig.savefig(join(args.figs, Path(__file__).stem + str(i_class)))
-        file = Path(join(args.data, args.out+str(i_class))).with_suffix('.npy')
-        style_list.save(file)
-
-    elapsed = time() - start
-    minutes = int(elapsed / 60)
-    seconds = elapsed - 60 * minutes
-    print(f'Elapsed Time {minutes} m {seconds:.2f} s')
-
-    if args.show:
-        show()
+    for i in args.classes:
+        Allocation = np.load(join(args.data, args.styles+str(i)+'.npy')).astype(int)
+        m1,n1 = Allocation.shape
+        for j in range(m1):
+            for k in min(n1,args.nimages):
+                pass
