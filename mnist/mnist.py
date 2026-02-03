@@ -129,6 +129,31 @@ def columnize(x):
     x_columnized_img_no_last = np.reshape(x_img_no_last, (n_rows*n_cols, -1))
     return np.transpose(x_columnized_img_no_last,[1,0])
 
+def create_indices(y, nclasses=10, nimages=1000, rng=np.random.default_rng()):
+    '''
+    Create list of indices for data  ensuring that there are
+    precisely nimages images from each class.
+
+    Parameters:
+        y          Vector of labels
+        rng        Random number generator
+        nclasses   Number of classes
+        nimages    Number of images per class
+    '''
+    product = np.zeros((nimages, nclasses), dtype=int)
+    class_counts = np.zeros((nclasses), dtype=int)
+    for k in rng.permutation(len(y)):
+        image_class = y[k]
+        i = class_counts[image_class]
+        if i < nimages:
+            product[i, image_class] = k
+            class_counts[image_class] += 1
+        else:
+            if np.min(class_counts) == nimages:
+                return product
+
+    raise RuntimeError(f'Failed to find {nimages} labels in {nclasses} classes')
+
 if __name__ == '__main__':
     rc('font', **{'family': 'serif',
                   'serif': ['Palatino'],
