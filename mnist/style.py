@@ -1,0 +1,76 @@
+#!/usr/bin/env python
+
+# Copyright (C) 2026 Simon Crase  simon@greenweaves.nz
+
+# This is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# This software is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.
+
+'''
+    Establish styles within classes using mutual information
+'''
+
+from sklearn.feature_selection import mutual_info_classif
+
+class Style(object):
+    '''
+    This class assigns images to Styles
+    '''
+    def __init__(self,exemplar_index):
+        self.exemplar_index = exemplar_index
+        self.indices = [exemplar_index]
+
+    def __len__(self):
+        return len(self.indices)
+
+    def add(self,new_index):
+        self.indices.append(new_index)
+
+class StyleList(object):
+    '''
+    This class manages the collextion of all Styles for one digit class
+    '''
+    @staticmethod
+    def build(x,indices,i_class=0,nimages=10,threshold=0.1):
+        x_class = x[indices[:,i_class],:]   # All vectors in this digit-class
+        style_list = StyleList(x_class)
+        for j in range(nimages):
+            matching_style,mi = style_list.get_best_match(j)
+            if matching_style == None or mi < threshold:
+                style_list.add(Style(j))
+            else:
+                matching_style.add(j)
+        return style_list
+
+    def  __init__(self,x_class):
+        self.styles = []
+        self.x_class = x_class
+
+    def __len__(self):
+        return len(self.styles)
+
+    def add(self,style):
+        self.styles.append(style)
+
+    def get_best_match(self,index):
+        style = None
+        mi = 0
+        X = self.x_class[index,:].reshape(-1,1)
+        for i in range(len(self.styles)):
+            candidate_style = self.styles[i]
+            y = self.x_class[candidate_style.exemplar_index,:]
+            mi_canditate = mutual_info_classif(X,y)
+            if mi_canditate > mi:
+                mi = mi_canditate
+                style = candidate_style
+
+        return  style,mi

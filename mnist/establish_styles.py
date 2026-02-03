@@ -26,7 +26,7 @@ from matplotlib.pyplot import figure, show
 from matplotlib import rc, cm
 import numpy as np
 from seaborn import lineplot
-from mnist import MnistDataloader, create_mask,columnize
+from mnist import MnistDataloader, create_mask, columnize
 from style import StyleList
 
 
@@ -36,13 +36,14 @@ def parse_args():
     parser.add_argument('--figs', default='./figs', help='Location for storing plot files')
     parser.add_argument('--data', default='./data', help='Location for storing data files')
     parser.add_argument('--indices', default='establish_subset.npy', help='Location for storing data files')
-    parser.add_argument('--npairs', default=128, type=int, help='Number of pairs for each class')
-    parser.add_argument('--mask',default=None,help='Name of mask file (omit for no mask)')
+    parser.add_argument('--nimages', default=None, type=int, help='Maximum number of images for each class')
+    parser.add_argument('--mask', default=None, help='Name of mask file (omit for no mask)')
     parser.add_argument('--size', default=28, type=int, help='Number of row/cols in each image: shape will be will be mxm')
-    parser.add_argument('--classes',default=list(range(10)),type=int,nargs='+',help='List of digit classes')
+    parser.add_argument('--classes', default=list(range(10)), type=int, nargs='+', help='List of digit classes')
     parser.add_argument('--bins', default=12, type=int, help='Number of bins for histograms')
-    parser.add_argument('--threshold', default = 0.1,type=float)
+    parser.add_argument('--threshold', default=0.1, type=float)
     return parser.parse_args()
+
 
 if __name__ == '__main__':
     rc('font', **{'family': 'serif',
@@ -52,34 +53,37 @@ if __name__ == '__main__':
     start = time()
     args = parse_args()
     rng = np.random.default_rng()
-    indices = np.load(join(args.data,args.indices)).astype(int)
-    n_examples,n_classes = indices.shape
+    indices = np.load(join(args.data, args.indices)).astype(int)
+    n_examples, n_classes = indices.shape
 
     mnist_dataloader = MnistDataloader.create(data=args.data)
     (x_train, _), _ = mnist_dataloader.load_data()
     x = columnize(x_train)
 
-    mask,mask_text = create_mask(mask_file=args.mask,data=args.data,size=args.size)
+    mask, mask_text = create_mask(mask_file=args.mask, data=args.data, size=args.size)
     mask = mask.reshape(-1)
-    x = np.multiply(x,mask)
-    m,n = indices.shape  # images,classes
+    x = np.multiply(x, mask)
+    m, n = indices.shape  # images,classes
 
     assert n == 10
 
     for i_class in args.classes:
-        print (f'Class {i_class}')
-        style_list = StyleList.build(x,indices,i_class=i_class,n=10,threshold= args.threshold)
+        print(f'Class {i_class}')
+        style_list = StyleList.build(x, indices,
+                                     i_class=i_class,
+                                     nimages=m if args.nimages == None else args.nimages,
+                                     threshold=args.threshold)
         fig = figure(figsize=(8, 8))
-        ax1 = fig.add_subplot(1,1,1)
+        ax1 = fig.add_subplot(1, 1, 1)
         ax1.hist([len(style) for style in style_list.styles])
         ax1.set_title(f'Lengths of style for {len(style_list)} styles')
         fig.suptitle(f'Digit Class = {i_class}, threshold={args.threshold}')
-        fig.savefig(join(args.figs,Path(__file__).stem + str(i_class)))
+        fig.savefig(join(args.figs, Path(__file__).stem + str(i_class)))
 
     elapsed = time() - start
-    minutes = int(elapsed/60)
-    seconds = elapsed - 60*minutes
-    print (f'Elapsed Time {minutes} m {seconds:.2f} s')
+    minutes = int(elapsed / 60)
+    seconds = elapsed - 60 * minutes
+    print(f'Elapsed Time {minutes} m {seconds:.2f} s')
 
     if args.show:
         show()
