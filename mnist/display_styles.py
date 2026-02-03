@@ -54,7 +54,7 @@ if __name__ == '__main__':
     start = time()
     args = parse_args()
     rng = np.random.default_rng()
-    indices = np.load(join(args.data, args.indices)).astype(int)
+    indices = np.load(join(args.data, args.indices)).astype(int) # no need as already selected
     n_examples, n_classes = indices.shape
 
     mnist_dataloader = MnistDataloader.create(data=args.data)
@@ -69,8 +69,21 @@ if __name__ == '__main__':
     assert n == 10
 
     for i in args.classes:
+        fig = figure(figsize=(8, 8))
         Allocation = np.load(join(args.data, args.styles+str(i)+'.npy')).astype(int)
         m1,n1 = Allocation.shape
+        if args.nimages != None:
+            n1 = min(n1,args.nimages)
         for j in range(m1):
-            for k in min(n1,args.nimages):
-                pass
+            for k in range(n1):
+                ax = fig.add_subplot(m1, n1, j*n1 + k + 1)
+                img = x_train[Allocation[j,k]]
+                ax.imshow(img)
+
+    elapsed = time() - start
+    minutes = int(elapsed / 60)
+    seconds = elapsed - 60 * minutes
+    print(f'Elapsed Time {minutes} m {seconds:.2f} s')
+
+    if args.show:
+        show()
