@@ -15,3 +15,4 @@ establish_styles.py|Establish styles within classes using mutual information
 establish_subset.py|Extract subsets of MNIST to facilitate replication
 establish_most_informative_pixels.py|Determine which pixels are most relevant to classifying images
 mnist.py|Functions for accessing MNIST data
+style.py|Classes to manange character styles

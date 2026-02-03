@@ -26,59 +26,9 @@ from matplotlib.pyplot import figure, show
 from matplotlib import rc, cm
 import numpy as np
 from seaborn import lineplot
-from sklearn.feature_selection import mutual_info_classif
 from mnist import MnistDataloader, create_mask,columnize
+from style import StyleList
 
-class Style(object):
-    '''
-    This class assigns images to Styles
-    '''
-    def __init__(self,exemplar_index):
-        self.exemplar_index = exemplar_index
-        self.indices = [exemplar_index]
-
-    def __len__(self):
-        return len(self.indices)
-
-    def add(self,new_index):
-        self.indices.append(new_index)
-
-class StyleList(object):
-
-    @staticmethod
-    def build(x,i_class,n=10,threshold=0.1):
-        x_class = x[indices[:,i_class],:]   # All vectors in this digit-class
-        style_list = StyleList(x_class)
-        for j in range(n):
-            matching_style,mi = style_list.get_best_match(j)
-            if matching_style == None or mi < args.threshold:
-                style_list.add(Style(j))
-            else:
-                matching_style.add(j)
-        return style_list
-
-    def  __init__(self,x_class):
-        self.styles = []
-        self.x_class = x_class
-
-    def __len__(self):
-        return len(self.styles)
-
-    def add(self,style):
-        self.styles.append(style)
-
-    def get_best_match(self,index):
-        matching_style = None
-        mi = 0
-        X = self.x_class[index,:].reshape(-1,1)
-        for i in range(len(self.styles)):
-            candidate_style = self.styles[i]
-            y = self.x_class[candidate_style.exemplar_index]
-            mi_canditate = mutual_info_classif(X,y)
-            if mi_canditate > mi:
-                mi = mi_canditate
-                matching_style = candidate_style
-        return  matching_style,mi
 
 def parse_args():
     parser = ArgumentParser(__doc__)
@@ -118,7 +68,7 @@ if __name__ == '__main__':
 
     for i_class in args.classes:
         print (f'Class {i_class}')
-        style_list = StyleList.build(x,i_class,n=10,threshold= args.threshold)
+        style_list = StyleList.build(x,indices,i_class=i_class,n=10,threshold= args.threshold)
         fig = figure(figsize=(8, 8))
         ax1 = fig.add_subplot(1,1,1)
         ax1.hist([len(style) for style in style_list.styles])
