@@ -41,7 +41,8 @@ def parse_args():
     parser.add_argument('--size', default=28, type=int, help='Number of row/cols in each image: shape will be will be mxm')
     parser.add_argument('--classes', default=list(range(10)), type=int, nargs='+', help='List of digit classes')
     parser.add_argument('--bins', default=12, type=int, help='Number of bins for histograms')
-    parser.add_argument('--threshold', default=0.1, type=float)
+    parser.add_argument('--threshold', default=0.1, type=float,help='Include image in same style if mutual information exceeds threshold')
+    parser.add_argument('--out', default=Path(__file__).stem, help='Location for storing indices')
     return parser.parse_args()
 
 
@@ -68,17 +69,19 @@ if __name__ == '__main__':
     assert n == 10
 
     for i_class in args.classes:
-        print(f'Class {i_class}')
         style_list = StyleList.build(x, indices,
                                      i_class=i_class,
                                      nimages=m if args.nimages == None else args.nimages,
                                      threshold=args.threshold)
+        print(f'Styles for Class {i_class} has length length= {len(style_list)}')
         fig = figure(figsize=(8, 8))
         ax1 = fig.add_subplot(1, 1, 1)
         ax1.hist([len(style) for style in style_list.styles])
         ax1.set_title(f'Lengths of style for {len(style_list)} styles')
         fig.suptitle(f'Digit Class = {i_class}, threshold={args.threshold}')
         fig.savefig(join(args.figs, Path(__file__).stem + str(i_class)))
+        file = Path(join(args.data, args.out+str(i_class))).with_suffix('.npy')
+        style_list.save(file)
 
     elapsed = time() - start
     minutes = int(elapsed / 60)

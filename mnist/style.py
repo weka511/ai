@@ -19,6 +19,7 @@
     Establish styles within classes using mutual information
 '''
 
+import numpy as np
 from sklearn.feature_selection import mutual_info_classif
 
 class Style(object):
@@ -74,3 +75,14 @@ class StyleList(object):
                 style = candidate_style
 
         return  style,mi
+
+    def save(self,file):
+        m = len(self.styles)
+        n = max(len(style) for style in self.styles)
+        Allocations = -1 * np.ones((m,n),dtype=int)
+        for i,style in enumerate(self.styles):
+            for j,index in enumerate(style.indices):
+                Allocations[i,j] = index
+        np.save(file,Allocations)
+        print (f'Saved styles in {file}')
+
