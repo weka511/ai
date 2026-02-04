@@ -20,7 +20,7 @@
 '''
 
 import numpy as np
-from mnist import get_mi
+from mnist import get_mutual_information
 
 class Style(object):
     '''
@@ -72,7 +72,7 @@ class StyleList(object):
         for i in range(len(self.styles)):
             candidate_style = self.styles[i]
             y = self.x_class[candidate_style.exemplar_index,:]
-            mi_canditate = get_mi(x,y)
+            mi_canditate = get_mutual_information(x,y)
             if mi_canditate > mi_best_match:
                 mi_best_match = mi_canditate
                 style_best_match = candidate_style

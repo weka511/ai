@@ -159,7 +159,7 @@ def create_indices(y, nclasses=10, nimages=1000, rng=np.random.default_rng()):
 
     raise RuntimeError(f'Failed to find {nimages} labels in {nclasses} classes')
 
-def get_mi(x,y):
+def get_mutual_information(x,y):
     '''
     Calculate mutual information between two vectors. This is a wrapper for
     sklearn.feature_selection.mutual_info_classif, which expects X to be a matrix
