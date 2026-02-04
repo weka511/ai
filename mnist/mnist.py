@@ -27,6 +27,7 @@ from matplotlib.pyplot import figure, show
 from matplotlib import rc, cm
 from skimage.exposure import equalize_hist
 from skimage.transform import resize
+from sklearn.feature_selection import mutual_info_classif
 import kagglehub
 
 
@@ -157,6 +158,17 @@ def create_indices(y, nclasses=10, nimages=1000, rng=np.random.default_rng()):
                 return product
 
     raise RuntimeError(f'Failed to find {nimages} labels in {nclasses} classes')
+
+def get_mi(x,y):
+    '''
+    Calculate mutual information between two vectors. This is a wrapper for
+    sklearn.feature_selection.mutual_info_classif, which expects X to be a matrix
+
+    Parameters:
+        x     A vector
+        y     Another vector
+    '''
+    return mutual_info_classif(x.reshape(-1,1),y)
 
 if __name__ == '__main__':
     rc('font', **{'family': 'serif',

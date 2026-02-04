@@ -20,7 +20,7 @@
 '''
 
 import numpy as np
-from sklearn.feature_selection import mutual_info_classif
+from mnist import get_mi
 
 class Style(object):
     '''
@@ -36,16 +36,7 @@ class Style(object):
     def add(self,new_index):
         self.indices.append(new_index)
 
-def get_mi(x,y):
-    '''
-    Calculate mutual information between two vectors. This is a wrapper for
-    sklearn.feature_selection.mutual_info_classif, which expects X to be a matrix
 
-    Parameters:
-        x     A vector
-        y     Another vector
-    '''
-    return mutual_info_classif(x.reshape(-1,1),y)
 
 class StyleList(object):
     '''
