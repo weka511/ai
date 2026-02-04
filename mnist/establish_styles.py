@@ -35,8 +35,8 @@ def parse_args():
     parser.add_argument('--show', default=False, action='store_true', help='Controls whether plot will be displayed')
     parser.add_argument('--figs', default='./figs', help='Location for storing plot files')
     parser.add_argument('--data', default='./data', help='Location for storing data files')
-    parser.add_argument('--indices', default='establish_subset.npy', help='Location for storing data files')
-    parser.add_argument('--nimages', default=None, type=int, help='Maximum number of images for each class')
+    parser.add_argument('--indices', default='establish_subset.npy', help='Location where index files have been saved')
+    parser.add_argument('--nimages', default=float('inf'), type=int, help='Maximum number of images for each class')
     parser.add_argument('--mask', default=None, help='Name of mask file (omit for no mask)')
     parser.add_argument('--size', default=28, type=int, help='Number of row/cols in each image: shape will be will be mxm')
     parser.add_argument('--classes', default=list(range(10)), type=int, nargs='+', help='List of digit classes')
@@ -71,9 +71,9 @@ if __name__ == '__main__':
     for i_class in args.classes:
         style_list = StyleList.build(x, indices,
                                      i_class=i_class,
-                                     nimages=m if args.nimages == None else args.nimages,
+                                     nimages=min(m,args.nimages),
                                      threshold=args.threshold)
-        print(f'Styles for Class {i_class} has length length= {len(style_list)}')
+        print(f'Styles for Class {i_class} has length= {len(style_list)}')
         fig = figure(figsize=(8, 8))
         ax1 = fig.add_subplot(1, 1, 1)
         ax1.hist([len(style) for style in style_list.styles])

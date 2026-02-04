@@ -139,6 +139,10 @@ def create_indices(y, nclasses=10, nimages=1000, rng=np.random.default_rng()):
         rng        Random number generator
         nclasses   Number of classes
         nimages    Number of images per class
+
+    Returns:
+        An array with one column per digit class, one
+        row for sequnce within class
     '''
     product = np.zeros((nimages, nclasses), dtype=int)
     class_counts = np.zeros((nclasses), dtype=int)

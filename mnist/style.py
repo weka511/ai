@@ -36,6 +36,17 @@ class Style(object):
     def add(self,new_index):
         self.indices.append(new_index)
 
+def get_mi(x,y):
+    '''
+    Calculate mutual information between two vectors. This is a wrapper for
+    sklearn.feature_selection.mutual_info_classif, which expects X to be a matrix
+
+    Parameters:
+        x     A vector
+        y     Another vector
+    '''
+    return mutual_info_classif(x.reshape(-1,1),y)
+
 class StyleList(object):
     '''
     This class manages the collection of all Styles for one digit class
@@ -43,14 +54,14 @@ class StyleList(object):
     @staticmethod
     def build(x,indices,i_class=0,nimages=10,threshold=0.1):
         x_class = x[indices[:,i_class],:]   # All vectors in this digit-class
-        style_list = StyleList(x_class)
+        product = StyleList(x_class)
         for j in range(nimages):
-            matching_style,mi = style_list.get_best_match(j)
+            matching_style,mi = product.get_best_match(j)
             if matching_style == None or mi < threshold:
-                style_list.add(Style(j))
+                product.add(Style(j))
             else:
                 matching_style.add(j)
-        return style_list
+        return product
 
     def  __init__(self,x_class):
         self.styles = []
@@ -63,18 +74,19 @@ class StyleList(object):
         self.styles.append(style)
 
     def get_best_match(self,index):
-        style = None
-        mi = 0
-        X = self.x_class[index,:].reshape(-1,1)
+        style_best_match = None
+        mi_best_match = -1
+        x = self.x_class[index,:]
+
         for i in range(len(self.styles)):
             candidate_style = self.styles[i]
             y = self.x_class[candidate_style.exemplar_index,:]
-            mi_canditate = mutual_info_classif(X,y)
-            if mi_canditate > mi:
-                mi = mi_canditate
-                style = candidate_style
+            mi_canditate = get_mi(x,y)
+            if mi_canditate > mi_best_match:
+                mi_best_match = mi_canditate
+                style_best_match = candidate_style
 
-        return  style,mi
+        return  style_best_match,mi_best_match
 
     def save(self,file):
         m = len(self.styles)

@@ -25,7 +25,6 @@ from time import time
 from matplotlib.pyplot import figure, show
 from matplotlib import rc, cm
 import numpy as np
-from seaborn import lineplot
 from mnist import MnistDataloader, create_mask, columnize
 from style import StyleList
 
@@ -35,7 +34,7 @@ def parse_args():
     parser.add_argument('--show', default=False, action='store_true', help='Controls whether plot will be displayed')
     parser.add_argument('--figs', default='./figs', help='Location for storing plot files')
     parser.add_argument('--data', default='./data', help='Location for storing data files')
-    parser.add_argument('--indices', default='establish_subset.npy', help='Location for storing data files')
+    parser.add_argument('--indices', default='establish_subset.npy', help='Location where index files have been saved')
     parser.add_argument('--nimages', default=None, type=int, help='Maximum number of images for each class')
     parser.add_argument('--mask', default=None, help='Name of mask file (omit for no mask)')
     parser.add_argument('--size', default=28, type=int, help='Number of row/cols in each image: shape will be will be mxm')
@@ -68,17 +67,18 @@ if __name__ == '__main__':
 
     assert n == 10
 
-    for i in args.classes:
+    for i_class in args.classes:
         fig = figure(figsize=(8, 8))
-        Allocation = np.load(join(args.data, args.styles+str(i)+'.npy')).astype(int)
+        x_class = x[indices[:,i_class],:]
+        Allocation = np.load(join(args.data, args.styles+str(i_class)+'.npy')).astype(int)
         m1,n1 = Allocation.shape
         if args.nimages != None:
             n1 = min(n1,args.nimages)
         for j in range(m1):
             for k in range(n1):
                 ax = fig.add_subplot(m1, n1, j*n1 + k + 1)
-                img = x_train[Allocation[j,k]]
-                ax.imshow(img)
+                img = x_class[Allocation[j,k]].reshape(args.size,args.size)
+                ax.imshow(img,cmap=cm.gray)
 
     elapsed = time() - start
     minutes = int(elapsed / 60)
