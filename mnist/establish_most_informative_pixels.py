@@ -36,7 +36,7 @@ def parse_args():
     parser.add_argument('--show', default=False, action='store_true', help='Controls whether plot will be displayed')
     parser.add_argument('--figs', default='./figs', help='Location for storing plot files')
     parser.add_argument('--data', default='./data', help='Location for storing data files')
-    parser.add_argument('--indices', default='establish_subset.npy', help='Location for storing data files')
+    parser.add_argument('--indices', default='establish_subset.npy', help='Location where index have been stored')
     parser.add_argument('--bins', default=17, type=int, help='Number of bins for histogram')
     parser.add_argument('--threshold',default=0.5, type=float,help='Used to cut off data that has too little information')
     parser.add_argument('--out',default='mask',help='Name of mask file.')
@@ -80,9 +80,9 @@ def create_entropies(images,selector,bins=20,m=32):
 
     return create_entropies_from_1d_images(create_1d_images())
 
-def cull(img,n,mu,sigma,min0=0,mask=False):
+def cull(img,n,mu,sigma,min0=0,clip=False):
     '''
-    Cull data and display
+    Cull data for display
 
     Parameters:
         img    An array of entropies, with one entry for each pixel
@@ -90,11 +90,12 @@ def cull(img,n,mu,sigma,min0=0,mask=False):
         mu     Mean entropy
         sigma  Standard deviation for entropy
         min0   Minimum entropy over all pixels
+        clip   Set to true to set pixels to 1 if they survive culling
         ax     Axis for displaying data
     '''
     product = np.copy(img)
     product[product < mu + n*sigma] = min0
-    if mask:
+    if clip:
         product[product >= mu + n*sigma] = 1
     return product
 
@@ -166,7 +167,7 @@ if __name__ == '__main__':
     sigma = np.std(entropies)
     min0 = np.min(entropies)
     img = np.reshape(entropies,(args.size,args.size)) # Issue 30
-    mask = cull(entropies,-args.threshold,mu,sigma,mask=True).reshape(args.size,args.size) # Issue 30
+    mask = cull(entropies,-args.threshold,mu,sigma,clip=True).reshape(args.size,args.size) # Issue 30
     file = Path(join(args.data, args.out)).with_suffix('.npy')
     np.save(file, mask)
 
