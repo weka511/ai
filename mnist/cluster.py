@@ -43,7 +43,7 @@ def parse_args():
     parser.add_argument('--bins', default=12, type=int, help='Number of bins for histograms')
     return parser.parse_args()
 
-def create_frequencies(x,npairs=128,m=1000):
+def create_frequencies(x,bins=[],npairs=128,m=1000):
     '''
     Generate a histogram of mutual information between pairs of images from the same digit class
 
@@ -52,15 +52,16 @@ def create_frequencies(x,npairs=128,m=1000):
         npairs    Number of pairs to select
         m         Number of images in class
     '''
-    MI = np.zeros((npairs))
-    for i in range(npairs):
-        K = rng.choice(m,size=2)
-        x_class = x[indices[K,i_class],:]
-        mi = mutual_info_classif(x_class.T,x_class[0,:])
-        MI[i] = mi[-1]
+    def create_mutual_info():
+        product = np.zeros((npairs))
+        for i in range(npairs):
+            K = rng.choice(m,size=2)
+            x_class = x[indices[K,i_class],:]
+            mi = mutual_info_classif(x_class.T,x_class[0,:])
+            product[i] = mi[-1]
+        return product
 
-    frequencies,_= np.histogram(MI,bins,density=True)
-    return frequencies
+    return np.histogram(create_mutual_info(),bins,density=True)[0]
 
 if __name__ == '__main__':
     rc('font', **{'family': 'serif',
@@ -88,11 +89,11 @@ if __name__ == '__main__':
     ax = fig.add_subplot(1,1,1)
     for i_class in args.classes:
         print (f'Class {i_class}')
-        ax.plot(0.5*(bins[:-1] + bins[1:]), create_frequencies(x,npairs=npairs,m=m),label=str(i_class))
+        ax.plot(0.5*(bins[:-1] + bins[1:]), create_frequencies(x,bins,npairs=npairs,m=m),label=str(i_class))
 
     ax.set_xlabel('Mutual Information')
     ax.set_ylabel('Frequency')
-    ax.set_title(f'Mutual Information within classes based on {128} pairs, {mask_text}')
+    ax.set_title(f'Mutual Information within classes based on {npairs} pairs, {mask_text}')
     ax.legend(title='Digit classes')
     fig.savefig(join(args.figs,Path(__file__).stem))
 

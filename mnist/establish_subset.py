@@ -18,8 +18,8 @@
 '''
     Extract subsets of MNIST to facilitate replication
 
-    This program generates a list of indices for data points ensuring that there are
-    precisely n points from each class.
+    This program generates a list of indices for data points ensuring
+    that there are a specified number of images from each class.
 '''
 
 from argparse import ArgumentParser

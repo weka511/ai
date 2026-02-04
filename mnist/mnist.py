@@ -168,7 +168,7 @@ def get_mutual_information(x,y):
         x     A vector
         y     Another vector
     '''
-    return mutual_info_classif(x.reshape(-1,1),y)
+    return mutual_info_classif(x[:, np.newaxis],y)
 
 if __name__ == '__main__':
     rc('font', **{'family': 'serif',

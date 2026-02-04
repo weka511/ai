@@ -73,7 +73,7 @@ if __name__ == '__main__':
                                      i_class=i_class,
                                      nimages=min(m,args.nimages),
                                      threshold=args.threshold)
-        print(f'Styles for Class {i_class} has length= {len(style_list)}')
+        print(f'Class {i_class} contains {len(style_list)} Styles')
         fig = figure(figsize=(8, 8))
         ax1 = fig.add_subplot(1, 1, 1)
         ax1.hist([len(style) for style in style_list.styles])
