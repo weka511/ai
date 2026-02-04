@@ -38,7 +38,7 @@ class Style(object):
 
 class StyleList(object):
     '''
-    This class manages the collextion of all Styles for one digit class
+    This class manages the collection of all Styles for one digit class
     '''
     @staticmethod
     def build(x,indices,i_class=0,nimages=10,threshold=0.1):
