@@ -28,6 +28,7 @@ from matplotlib import rc, cm
 import numpy as np
 from mnist import MnistDataloader, create_mask, columnize
 from sklearn.feature_selection import mutual_info_classif
+from skimage.transform import resize
 from style import StyleList
 
 class Command(ABC):
@@ -62,8 +63,8 @@ class Command(ABC):
         '''
         print (self.get_name(),strftime("%a, %d %b %Y %H:%M:%S +0000", localtime()))
         mnist_dataloader = MnistDataloader.create(data=self.args.data)
-        (x_train, _), _ = mnist_dataloader.load_data()
-        x = columnize(x_train)
+        (self.x_train, _), _ = mnist_dataloader.load_data()
+        x = columnize(self.x_train)
 
         mask, self.mask_text = create_mask(mask_file=self.args.mask, data=self.args.data, size=self.args.size)
         mask = mask.reshape(-1)
@@ -79,6 +80,77 @@ class Command(ABC):
         Execute command
         '''
         ...
+
+class EDA(Command):
+    '''
+        Exploratory Data Analysis for MNIST: plot some raw data, with and without masking
+    '''
+    def __init__(self):
+        super().__init__('Exploratory Data Analysis','eda')
+
+    def _execute(self):
+        m,n = 10,10  #FIXME
+        fig = figure(figsize=(20, 8))
+        for k,img in self.generate_images(n=n,m=m,size=args.size):
+            ax = fig.add_subplot(n,m,k)
+            ax.imshow(img, cmap=cm.Blues)
+            ax.axis('off')
+
+        fig.suptitle(('No mask' if args.mask == None
+                      else rf'Mask preserving {int(100*mask.sum()/(args.size*args.size))}\% of pixels'))
+
+        fig.tight_layout(pad=2,h_pad=2,w_pad=2)
+        fig.savefig(join(args.figs,Path(__file__).stem))
+
+    def generate_images(self,n=10,m=20,size=28):
+        '''
+        Used to iterate through all the images that need to be displayed
+
+        Parameters:
+            x          Data to be plotted
+            indices    Indices for selecting data
+            n          Number of classes
+            m          Number of images for each class
+            size       Size of image size x size
+        '''
+        x=np.array(self.x_train)
+        # self.indices,
+        k = 0
+        for i in range(n):
+            for j in range(m):
+                k += 1
+                yield k,resize(x[self.indices[j,i]],(size,size))
+
+
+class EDA_MI(Command):
+    '''
+        Display representatives of all styles created by establish_styles.py
+    '''
+    def __init__(self):
+        super().__init__('Display Styles','display-styles')
+
+    def _execute(self):
+        pass
+
+class EstablishPixels(Command):
+    '''
+        Display representatives of all styles created by establish_styles.py
+    '''
+    def __init__(self):
+        super().__init__('Display Styles','display-styles')
+
+    def _execute(self):
+        pass
+
+class EstablishSubsets(Command):
+    '''
+        Display representatives of all styles created by establish_styles.py
+    '''
+    def __init__(self):
+        super().__init__('Display Styles','display-styles')
+
+    def _execute(self):
+        pass
 
 class DisplayStyles(Command):
     '''
@@ -179,6 +251,7 @@ if __name__ == '__main__':
     rc('text', usetex=True)
     start = time()
     Command.build([
+        EDA(),
         DisplayStyles(),
         Cluster()
     ])
