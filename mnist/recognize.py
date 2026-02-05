@@ -91,8 +91,8 @@ class EDA(Command):
     def _execute(self):
         m,n = 10,10  #FIXME
         fig = figure(figsize=(20, 8))
-        for k,img in self.generate_images(n=n,m=m,size=args.size):
-            ax = fig.add_subplot(n,m,k)
+        for k,img in self.generate_images(n=n,m=args.nimages,size=args.size):
+            ax = fig.add_subplot(n,args.nimages,k)
             ax.imshow(img, cmap=cm.Blues)
             ax.axis('off')
 
@@ -113,8 +113,7 @@ class EDA(Command):
             m          Number of images for each class
             size       Size of image size x size
         '''
-        x=np.array(self.x_train)
-        # self.indices,
+        x = np.array(self.x_train)
         k = 0
         for i in range(n):
             for j in range(m):
@@ -229,7 +228,7 @@ def parse_args(command_names):
     parser.add_argument('--figs', default='./figs', help='Location for storing plot files')
     parser.add_argument('--data', default='./data', help='Location for storing data files')
     parser.add_argument('--indices', default='establish_subset.npy', help='Location where index files have been saved')
-    parser.add_argument('--nimages', default=None, type=int, help='Maximum number of images for each class')
+    parser.add_argument('--nimages', default=20, type=int, help='Maximum number of images for each class')
     parser.add_argument('--mask', default=None, help='Name of mask file (omit for no mask)')
     parser.add_argument('--size', default=28, type=int, help='Number of row/cols in each image: shape will be will be mxm')
     parser.add_argument('--classes', default=list(range(10)), type=int, nargs='+', help='List of digit classes')
