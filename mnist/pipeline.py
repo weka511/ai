@@ -26,7 +26,7 @@ from time import time, strftime,localtime
 from matplotlib.pyplot import figure, show
 from matplotlib import rc, cm
 import numpy as np
-from mnist import MnistDataloader, create_mask, columnize
+from mnist import MnistDataloader, create_mask, columnize,create_indices
 from sklearn.feature_selection import mutual_info_classif
 from skimage.transform import resize
 from style import StyleList
@@ -63,7 +63,7 @@ class Command(ABC):
         '''
         print (self.get_name(),strftime("%a, %d %b %Y %H:%M:%S +0000", localtime()))
         mnist_dataloader = MnistDataloader.create(data=self.args.data)
-        (self.x_train, _), _ = mnist_dataloader.load_data()
+        (self.x_train, self.ytrain), _ = mnist_dataloader.load_data()
         x = columnize(self.x_train)
 
         mask, self.mask_text = create_mask(mask_file=self.args.mask, data=self.args.data, size=self.args.size)
@@ -143,13 +143,20 @@ class EstablishPixels(Command):
 
 class EstablishSubsets(Command):
     '''
-        Display representatives of all styles created by establish_styles.py
+        Extract subsets of MNIST to facilitate replication
     '''
     def __init__(self):
-        super().__init__('Display Styles','display-styles')
+        super().__init__('Establish Subsets','establish_subsets')
 
     def _execute(self):
-        pass
+        if args.out == None:
+            print ('Output file must be specified')
+            exit(1)
+        indices = create_indices(self.ytrain, nimages=args.nimages, rng=self.rng)
+        m, n = indices.shape
+        file = Path(join(args.data, args.out)).with_suffix('.npy')
+        np.save(file, indices)
+        print(f'Saved {m} labels for each of {n} classes in {file.resolve()}')
 
 class DisplayStyles(Command):
     '''
@@ -224,6 +231,7 @@ class Cluster(Command):
 def parse_args(command_names):
     parser = ArgumentParser(__doc__)
     parser.add_argument('command',choices=command_names)
+    parser.add_argument('out',nargs='?')
     parser.add_argument('--show', default=False, action='store_true', help='Controls whether plot will be displayed')
     parser.add_argument('--figs', default='./figs', help='Location for storing plot files')
     parser.add_argument('--data', default='./data', help='Location for storing data files')
@@ -250,6 +258,7 @@ if __name__ == '__main__':
     rc('text', usetex=True)
     start = time()
     Command.build([
+        EstablishSubsets(),
         EDA(),
         DisplayStyles(),
         Cluster()
