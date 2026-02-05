@@ -32,7 +32,7 @@ from skimage.exposure import equalize_hist
 from sklearn.feature_selection import mutual_info_classif
 from skimage.transform import resize
 from style import StyleList
-from establish_most_informative_pixels import cull,show_culled,show_mask,show_histogram,show_image
+
 class Command(ABC):
     '''
     Parent class for procesing requests
@@ -151,14 +151,14 @@ class EstablishPixels(Command):
         sigma = np.std(entropies)
         min0 = np.min(entropies)
         img = np.reshape(entropies,(args.size,args.size)) # Issue 30
-        mask = cull(entropies,-args.threshold,mu,sigma,clip=True).reshape(args.size,args.size) # Issue 30
+        mask = self.cull(entropies,-args.threshold,mu,sigma,clip=True).reshape(args.size,args.size) # Issue 30
         file = Path(join(args.data, args.out)).with_suffix('.npy')
         np.save(file, mask)
         fig = figure(figsize=(12, 12))
-        show_image(img,ax=fig.add_subplot(2,2,1),fig=fig,cmap=args.cmap)
-        show_culled(img,-args.threshold,mu,sigma,min0,ax = fig.add_subplot(2,2,2),cmap=args.cmap)
-        show_mask(mask,cmap=args.cmap,ax = fig.add_subplot(2,2,3),size=args.size)
-        show_histogram(img,mu,sigma,threshold=args.threshold,ax=fig.add_subplot(2,2,4))
+        self.show_image(img,ax=fig.add_subplot(2,2,1),fig=fig,cmap=args.cmap)
+        self.show_culled(img,-args.threshold,mu,sigma,min0,ax = fig.add_subplot(2,2,2),cmap=args.cmap)
+        self.show_mask(mask,cmap=args.cmap,ax = fig.add_subplot(2,2,3),size=args.size)
+        self.show_histogram(img,mu,sigma,threshold=args.threshold,ax=fig.add_subplot(2,2,4))
 
         fig.suptitle(r'Processed \emph{' + f'{args.indices}'
                      ',} '  f'{len(indices) // 10:,d} images per class, {args.bins} bins')
@@ -201,6 +201,75 @@ class EstablishPixels(Command):
             return product
 
         return create_entropies_from_1d_images(create_1d_images())
+
+    def cull(self,img,n,mu,sigma,min0=0,clip=False):
+        '''
+        Cull data for display
+
+        Parameters:
+            img    An array of entropies, with one entry for each pixel
+            n      Threshold for culling: number of standard deviations below mean
+            mu     Mean entropy
+            sigma  Standard deviation for entropy
+            min0   Minimum entropy over all pixels
+            clip   Set to true to set pixels to 1 if they survive culling
+            ax     Axis for displaying data
+        '''
+        product = np.copy(img)
+        product[product < mu + n*sigma] = min0
+        if clip:
+            product[product >= mu + n*sigma] = 1
+        return product
+
+    def show_image(self,entropies,ax=None,fig=None,cmap='Blues'):
+        '''
+        Show the distribution of entropies over images
+
+        Parameters:
+            entropies  An array of entropies, with one entry for each pixel
+            ax         Axis for displaying data
+            fig        Figure to be displayed
+        '''
+        fig.colorbar(
+            ax.imshow(entropies,cmap=cmap),label='Entropy')
+        ax.set_title('All pixels')
+
+    def show_culled(self,entropies,n,mu,sigma,min0,ax=None,cmap='Blues'):
+        '''
+        Cull data and display
+
+        Parameters:
+            entropies  An array of entropies, with one entry for each pixel
+            n          Threshold for culling: number of standard deviations below mean
+            mu         Mean entropy
+            sigma      Standard deviation for entropy
+            min0       Minimum entropy over all pixels
+            ax         Axis for displaying data
+        '''
+        ax.imshow(self.cull(entropies,n,mu,sigma,min0),cmap=cmap)
+        ax.set_title(rf'Culled {abs(n)}$\sigma$ below $\mu$' if n != 0 else r'Culled all below $\mu$')
+
+    def show_mask(self,mask,cmap='Blues',ax=None,size=28):
+        ax.imshow(mask,cmap=cmap)
+        ax.set_title(rf'Mask preserving {int(100*mask.sum()/(size**2))}\% of pixels')
+
+    def show_histogram(self,entropies,mu,sigma,threshold=0.5,ax=None):
+        '''
+        Show histogram of entropies.
+
+        Parameters:
+            entropies  An array of entropies, with one entry for each pixel
+            mu         Mean entropy
+            sigma      Standard deviation for entropy
+            ax         Axis for displaying data
+        '''
+        ax.hist(entropies.reshape(-1),bins='fd',density=True,color='xkcd:blue',label='Histogram')
+        ax.set_xlabel('H')
+        ax.set_ylabel('Frequency')
+        ax.set_title('Entropy of pixels')
+        ax.axvline(mu,c='xkcd:red',ls='-',label=r'$\mu$')
+        ax.axvline(mu-threshold*sigma,c='xkcd:red',ls=':',label=r'$\mu' f'{-threshold}' r'\sigma$')
+        ax.legend()
 
 class EstablishSubsets(Command):
     '''
