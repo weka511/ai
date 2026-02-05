@@ -43,7 +43,7 @@ def parse_args():
     parser.add_argument('--bins', default=12, type=int, help='Number of bins for histograms')
     return parser.parse_args()
 
-def create_frequencies(x,bins=[],npairs=128,m=1000):
+def create_frequencies(x,indices,bins=[],npairs=128,m=1000):
     '''
     Generate a histogram of mutual information between pairs of images from the same digit class
 
@@ -89,7 +89,7 @@ if __name__ == '__main__':
     ax = fig.add_subplot(1,1,1)
     for i_class in args.classes:
         print (f'Class {i_class}')
-        ax.plot(0.5*(bins[:-1] + bins[1:]), create_frequencies(x,bins,npairs=npairs,m=m),label=str(i_class))
+        ax.plot(0.5*(bins[:-1] + bins[1:]), create_frequencies(x,indices,bins,npairs=npairs,m=m),label=str(i_class))
 
     ax.set_xlabel('Mutual Information')
     ax.set_ylabel('Frequency')
