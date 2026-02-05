@@ -22,7 +22,7 @@ from abc import ABC,abstractmethod
 from argparse import ArgumentParser
 from os.path import join
 from pathlib import Path
-from time import time
+from time import time, strftime,localtime
 from matplotlib.pyplot import figure, show
 from matplotlib import rc, cm
 import numpy as np
@@ -30,33 +30,90 @@ from mnist import MnistDataloader, create_mask, columnize
 from style import StyleList
 
 class Command(ABC):
-
+    '''
+    Parent class for procesing requests
+    '''
     commands = {}
 
     @staticmethod
-    def add(command):
-        Command.commands[command.name] = command
+    def build(command_list):
+        for command in command_list:
+            Command.commands[command.command_name] = command
 
-    def __init__(self,name):
+    @staticmethod
+    def get_command_names():
+        return [name for name in Command.commands.keys()]
+
+    def __init__(self,name,command_name):
         self.name = name
+        self.command_name = command_name
 
     def get_name(self):
         return self.name
 
-    @abstractmethod
+    def set_args(self,args):
+        self.args = args
+        self.rng = np.random.default_rng()           #TODO add seed
+
     def execute(self):
+        '''
+        Execute command: shared code
+        '''
+        print (self.get_name(),strftime("%a, %d %b %Y %H:%M:%S +0000", localtime()))
+        self._execute()
+
+    @abstractmethod
+    def _execute(self):
+        '''
+        Execute command
+        '''
         ...
 
 class DisplayStyles(Command):
+    '''
+        Display representatives of all styles created by establish_styles.py
+    '''
     def __init__(self):
-        super().__init__('display-styles')
+        super().__init__('Display Styles','display-styles')
 
-    def execute(self):
-        print (self.name)
+    def _execute(self):
+        indices = np.load(join(self.args.data, self.args.indices)).astype(int) # no need as already selected
+        n_examples, n_classes = indices.shape
 
-def parse_args(commands):
+        mnist_dataloader = MnistDataloader.create(data=self.args.data)
+        (x_train, _), _ = mnist_dataloader.load_data()
+        x = columnize(x_train)
+
+        mask, mask_text = create_mask(mask_file=self.args.mask, data=self.args.data, size=self.args.size)
+        mask = mask.reshape(-1)
+        x = np.multiply(x, mask)
+        m, n = indices.shape  # images,classes
+
+        assert n == 10
+
+        for i_class in self.args.classes:
+            fig = figure(figsize=(8, 8))
+            x_class = x[indices[:,i_class],:]
+            Allocation = np.load(join(self.args.data, self.args.styles+str(i_class)+'.npy')).astype(int)
+            m1,n1 = Allocation.shape
+            if self.args.nimages != None:
+                n1 = min(n1,self.args.nimages)
+            for j in range(m1):
+                for k in range(n1):
+                    ax = fig.add_subplot(m1, n1, j*n1 + k + 1)
+                    img = x_class[Allocation[j,k]].reshape(args.size,args.size)
+                    ax.imshow(img,cmap=cm.gray)
+
+class EstablishStyles(Command):
+    def __init__(self):
+        super().__init__('Dummy','establish-styles')
+
+    def _execute(self):
+        print (self.command_name)
+
+def parse_args(command_names):
     parser = ArgumentParser(__doc__)
-    parser.add_argument('command',choices=[command.name for command in commands])
+    parser.add_argument('command',choices=command_names)
     parser.add_argument('--show', default=False, action='store_true', help='Controls whether plot will be displayed')
     parser.add_argument('--figs', default='./figs', help='Location for storing plot files')
     parser.add_argument('--data', default='./data', help='Location for storing data files')
@@ -77,10 +134,14 @@ if __name__ == '__main__':
                   'size': 8})
     rc('text', usetex=True)
     start = time()
-    Command.add(DisplayStyles())
-
-    args=parse_args(Command.commands.values())
-    Command.commands[args.command].execute()
+    Command.build([
+        DisplayStyles(),
+        EstablishStyles()
+    ])
+    args = parse_args(Command.get_command_names())
+    command = Command.commands[args.command]
+    command.set_args(args)
+    command.execute()
 
     elapsed = time() - start
     minutes = int(elapsed / 60)
