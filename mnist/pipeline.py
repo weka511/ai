@@ -27,10 +27,12 @@ from matplotlib.pyplot import figure, show
 from matplotlib import rc, cm
 import numpy as np
 from mnist import MnistDataloader, create_mask, columnize,create_indices
+from scipy.stats import entropy
+from skimage.exposure import equalize_hist
 from sklearn.feature_selection import mutual_info_classif
 from skimage.transform import resize
 from style import StyleList
-
+from establish_most_informative_pixels import cull,show_culled,show_mask,show_histogram,show_image
 class Command(ABC):
     '''
     Parent class for procesing requests
@@ -133,13 +135,72 @@ class EDA_MI(Command):
 
 class EstablishPixels(Command):
     '''
-        Display representatives of all styles created by establish_styles.py
+        Determine which pixels are most relevant to classifying images
     '''
     def __init__(self):
-        super().__init__('Display Styles','display-styles')
+        super().__init__('Establish Pixels','establish-pixels')
 
     def _execute(self):
-        pass
+        if args.out == None:
+            print ('Output file must be specified')
+            exit(1)
+        x_train = np.array(self.x_train)
+        indices = self.indices.reshape(-1)
+        entropies = self.create_entropies(x_train[indices],list(range(len(indices))),bins=args.bins,m=args.size) # Issue 30
+        mu = np.mean(entropies)
+        sigma = np.std(entropies)
+        min0 = np.min(entropies)
+        img = np.reshape(entropies,(args.size,args.size)) # Issue 30
+        mask = cull(entropies,-args.threshold,mu,sigma,clip=True).reshape(args.size,args.size) # Issue 30
+        file = Path(join(args.data, args.out)).with_suffix('.npy')
+        np.save(file, mask)
+        fig = figure(figsize=(12, 12))
+        show_image(img,ax=fig.add_subplot(2,2,1),fig=fig,cmap=args.cmap)
+        show_culled(img,-args.threshold,mu,sigma,min0,ax = fig.add_subplot(2,2,2),cmap=args.cmap)
+        show_mask(mask,cmap=args.cmap,ax = fig.add_subplot(2,2,3),size=args.size)
+        show_histogram(img,mu,sigma,threshold=args.threshold,ax=fig.add_subplot(2,2,4))
+
+        fig.suptitle(r'Processed \emph{' + f'{args.indices}'
+                     ',} '  f'{len(indices) // 10:,d} images per class, {args.bins} bins')
+        fig.savefig(join(args.figs,Path(__file__).stem))
+
+        print(f'Processed {args.indices}, {len(indices) // 10:,d} images per class, {args.bins} bins')
+
+    def create_entropies(self,images,selector,bins=20,m=32):
+        '''
+        Used to determine which pixels have the most information
+
+        Parameters:
+            images     Raw images from NIST
+            selector   Indices of images that need to be included
+            bins       Number of bins
+            m          We will standardize images to be mxm
+        '''
+        n = len(selector)
+        def create_1d_images():
+            '''
+            Convert images to be mxm, equalize, then convert to 1d
+            '''
+            m0,_ = images[0].shape
+            product = np.zeros((n, m*m))
+            for i in selector:
+                right_sized_image = images[i] if m == m0 else resize(np.array(images[i]),(m,m))
+                img = equalize_hist(right_sized_image)
+                product[i] = np.reshape(img,-1)
+            return product
+
+        def create_entropies_from_1d_images(images1d):
+            '''
+            Calculate probability density for each pixel, then calculate entropy
+            '''
+            product = np.zeros((m*m))
+            for i in range((m*m)):
+                hist,edges = np.histogram(images1d[i],bins=bins,density=True)
+                pdf = hist/np.sum(hist)
+                product[i] = entropy(pdf)
+            return product
+
+        return create_entropies_from_1d_images(create_1d_images())
 
 class EstablishSubsets(Command):
     '''
@@ -157,6 +218,8 @@ class EstablishSubsets(Command):
         file = Path(join(args.data, args.out)).with_suffix('.npy')
         np.save(file, indices)
         print(f'Saved {m} labels for each of {n} classes in {file.resolve()}')
+
+
 
 class DisplayStyles(Command):
     '''
@@ -248,6 +311,8 @@ def parse_args(command_names):
 
     group_explore_clusters = parser.add_argument_group('Options for explore-clusters')
     group_explore_clusters.add_argument('--npairs', default=128, type=int, help='Number of pairs for each class')
+
+    parser.add_argument('--cmap',default='Blues',help='Colour map') #FIXME
     return parser.parse_args()
 
 
@@ -259,6 +324,7 @@ if __name__ == '__main__':
     start = time()
     Command.build([
         EstablishSubsets(),
+        EstablishPixels(),
         EDA(),
         DisplayStyles(),
         Cluster()

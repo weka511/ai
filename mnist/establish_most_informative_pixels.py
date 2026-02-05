@@ -141,7 +141,7 @@ def show_histogram(entropies,mu,sigma,threshold=0.5,ax=None):
         sigma      Standard deviation for entropy
         ax         Axis for displaying data
     '''
-    ax.hist(img.reshape(-1),bins='fd',density=True,color='xkcd:blue',label='Histogram')
+    ax.hist(entropies.reshape(-1),bins='fd',density=True,color='xkcd:blue',label='Histogram')
     ax.set_xlabel('H')
     ax.set_ylabel('Frequency')
     ax.set_title('Entropy of pixels')
