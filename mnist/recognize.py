@@ -61,6 +61,16 @@ class Command(ABC):
         Execute command: shared code
         '''
         print (self.get_name(),strftime("%a, %d %b %Y %H:%M:%S +0000", localtime()))
+        mnist_dataloader = MnistDataloader.create(data=self.args.data)
+        (x_train, _), _ = mnist_dataloader.load_data()
+        x = columnize(x_train)
+
+        mask, self.mask_text = create_mask(mask_file=self.args.mask, data=self.args.data, size=self.args.size)
+        mask = mask.reshape(-1)
+        self.x = np.multiply(x, mask)
+        self.indices = np.load(join(self.args.data, self.args.indices)).astype(int)
+        n_examples, n_classes = self.indices.shape
+        assert n_classes == 10
         self._execute()
 
     @abstractmethod
@@ -81,20 +91,9 @@ class DisplayStyles(Command):
         indices = np.load(join(self.args.data, self.args.indices)).astype(int) # no need as already selected
         n_examples, n_classes = indices.shape
 
-        mnist_dataloader = MnistDataloader.create(data=self.args.data)
-        (x_train, _), _ = mnist_dataloader.load_data()
-        x = columnize(x_train)
-
-        mask, mask_text = create_mask(mask_file=self.args.mask, data=self.args.data, size=self.args.size)
-        mask = mask.reshape(-1)
-        x = np.multiply(x, mask)
-        m, n = indices.shape  # images,classes
-
-        assert n == 10
-
         for i_class in self.args.classes:
             fig = figure(figsize=(8, 8))
-            x_class = x[indices[:,i_class],:]
+            x_class = self.x[self.indices[:,i_class],:]
             Allocation = np.load(join(self.args.data, self.args.styles+str(i_class)+'.npy')).astype(int)
             m1,n1 = Allocation.shape
             if self.args.nimages != None:
@@ -105,25 +104,7 @@ class DisplayStyles(Command):
                     img = x_class[Allocation[j,k]].reshape(args.size,args.size)
                     ax.imshow(img,cmap=cm.gray)
 
-def create_frequencies(x,indices,i_class,bins=[],npairs=128,m=1000,rng=None):
-    '''
-    Generate a histogram of mutual information between pairs of images from the same digit class
 
-    Parameters:
-        x         Image data
-        npairs    Number of pairs to select
-        m         Number of images in class
-    '''
-    def create_mutual_info():
-        product = np.zeros((npairs))
-        for i in range(npairs):
-            K = rng.choice(m,size=2)
-            x_class = x[indices[K,i_class],:]
-            mi = mutual_info_classif(x_class.T,x_class[0,:])
-            product[i] = mi[-1]
-        return product
-
-    return np.histogram(create_mutual_info(),bins,density=True)[0]
 
 class Cluster(Command):
     def __init__(self):
@@ -134,14 +115,7 @@ class Cluster(Command):
         indices = np.load(join(self.args.data,self.args.indices)).astype(int)
         n_examples,n_classes = indices.shape
 
-        mnist_dataloader = MnistDataloader.create(data=self.args.data)
-        (x_train, _), _ = mnist_dataloader.load_data()
-        x = columnize(x_train)
-
-        mask,mask_text = create_mask(mask_file=self.args.mask,data=self.args.data,size=self.args.size)
-        mask = mask.reshape(-1)
-        x = np.multiply(x,mask)
-        m,n = indices.shape  # images,classes
+        m,n = self.indices.shape  # images,classes
         npairs = min(m,self.args.npairs)
         bins = np.linspace(0,1,num=self.args.bins+1)
         assert n == 10
@@ -149,13 +123,32 @@ class Cluster(Command):
         for i_class in self.args.classes:
             print (f'Class {i_class}')
             ax.plot(0.5*(bins[:-1] + bins[1:]),
-                    create_frequencies(x,indices,i_class,bins,npairs=npairs,m=m,rng=self.rng),label=str(i_class))
+                    self.create_frequencies(i_class,bins,npairs=npairs,m=m,rng=self.rng),label=str(i_class))
 
         ax.set_xlabel('Mutual Information')
         ax.set_ylabel('Frequency')
-        ax.set_title(f'Mutual Information within classes based on {npairs} pairs, {mask_text}')
+        ax.set_title(f'Mutual Information within classes based on {npairs} pairs, {self.mask_text}')
         ax.legend(title='Digit classes')
         fig.savefig(join(self.args.figs,Path(__file__).stem))
+
+    def create_frequencies(self,i_class,bins=[],npairs=128,m=1000,rng=None):
+        '''
+        Generate a histogram of mutual information between pairs of images from the same digit class
+
+        Parameters:
+            npairs    Number of pairs to select
+            m         Number of images in class
+        '''
+        def create_mutual_info():
+            product = np.zeros((npairs))
+            for i in range(npairs):
+                K = rng.choice(m,size=2)
+                x_class = self.x[self.indices[K,i_class],:]
+                mi = mutual_info_classif(x_class.T,x_class[0,:])
+                product[i] = mi[-1]
+            return product
+
+        return np.histogram(create_mutual_info(),bins,density=True)[0]
 
 def parse_args(command_names):
     parser = ArgumentParser(__doc__)
@@ -170,9 +163,12 @@ def parse_args(command_names):
     parser.add_argument('--classes', default=list(range(10)), type=int, nargs='+', help='List of digit classes')
     parser.add_argument('--bins', default=12, type=int, help='Number of bins for histograms')
     parser.add_argument('--threshold', default=0.1, type=float,help='Include image in same style if mutual information exceeds threshold')
-    parser.add_argument('--styles', default=Path(__file__).stem, help='Location where styles have been stored')
 
-    parser.add_argument('--npairs', default=128, type=int, help='Number of pairs for each class')
+    group_display_styles = parser.add_argument_group('Options for display-styles')
+    group_display_styles.add_argument('--styles', default=Path(__file__).stem, help='Location where styles have been stored')
+
+    group_explore_clusters = parser.add_argument_group('Options for explore-clusters')
+    group_explore_clusters.add_argument('--npairs', default=128, type=int, help='Number of pairs for each class')
     return parser.parse_args()
 
 
