@@ -48,9 +48,10 @@ class Command(ABC):
     def get_command_names():
         return [name for name in Command.commands.keys()]
 
-    def __init__(self,name,command_name):
+    def __init__(self,name,command_name,needs_output_file=False):
         self.name = name
         self.command_name = command_name
+        self.needs_output_file = needs_output_file
 
     def get_name(self):
         return self.name
@@ -64,6 +65,9 @@ class Command(ABC):
         Execute command: shared code
         '''
         print (self.get_name(),strftime("%a, %d %b %Y %H:%M:%S +0000", localtime()))
+        if self.needs_output_file and args.out == None:
+            print ('Output file must be specified')
+            exit(1)
         mnist_dataloader = MnistDataloader.create(data=self.args.data)
         (self.x_train, self.ytrain), _ = mnist_dataloader.load_data()
         x = columnize(self.x_train)
@@ -138,12 +142,9 @@ class EstablishPixels(Command):
         Determine which pixels are most relevant to classifying images
     '''
     def __init__(self):
-        super().__init__('Establish Pixels','establish-pixels')
+        super().__init__('Establish Pixels','establish-pixels',needs_output_file=True)
 
     def _execute(self):
-        if args.out == None:
-            print ('Output file must be specified')
-            exit(1)
         x_train = np.array(self.x_train)
         indices = self.indices.reshape(-1)
         entropies = self.create_entropies(x_train[indices],list(range(len(indices))),bins=args.bins,m=args.size) # Issue 30
@@ -276,19 +277,38 @@ class EstablishSubsets(Command):
         Extract subsets of MNIST to facilitate replication
     '''
     def __init__(self):
-        super().__init__('Establish Subsets','establish_subsets')
+        super().__init__('Establish Subsets','establish-subsets',needs_output_file=True)
 
     def _execute(self):
-        if args.out == None:
-            print ('Output file must be specified')
-            exit(1)
         indices = create_indices(self.ytrain, nimages=args.nimages, rng=self.rng)
         m, n = indices.shape
         file = Path(join(args.data, args.out)).with_suffix('.npy')
         np.save(file, indices)
         print(f'Saved {m} labels for each of {n} classes in {file.resolve()}')
 
+class EstablishStyles(Command):
+    '''
+        Display representatives of all styles created by establish_styles.py
+    '''
+    def __init__(self):
+        super().__init__('Establish Styles','establish-styles',needs_output_file=True)
 
+    def _execute(self):
+        n_examples, n_classes = self.indices.shape
+        for i_class in args.classes:
+            style_list = StyleList.build(self.x, self.indices,
+                                         i_class=i_class,
+                                         nimages=min(n_examples,args.nimages),
+                                         threshold=args.threshold)
+            print(f'Class {i_class} contains {len(style_list)} Styles')
+            fig = figure(figsize=(8, 8))
+            ax1 = fig.add_subplot(1, 1, 1)
+            ax1.hist([len(style) for style in style_list.styles])
+            ax1.set_title(f'Lengths of style for {len(style_list)} styles')
+            fig.suptitle(f'Digit Class = {i_class}, threshold={self.args.threshold}')
+            fig.savefig(join(args.figs, Path(__file__).stem + str(i_class)))
+            file = Path(join(args.data, args.out+str(i_class))).with_suffix('.npy')
+            style_list.save(file)
 
 class DisplayStyles(Command):
     '''
@@ -373,7 +393,8 @@ def parse_args(command_names):
     parser.add_argument('--size', default=28, type=int, help='Number of row/cols in each image: shape will be will be mxm')
     parser.add_argument('--classes', default=list(range(10)), type=int, nargs='+', help='List of digit classes')
     parser.add_argument('--bins', default=12, type=int, help='Number of bins for histograms')
-    parser.add_argument('--threshold', default=0.1, type=float,help='Include image in same style if mutual information exceeds threshold')
+    parser.add_argument('--threshold', default=0.1, type=float,  #FIXME
+                        help='Include image in same style if mutual information exceeds threshold')
 
     group_display_styles = parser.add_argument_group('Options for display-styles')
     group_display_styles.add_argument('--styles', default=Path(__file__).stem, help='Location where styles have been stored')
@@ -395,6 +416,7 @@ if __name__ == '__main__':
         EstablishSubsets(),
         EstablishPixels(),
         EDA(),
+        EstablishStyles(),
         DisplayStyles(),
         Cluster()
     ])

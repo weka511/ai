@@ -9,7 +9,6 @@ The inspiration comes from the following papers by Friston et al:
 File|Description
 -------------------------------------|-----------------------------------------------------------------------------------------
 eda_mi.py|Exploratory Data Analysis for MNIST: figure out variability of mutual information within and between classes
-establish_styles.py|Establish styles within classes using mutual information
 mnist.py|Functions for accessing MNIST data
 pipeline.py|Program for creating files needed for analysis pipeline
 style.py|Classes to manange character styles
