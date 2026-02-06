@@ -418,12 +418,12 @@ class DisplayStyles(Command):
             fig = figure(figsize=(8, 8))
             x_class = self.x[self.indices[:,i_class],:]
             Allocation = np.load(join(self.args.data, self.args.styles+str(i_class)+'.npy')).astype(int)
-            m1,n1 = Allocation.shape
+            n_styles,n_images = Allocation.shape
             if self.args.nimages != None:
-                n1 = min(n1,self.args.nimages)
-            for j in range(m1):
+                n_images = min(n_images,self.args.nimages)
+            for j in range(n_styles):
                 for k in range(n1):
-                    ax = fig.add_subplot(m1, n1, j*n1 + k + 1)
+                    ax = fig.add_subplot(n_styles, n1, j*n1 + k + 1)
                     img = x_class[Allocation[j,k]].reshape(args.size,args.size)
                     ax.imshow(img,cmap=args.cmap)
                     ax.axis('off')
@@ -433,17 +433,56 @@ class CalculateA(Command):
     Calculate the A matrices
     '''
     def __init__(self):
-        super().__init__('Calculate the A matrices','calculate-A')
+        super().__init__('Calculate the A matrices','calculate-A',needs_output_file=True)
 
     def _execute(self):
         '''
         For each pixel, determine the probability of belonging to each digit and style
         '''
+        index_style_start,class_styles = self.create_class_styles()
+        A = self.create_A(index_style_start,class_styles)
+        file = Path(join(args.data, args.out)).with_suffix('.npz')
+        np.savez(file,A=A,class_styles=class_styles)
+        print (f'Saved A and class_styles from {join(self.args.data, self.args.styles+'*.npy')} in {file}')
+
+    def create_class_styles(self):
+        '''
+        Create mapping between class/style and position in A matrix
+        '''
+        product = []
+        index_style_start = np.zeros(len(self.args.classes),dtype=int)
         for i_class in self.args.classes:
             x_class = self.x[self.indices[:,i_class],:]
+            _,n_pixels = x_class.shape
             Allocation = np.load(join(self.args.data, self.args.styles+str(i_class)+'.npy')).astype(int)
-            m1,n1 = Allocation.shape
-            z=0
+            n_styles,n_images = Allocation.shape
+            index_style_start[i_class] = len(product)
+            for i in range(n_styles):
+                product.append([i_class,i])
+
+        return index_style_start,np.array(product)
+
+    def create_A(self,index_style_start,class_styles,n_pixels = 784 ): #FIXME
+        '''
+        Add up pixels for each combination of class,style and normalize
+        '''
+        n_class_styles,_ = class_styles.shape
+        A = args.pseudocount*np.ones((n_class_styles,n_pixels))
+        for i_class in self.args.classes:
+                x_class = self.x[self.indices[:,i_class],:]
+                _,n_pixels = x_class.shape
+                Allocation = np.load(join(self.args.data, self.args.styles+str(i_class)+'.npy')).astype(int)
+                n_styles,n_images = Allocation.shape
+                for i_style in range(n_styles):
+                    for image_seq in range(n_images):
+                        image_index = Allocation[i_style,image_seq]
+                        if image_index < 0: break
+                        img = x_class[image_index]
+                        i = index_style_start[i_class] + i_style
+                        A[i,:] += img
+
+        return A/ A.sum(axis=0)
+
 
 class Cluster(Command):
     def __init__(self):
@@ -504,6 +543,7 @@ def parse_args(command_names,text):
     parser.add_argument('--classes', default=list(range(10)), type=int, nargs='+', help='List of digit classes')
     parser.add_argument('--bins', default=12, type=int, help='Number of bins for histograms')
     parser.add_argument('--seed', default=None, type=int, help='For initializing random number generator')
+    parser.add_argument('--cmap',default='Blues',help='Colour map')
 
     group_establish_pixels = parser.add_argument_group('Options for establish-pixels')
     group_establish_pixels.add_argument('--fraction', default=0.5, type=float,
@@ -519,7 +559,10 @@ def parse_args(command_names,text):
     group_explore_clusters = parser.add_argument_group('Options for explore-clusters')
     group_explore_clusters.add_argument('--npairs', default=128, type=int, help='Number of pairs for each class')
 
-    parser.add_argument('--cmap',default='Blues',help='Colour map') #FIXME
+    group_calculate_A = parser.add_argument_group('Options for calculate-A')
+    group_calculate_A.add_argument('--pseudocount', default=0.5, type=float,
+                        help='Used to intialize counts')
+
 
     return parser.parse_args()
 
