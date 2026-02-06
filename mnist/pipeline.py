@@ -116,12 +116,15 @@ class EstablishSubsets(Command):
 
 class EDA(Command):
     '''
-        Exploratory Data Analysis for MNIST: plot some raw data, with and without masking
+        Exploratory Data Analysis for MNIST: plot some raw data, with or without masking
     '''
     def __init__(self):
         super().__init__('Exploratory Data Analysis','eda')
 
     def _execute(self):
+        '''
+        Plot some raw data, with or without masking
+        '''
         m,n = 10,10  #FIXME
         fig = figure(figsize=(20, 8))
         for k,img in self.generate_images(n=n,m=args.nimages,size=args.size):
@@ -242,14 +245,14 @@ class EstablishPixels(Command):
         sigma = np.std(entropies)
         min0 = np.min(entropies)
         img = np.reshape(entropies,(args.size,args.size)) # Issue 30
-        mask = self.cull(entropies,-args.threshold,mu,sigma,clip=True).reshape(args.size,args.size) # Issue 30
+        mask = self.cull(entropies,-args.fraction,mu,sigma,clip=True).reshape(args.size,args.size) # Issue 30
         file = Path(join(args.data, args.out)).with_suffix('.npy')
         np.save(file, mask)
         fig = figure(figsize=(12, 12))
         self.show_image(img,ax=fig.add_subplot(2,2,1),fig=fig,cmap=args.cmap)
-        self.show_culled(img,-args.threshold,mu,sigma,min0,ax = fig.add_subplot(2,2,2),cmap=args.cmap)
+        self.show_culled(img,-args.fraction,mu,sigma,min0,ax = fig.add_subplot(2,2,2),cmap=args.cmap)
         self.show_mask(mask,cmap=args.cmap,ax = fig.add_subplot(2,2,3),size=args.size)
-        self.show_histogram(img,mu,sigma,threshold=args.threshold,ax=fig.add_subplot(2,2,4))
+        self.show_histogram(img,mu,sigma,threshold=args.fraction,ax=fig.add_subplot(2,2,4))
 
         fig.suptitle(r'Processed \emph{' + f'{args.indices}'
                      ',} '  f'{len(indices) // 10:,d} images per class, {args.bins} bins')
@@ -410,7 +413,7 @@ class DisplayStyles(Command):
                 for k in range(n1):
                     ax = fig.add_subplot(m1, n1, j*n1 + k + 1)
                     img = x_class[Allocation[j,k]].reshape(args.size,args.size)
-                    ax.imshow(img,cmap=cm.gray)
+                    ax.imshow(img,cmap=args.cmap)
 
 
 
@@ -465,13 +468,17 @@ def parse_args(command_names):
     parser.add_argument('--show', default=False, action='store_true', help='Controls whether plot will be displayed')
     parser.add_argument('--figs', default='./figs', help='Location for storing plot files')
     parser.add_argument('--data', default='./data', help='Location for storing data files')
-    parser.add_argument('--indices', default='establish_subset.npy', help='Location where index files have been saved')
+    parser.add_argument('--indices', default='baseline.npy', help='Location where index files have been saved')
     parser.add_argument('--nimages', default=1000, type=int, help='Maximum number of images for each class')
     parser.add_argument('--mask', default=None, help='Name of mask file (omit for no mask)')
     parser.add_argument('--size', default=28, type=int, help='Number of row/cols in each image: shape will be will be mxm')
     parser.add_argument('--classes', default=list(range(10)), type=int, nargs='+', help='List of digit classes')
     parser.add_argument('--bins', default=12, type=int, help='Number of bins for histograms')
     parser.add_argument('--seed', default=None, type=int, help='For initializing random number generator')
+
+    group_establish_pixels = parser.add_argument_group('Options for establish-pixels')
+    group_establish_pixels.add_argument('--fraction', default=0.5, type=float,  #FIXME
+                        help='Include pixel if entropy exceeds mean - fraction*sd')
     parser.add_argument('--threshold', default=0.1, type=float,  #FIXME
                         help='Include image in same style if mutual information exceeds threshold')
 
@@ -494,8 +501,8 @@ if __name__ == '__main__':
     start = time()
     Command.build([
         EstablishSubsets(),
-        EstablishPixels(),
         EDA(),
+        EstablishPixels(),
         EstablishStyles(),
         DisplayStyles(),
         Cluster(),
