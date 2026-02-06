@@ -19,7 +19,8 @@
     This program schedules commands to create file in pipeline
 '''
 from abc import ABC,abstractmethod
-from argparse import ArgumentParser
+from argparse import ArgumentParser, RawDescriptionHelpFormatter
+from textwrap import dedent
 from os.path import join
 from pathlib import Path
 from time import time, strftime,localtime
@@ -53,6 +54,13 @@ class Command(ABC):
         Used to construct command line argument
         '''
         return [name for name in Command.commands.keys()]
+
+    @staticmethod
+    def get_command_help():
+        '''
+        Used to construct command line argument
+        '''
+        return ''.join([f'{key}\t{value.name}\n' for key,value in Command.commands.items()])
 
     def __init__(self,name,command_name,needs_output_file=False,needs_index_file=True):
         self.name = name
@@ -461,8 +469,9 @@ class Cluster(Command):
 
         return np.histogram(create_mutual_info(),bins,density=True)[0]
 
-def parse_args(command_names):
-    parser = ArgumentParser(__doc__)
+def parse_args(command_names,text):
+    parser = ArgumentParser(__doc__,formatter_class=RawDescriptionHelpFormatter,
+      epilog=dedent(text))
     parser.add_argument('command',choices=command_names,help='The command to be executed')
     parser.add_argument('-o','--out',nargs='?')
     parser.add_argument('--show', default=False, action='store_true', help='Controls whether plot will be displayed')
@@ -510,7 +519,7 @@ if __name__ == '__main__':
         DisplayStyles(),
         Cluster()
     ])
-    args = parse_args(Command.get_command_names())
+    args = parse_args(Command.get_command_names(),Command.get_command_help())
     command = Command.commands[args.command]
     command.set_args(args)
     command.execute()
