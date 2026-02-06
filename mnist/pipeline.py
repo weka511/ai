@@ -79,9 +79,9 @@ class Command(ABC):
         (self.x_train, self.ytrain), _ = mnist_dataloader.load_data()
         x = columnize(self.x_train)
 
-        mask, self.mask_text = create_mask(mask_file=self.args.mask, data=self.args.data, size=self.args.size)
-        mask = mask.reshape(-1)
-        self.x = np.multiply(x, mask)
+        self.mask, self.mask_text = create_mask(mask_file=self.args.mask, data=self.args.data, size=self.args.size)
+        self.mask = self.mask.reshape(-1)
+        self.x = np.multiply(x, self.mask)
         if self.needs_index_file:
             self.indices = np.load(join(self.args.data, self.args.indices)).astype(int)
             n_examples, n_classes = self.indices.shape
@@ -133,7 +133,7 @@ class EDA(Command):
             ax.axis('off')
 
         fig.suptitle(('No mask' if args.mask == None
-                      else rf'Mask preserving {int(100*mask.sum()/(args.size*args.size))}\% of pixels'))
+                      else rf'Mask preserving {int(100*self.mask.sum()/(self.args.size*self.args.size))}\% of pixels'))
 
         fig.tight_layout(pad=2,h_pad=2,w_pad=2)
         fig.savefig(join(args.figs,Path(__file__).stem))
