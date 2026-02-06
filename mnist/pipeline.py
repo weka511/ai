@@ -165,12 +165,15 @@ class EDA(Command):
 
 class EDA_MI(Command):
     '''
-    Exploratory Data Analysis for MNIST: figure out variability of
+    Exploratory Data Analysis for MNIST: determine variability of
     mutual information within and between classes
     '''
     def __init__(self):
         super().__init__('EDA Mutual Information','eda-mi')
 
+    '''
+    Determine variability of mutual information within and between classes
+    '''
     def _execute(self):
         n_examples,n_classes = self.indices.shape
         Exemplars = self.create_exemplars()
@@ -182,6 +185,7 @@ class EDA_MI(Command):
         for i in range(n_classes):
             companions = self.create_companions(i,n_comparison=args.nimages)
             MI_within_classes[i] = mutual_info_classif(companions.T,Exemplars[i,:])
+
         fig = figure(figsize=(20, 8))
         ax1 = fig.add_subplot(1,2,1)
         fig.colorbar(ax1.imshow(MI_between_classes, cmap='Blues', interpolation='nearest'),
@@ -201,10 +205,6 @@ class EDA_MI(Command):
     def create_exemplars(self):
         '''
         Create an array containing one element from each class
-
-        Parameters:
-            indices
-            x
         '''
         exemplar_indices = self.indices[0,:]
         return np.array( [ self.x[i,:] for i in exemplar_indices])
@@ -214,10 +214,8 @@ class EDA_MI(Command):
         Create a collection of vectors belonging to same class
 
         Parameters:
-            iclass
-            indices
-            x
-            n_comparison
+            iclass         The digit class we are considering
+            n_comparison   The number of images we will compare
         '''
         companion_indices = self.indices[1:n_comparison+1,iclass]
         return np.array( [ self.x[i,:] for i in companion_indices])
@@ -228,9 +226,9 @@ class EDA_MI(Command):
         Annotate heatmap with values of mutual information
 
         Parameters:
-            MI
-            ax
-            color
+            MI          Vaues for annotation
+            ax          Axis for display
+            color       Colour for annotations
         '''
         m,n = MI.shape
         for i in range(m):
@@ -240,20 +238,23 @@ class EDA_MI(Command):
 
 class EstablishPixels(Command):
     '''
-        Determine which pixels are most relevant to classifying images
+    Determine which pixels are most relevant to classifying images
     '''
     def __init__(self):
         super().__init__('Establish Pixels','establish-pixels',needs_output_file=True)
 
     def _execute(self):
+        '''
+        Determine which pixels are most relevant to classifying images
+        '''
         x_train = np.array(self.x_train)
         indices = self.indices.reshape(-1)
-        entropies = self.create_entropies(x_train[indices],list(range(len(indices))),bins=args.bins,m=args.size) # Issue 30
+        entropies = self.create_entropies(x_train[indices],list(range(len(indices))),bins=args.bins,m=args.size)
         mu = np.mean(entropies)
         sigma = np.std(entropies)
         min0 = np.min(entropies)
-        img = np.reshape(entropies,(args.size,args.size)) # Issue 30
-        mask = self.cull(entropies,-args.fraction,mu,sigma,clip=True).reshape(args.size,args.size) # Issue 30
+        img = np.reshape(entropies,(args.size,args.size))
+        mask = self.cull(entropies,-args.fraction,mu,sigma,clip=True).reshape(args.size,args.size)
         file = Path(join(args.data, args.out)).with_suffix('.npy')
         np.save(file, mask)
         fig = figure(figsize=(12, 12))
@@ -315,7 +316,6 @@ class EstablishPixels(Command):
             sigma  Standard deviation for entropy
             min0   Minimum entropy over all pixels
             clip   Set to true to set pixels to 1 if they survive culling
-            ax     Axis for displaying data
         '''
         product = np.copy(img)
         product[product < mu + n*sigma] = min0
@@ -364,6 +364,7 @@ class EstablishPixels(Command):
             mu         Mean entropy
             sigma      Standard deviation for entropy
             ax         Axis for displaying data
+            threshold  Thrshold for culling: we represent this by a verticl line
         '''
         ax.hist(entropies.reshape(-1),bins='fd',density=True,color='xkcd:blue',label='Histogram')
         ax.set_xlabel('H')
@@ -377,12 +378,15 @@ class EstablishPixels(Command):
 
 class EstablishStyles(Command):
     '''
-        Display representatives of all styles created by establish_styles.py
+    Display representatives of all styles created by establish_styles.py
     '''
     def __init__(self):
         super().__init__('Establish Styles','establish-styles',needs_output_file=True)
 
     def _execute(self):
+        '''
+        Display representatives of all styles created by establish_styles.py
+        '''
         n_examples, n_classes = self.indices.shape
         for i_class in args.classes:
             style_list = StyleList.build(self.x, self.indices,
@@ -401,15 +405,15 @@ class EstablishStyles(Command):
 
 class DisplayStyles(Command):
     '''
-        Display representatives of all styles created by establish_styles.py
+    Display representatives of all styles created by establish_styles.py
     '''
     def __init__(self):
         super().__init__('Display Styles','display-styles')
 
     def _execute(self):
-        indices = np.load(join(self.args.data, self.args.indices)).astype(int) # no need as already selected
-        n_examples, n_classes = indices.shape
-
+        '''
+        Display representatives of all styles created by establish_styles.py
+        '''
         for i_class in self.args.classes:
             fig = figure(figsize=(8, 8))
             x_class = self.x[self.indices[:,i_class],:]
@@ -422,8 +426,24 @@ class DisplayStyles(Command):
                     ax = fig.add_subplot(m1, n1, j*n1 + k + 1)
                     img = x_class[Allocation[j,k]].reshape(args.size,args.size)
                     ax.imshow(img,cmap=args.cmap)
+                    ax.axis('off')
 
+class CalculateA(Command):
+    '''
+    Calculate the A matrices
+    '''
+    def __init__(self):
+        super().__init__('Calculate the A matrices','calculate-A')
 
+    def _execute(self):
+        '''
+        For each pixel, determine the probability of belonging to each digit and style
+        '''
+        for i_class in self.args.classes:
+            x_class = self.x[self.indices[:,i_class],:]
+            Allocation = np.load(join(self.args.data, self.args.styles+str(i_class)+'.npy')).astype(int)
+            m1,n1 = Allocation.shape
+            z=0
 
 class Cluster(Command):
     def __init__(self):
@@ -517,6 +537,7 @@ if __name__ == '__main__':
         EDA_MI(),
         EstablishStyles(),
         DisplayStyles(),
+        CalculateA(),
         Cluster()
     ])
     args = parse_args(Command.get_command_names(),Command.get_command_help())
