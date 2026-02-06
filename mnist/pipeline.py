@@ -129,13 +129,78 @@ class EDA(Command):
 
 class EDA_MI(Command):
     '''
-        Display representatives of all styles created by establish_styles.py
+    Exploratory Data Analysis for MNIST: figure out variability of
+    mutual information within and between classes
     '''
     def __init__(self):
-        super().__init__('Display Styles','display-styles')
+        super().__init__('EDA Mutual Information','eda-mi')
 
     def _execute(self):
-        pass
+        n_examples,n_classes = self.indices.shape
+        Exemplars = self.create_exemplars()
+        MI_between_classes = np.zeros((n_classes,n_classes))
+        for i in range(n_classes):
+            MI_between_classes[i] = mutual_info_classif(Exemplars.T,Exemplars[i,:])
+
+        MI_within_classes = np.zeros((n_classes,args.m))
+        for i in range(n_classes):
+            companions = self.create_companions(i,n_comparison=args.m)
+            MI_within_classes[i] = mutual_info_classif(companions.T,Exemplars[i,:])
+        fig = figure(figsize=(20, 8))
+        ax1 = fig.add_subplot(1,2,1)
+        fig.colorbar(ax1.imshow(MI_between_classes, cmap='Blues', interpolation='nearest'),
+                     orientation='vertical')
+        ax1.set_title('Mutual Information between classes')
+        EDA_MI.annotate(MI_between_classes,ax=ax1)
+
+        ax2 = fig.add_subplot(1,2,2)
+        fig.colorbar(ax2.imshow(MI_within_classes.T, cmap='Reds', interpolation='nearest'),
+                     orientation='vertical')
+        ax2.set_title('Mutual Information within classes')
+        EDA_MI.annotate(MI_within_classes.T,ax=ax2)
+
+        fig.tight_layout(pad=2,h_pad=2,w_pad=2)
+        fig.savefig(join(args.figs,Path(__file__).stem))
+
+    def create_exemplars(self):
+        '''
+        Create an array containing one element from each class
+
+        Parameters:
+            indices
+            x
+        '''
+        exemplar_indices = self.indices[0,:]
+        return np.array( [ self.x[i,:] for i in exemplar_indices])
+
+    def create_companions(self,iclass,n_comparison=7):
+        '''
+        Create a collection of vectors belonging to same class
+
+        Parameters:
+            iclass
+            indices
+            x
+            n_comparison
+        '''
+        companion_indices = self.indices[1:n_comparison+1,iclass]
+        return np.array( [ self.x[i,:] for i in companion_indices])
+
+    @staticmethod
+    def annotate(MI,ax=None,color='k'):
+        '''
+        Annotate heatmap with values of mutual information
+
+        Parameters:
+            MI
+            ax
+            color
+        '''
+        m,n = MI.shape
+        for i in range(m):
+            for j in range(n):
+                ax.text(j, i, f'{MI[i,j]:.2e}',ha='center', va='center', color='k')
+
 
 class EstablishPixels(Command):
     '''
@@ -403,6 +468,8 @@ def parse_args(command_names):
     group_explore_clusters.add_argument('--npairs', default=128, type=int, help='Number of pairs for each class')
 
     parser.add_argument('--cmap',default='Blues',help='Colour map') #FIXME
+
+    parser.add_argument('--m', default=12, type=int, help='Number of images for each class')
     return parser.parse_args()
 
 
@@ -418,7 +485,8 @@ if __name__ == '__main__':
         EDA(),
         EstablishStyles(),
         DisplayStyles(),
-        Cluster()
+        Cluster(),
+        EDA_MI()
     ])
     args = parse_args(Command.get_command_names())
     command = Command.commands[args.command]

@@ -8,7 +8,6 @@ The inspiration comes from the following papers by Friston et al:
 
 File|Description
 -------------------------------------|-----------------------------------------------------------------------------------------
-eda_mi.py|Exploratory Data Analysis for MNIST: figure out variability of mutual information within and between classes
 mnist.py|Functions for accessing MNIST data
 pipeline.py|Program for creating files needed for analysis pipeline
 style.py|Classes to manange character styles
