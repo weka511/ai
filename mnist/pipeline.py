@@ -41,24 +41,31 @@ class Command(ABC):
 
     @staticmethod
     def build(command_list):
+        '''
+        Load a list of commands that are available for execution
+        '''
         for command in command_list:
             Command.commands[command.command_name] = command
 
     @staticmethod
     def get_command_names():
+        '''
+        Used to construct command line argument
+        '''
         return [name for name in Command.commands.keys()]
 
-    def __init__(self,name,command_name,needs_output_file=False):
+    def __init__(self,name,command_name,needs_output_file=False,needs_index_file=True):
         self.name = name
         self.command_name = command_name
         self.needs_output_file = needs_output_file
+        self.needs_index_file = needs_index_file
 
     def get_name(self):
         return self.name
 
     def set_args(self,args):
         self.args = args
-        self.rng = np.random.default_rng()           #TODO add seed
+        self.rng = np.random.default_rng(args.seed)
 
     def execute(self):
         '''
@@ -75,17 +82,37 @@ class Command(ABC):
         mask, self.mask_text = create_mask(mask_file=self.args.mask, data=self.args.data, size=self.args.size)
         mask = mask.reshape(-1)
         self.x = np.multiply(x, mask)
-        self.indices = np.load(join(self.args.data, self.args.indices)).astype(int)
-        n_examples, n_classes = self.indices.shape
-        assert n_classes == 10
+        if self.needs_index_file:
+            self.indices = np.load(join(self.args.data, self.args.indices)).astype(int)
+            n_examples, n_classes = self.indices.shape
+            assert n_classes == 10
+
         self._execute()
 
     @abstractmethod
     def _execute(self):
         '''
-        Execute command
+        Execute command: must be implemented for each class
         '''
         ...
+
+class EstablishSubsets(Command):
+    '''
+    Extract subsets of MNIST to facilitate replication
+    '''
+
+    def __init__(self):
+        super().__init__('Establish Subsets','establish-subsets',needs_output_file=True,needs_index_file=False)
+
+    def _execute(self):
+        '''
+        Extract subsets of MNIST and save to index file
+        '''
+        indices = create_indices(self.ytrain, nimages=args.nimages, rng=self.rng)
+        file = Path(join(args.data, args.out)).with_suffix('.npy')
+        np.save(file, indices)
+        m, n = indices.shape
+        print(f'Saved {m} labels for each of {n} classes in {file.resolve()}')
 
 class EDA(Command):
     '''
@@ -113,8 +140,6 @@ class EDA(Command):
         Used to iterate through all the images that need to be displayed
 
         Parameters:
-            x          Data to be plotted
-            indices    Indices for selecting data
             n          Number of classes
             m          Number of images for each class
             size       Size of image size x size
@@ -142,9 +167,9 @@ class EDA_MI(Command):
         for i in range(n_classes):
             MI_between_classes[i] = mutual_info_classif(Exemplars.T,Exemplars[i,:])
 
-        MI_within_classes = np.zeros((n_classes,args.m))
+        MI_within_classes = np.zeros((n_classes,args.nimages))
         for i in range(n_classes):
-            companions = self.create_companions(i,n_comparison=args.m)
+            companions = self.create_companions(i,n_comparison=args.nimages)
             MI_within_classes[i] = mutual_info_classif(companions.T,Exemplars[i,:])
         fig = figure(figsize=(20, 8))
         ax1 = fig.add_subplot(1,2,1)
@@ -337,19 +362,7 @@ class EstablishPixels(Command):
         ax.axvline(mu-threshold*sigma,c='xkcd:red',ls=':',label=r'$\mu' f'{-threshold}' r'\sigma$')
         ax.legend()
 
-class EstablishSubsets(Command):
-    '''
-        Extract subsets of MNIST to facilitate replication
-    '''
-    def __init__(self):
-        super().__init__('Establish Subsets','establish-subsets',needs_output_file=True)
 
-    def _execute(self):
-        indices = create_indices(self.ytrain, nimages=args.nimages, rng=self.rng)
-        m, n = indices.shape
-        file = Path(join(args.data, args.out)).with_suffix('.npy')
-        np.save(file, indices)
-        print(f'Saved {m} labels for each of {n} classes in {file.resolve()}')
 
 class EstablishStyles(Command):
     '''
@@ -448,16 +461,17 @@ class Cluster(Command):
 def parse_args(command_names):
     parser = ArgumentParser(__doc__)
     parser.add_argument('command',choices=command_names)
-    parser.add_argument('out',nargs='?')
+    parser.add_argument('-o','--out',nargs='?')
     parser.add_argument('--show', default=False, action='store_true', help='Controls whether plot will be displayed')
     parser.add_argument('--figs', default='./figs', help='Location for storing plot files')
     parser.add_argument('--data', default='./data', help='Location for storing data files')
     parser.add_argument('--indices', default='establish_subset.npy', help='Location where index files have been saved')
-    parser.add_argument('--nimages', default=20, type=int, help='Maximum number of images for each class')
+    parser.add_argument('--nimages', default=1000, type=int, help='Maximum number of images for each class')
     parser.add_argument('--mask', default=None, help='Name of mask file (omit for no mask)')
     parser.add_argument('--size', default=28, type=int, help='Number of row/cols in each image: shape will be will be mxm')
     parser.add_argument('--classes', default=list(range(10)), type=int, nargs='+', help='List of digit classes')
     parser.add_argument('--bins', default=12, type=int, help='Number of bins for histograms')
+    parser.add_argument('--seed', default=None, type=int, help='For initializing random number generator')
     parser.add_argument('--threshold', default=0.1, type=float,  #FIXME
                         help='Include image in same style if mutual information exceeds threshold')
 
@@ -469,7 +483,6 @@ def parse_args(command_names):
 
     parser.add_argument('--cmap',default='Blues',help='Colour map') #FIXME
 
-    parser.add_argument('--m', default=12, type=int, help='Number of images for each class')
     return parser.parse_args()
 
 
