@@ -16,7 +16,7 @@
 # along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.
 
 '''
-    Display representatives of all styles created by establish_styles.py
+    This program schedules commands to create file in pipeline
 '''
 from abc import ABC,abstractmethod
 from argparse import ArgumentParser
@@ -463,7 +463,7 @@ class Cluster(Command):
 
 def parse_args(command_names):
     parser = ArgumentParser(__doc__)
-    parser.add_argument('command',choices=command_names)
+    parser.add_argument('command',choices=command_names,help='The command to be executed')
     parser.add_argument('-o','--out',nargs='?')
     parser.add_argument('--show', default=False, action='store_true', help='Controls whether plot will be displayed')
     parser.add_argument('--figs', default='./figs', help='Location for storing plot files')
@@ -477,10 +477,12 @@ def parse_args(command_names):
     parser.add_argument('--seed', default=None, type=int, help='For initializing random number generator')
 
     group_establish_pixels = parser.add_argument_group('Options for establish-pixels')
-    group_establish_pixels.add_argument('--fraction', default=0.5, type=float,  #FIXME
+    group_establish_pixels.add_argument('--fraction', default=0.5, type=float,
                         help='Include pixel if entropy exceeds mean - fraction*sd')
-    parser.add_argument('--threshold', default=0.1, type=float,  #FIXME
-                        help='Include image in same style if mutual information exceeds threshold')
+
+    group_establish_styles = parser.add_argument_group('Options for establish-styles')
+    group_establish_styles.add_argument('--threshold', default=0.1, type=float,
+                          help='Include image in same style if mutual information exceeds threshold')
 
     group_display_styles = parser.add_argument_group('Options for display-styles')
     group_display_styles.add_argument('--styles', default=Path(__file__).stem, help='Location where styles have been stored')
@@ -503,10 +505,10 @@ if __name__ == '__main__':
         EstablishSubsets(),
         EDA(),
         EstablishPixels(),
+        EDA_MI(),
         EstablishStyles(),
         DisplayStyles(),
-        Cluster(),
-        EDA_MI()
+        Cluster()
     ])
     args = parse_args(Command.get_command_names())
     command = Command.commands[args.command]
