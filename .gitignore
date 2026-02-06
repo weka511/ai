@@ -342,3 +342,4 @@ ActiveInference.pdf
 selforg*.png
 figs/
 *.npy
+*.npz
