@@ -458,7 +458,7 @@ class CalculateA(Command):
             n_styles,n_images = Allocation.shape
             index_style_start[i_class] = len(product)
             for i in range(n_styles):
-                product.append([i_class,i])
+                product.append([i_class,int(i + index_style_start[i_class])]) # avoid messy np.int64
 
         return index_style_start,np.array(product)
 
