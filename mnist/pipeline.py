@@ -599,7 +599,7 @@ def parse_args(command_names,text):
     group_explore_clusters.add_argument('--npairs', default=128, type=int, help='Number of pairs for each class')
 
     group_calculate_A = parser.add_argument_group('Options for calculate-A')
-    group_calculate_A.add_argument('--pseudocount', default=0.5, type=float,help='Used to intialize counts')
+    group_calculate_A.add_argument('--pseudocount', default=0.5, type=float,help='Used to initialize counts')
 
     group_recognize = parser.add_argument_group('Options for recognize')
     group_recognize.add_argument('--A', default='A.npy', help='Location where A matrices files have been saved')
