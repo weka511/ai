@@ -78,7 +78,7 @@ class Command(ABC):
 
     def execute(self):
         '''
-        Execute command: shared code
+        Execute command: shared code. Load mnist images and other data used by commands
         '''
         print (self.get_name(),strftime("%a, %d %b %Y %H:%M:%S +0000", localtime()))
         if self.needs_output_file and args.out == None:
@@ -91,12 +91,13 @@ class Command(ABC):
         self.mask, self.mask_text = create_mask(mask_file=self.args.mask, data=self.args.data, size=self.args.size)
         self.mask = self.mask.reshape(-1)
         self.x = np.multiply(x, self.mask)
+
         if self.needs_index_file:
             self.indices = np.load(join(self.args.data, self.args.indices)).astype(int)
             n_examples, n_classes = self.indices.shape
             assert n_classes == 10
 
-        self._execute()
+        self._execute()   # Perform actual command
 
     @abstractmethod
     def _execute(self):
@@ -497,14 +498,15 @@ class Recognize(Command):
         '''
         loaded_data = np.load(join(self.args.data,self.args.A))
         self.class_styles = loaded_data['class_styles']
-        # print (self.class_styles)
         self.A = loaded_data['A']
         print ( self.get_accuracy(self.x_train,self.y_train))
         print ( self.get_accuracy(self.x_test,self.y_test))
 
-    def predict(self,x,selection,nclasses=10):
-        img = np.array(x[selection])#histeq(np.array(x[selection]))
-        post = self.A@img.reshape(-1)
+    def predict(self,img,nclasses=10):
+        '''
+        Compute the probability of each digit as a cause for imgage
+        '''
+        post = self.A @ img.reshape(-1)
         predictions = np.zeros((nclasses))
         m,n = self.class_styles.shape
         for i in range(m):
@@ -512,28 +514,36 @@ class Recognize(Command):
             istyle = self.class_styles[i,1]
             predictions[iclass] += post[i]
 
-        return img,softmax(predictions)
+        return softmax(predictions)
 
     def get_accuracy(self,x,y):
+        '''
+        Estimate accuracy of predictions
+        '''
         matches = 0
         N = len(y)
         for i in range(N):
-            img,predictions = self.predict(x,i)
+            img = np.array(x[i])
+            predictions = self.predict(img)
             if y[i] == np.argmax(predictions):
                 matches += 1
         return N,matches/N
 
 
 class Cluster(Command):
+    '''
+    Plot mutual information between classes
+    '''
     def __init__(self):
-        super().__init__('Cluster','explore-clusters')
+        super().__init__('Cluster','explore-clusters',needs_output_file=True)
 
+    '''
+    Plot mutual information between classes
+    '''
     def _execute(self):
         fig = figure(figsize=(8, 8))
-        indices = np.load(join(self.args.data,self.args.indices)).astype(int)
-        n_examples,n_classes = indices.shape
 
-        m,n = self.indices.shape  # images,classes
+        m,n = self.indices.shape
         npairs = min(m,self.args.npairs)
         bins = np.linspace(0,1,num=self.args.bins+1)
         assert n == 10
@@ -547,7 +557,7 @@ class Cluster(Command):
         ax.set_ylabel('Frequency')
         ax.set_title(f'Mutual Information within classes based on {npairs} pairs, {self.mask_text}')
         ax.legend(title='Digit classes')
-        fig.savefig(join(self.args.figs,Path(__file__).stem))
+        fig.savefig(join(self.args.figs,args.out))
 
     def create_frequencies(self,i_class,bins=[],npairs=128,m=1000,rng=None):
         '''
@@ -618,11 +628,11 @@ if __name__ == '__main__':
         EDA(),
         EstablishPixels(),
         EDA_MI(),
+        Cluster(),
         EstablishStyles(),
         DisplayStyles(),
         CalculateA(),
-        Recognize(),
-        Cluster()
+        Recognize()
     ])
     args = parse_args(Command.get_command_names(),Command.get_command_help())
     command = Command.commands[args.command]
