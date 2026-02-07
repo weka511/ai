@@ -27,7 +27,7 @@ from time import time, strftime,localtime
 from matplotlib.pyplot import figure, show
 from matplotlib import rc, cm
 import numpy as np
-from mnist import MnistDataloader, create_mask, columnize,create_indices
+from mnist import MnistDataloader, create_mask, columnize,create_indices,histeq
 from scipy.stats import entropy
 from skimage.exposure import equalize_hist
 from sklearn.feature_selection import mutual_info_classif
@@ -495,9 +495,22 @@ class Recognize(Command):
         For each pixel, determine the probability of belonging to each digit and style
         '''
         loaded_data = np.load(join(self.args.data,self.args.A))
-        class_styles = loaded_data['class_styles']
-        A = loaded_data['A']
+        self.class_styles = loaded_data['class_styles']
+        self.A = loaded_data['A']
+        img,predictions = self.predict(self.x_train,0)
         z=0
+
+    def predict(self,x,selection,nclasses=10):
+        img = histeq(np.array(x[selection]))
+        post = self.A@img.reshape(-1)
+        predictions = np.zeros((nclasses))
+        m,n = self.class_styles.shape
+        for i in range(len(predictions)):
+            iclass = self.class_styles[i,0]
+            istyle = self.class_styles[i,1]
+            predictions[iclass] += post[i]
+            print (iclass,istyle,post[i],predictions)
+        return img,predictions
 
 class Cluster(Command):
     def __init__(self):
