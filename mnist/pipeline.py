@@ -27,11 +27,12 @@ from time import time, strftime,localtime
 from matplotlib.pyplot import figure, show
 from matplotlib import rc, cm
 import numpy as np
-from mnist import MnistDataloader, create_mask, columnize,create_indices,histeq
 from scipy.stats import entropy
 from skimage.exposure import equalize_hist
 from sklearn.feature_selection import mutual_info_classif
 from skimage.transform import resize
+from pymdp.maths import softmax
+from mnist import MnistDataloader, create_mask, columnize,create_indices,histeq
 from style import StyleList
 
 class Command(ABC):
@@ -84,7 +85,7 @@ class Command(ABC):
             print ('Output file must be specified')
             exit(1)
         mnist_dataloader = MnistDataloader.create(data=self.args.data)
-        (self.x_train, self.ytrain), _ = mnist_dataloader.load_data()
+        (self.x_train, self.y_train), (self.x_test, self.y_test), = mnist_dataloader.load_data()
         x = columnize(self.x_train)
 
         self.mask, self.mask_text = create_mask(mask_file=self.args.mask, data=self.args.data, size=self.args.size)
@@ -496,21 +497,32 @@ class Recognize(Command):
         '''
         loaded_data = np.load(join(self.args.data,self.args.A))
         self.class_styles = loaded_data['class_styles']
+        # print (self.class_styles)
         self.A = loaded_data['A']
-        img,predictions = self.predict(self.x_train,0)
-        z=0
+        print ( self.get_accuracy(self.x_train,self.y_train))
+        print ( self.get_accuracy(self.x_test,self.y_test))
 
     def predict(self,x,selection,nclasses=10):
-        img = histeq(np.array(x[selection]))
+        img = np.array(x[selection])#histeq(np.array(x[selection]))
         post = self.A@img.reshape(-1)
         predictions = np.zeros((nclasses))
         m,n = self.class_styles.shape
-        for i in range(len(predictions)):
+        for i in range(m):
             iclass = self.class_styles[i,0]
             istyle = self.class_styles[i,1]
             predictions[iclass] += post[i]
-            print (iclass,istyle,post[i],predictions)
-        return img,predictions
+
+        return img,softmax(predictions)
+
+    def get_accuracy(self,x,y):
+        matches = 0
+        N = len(y)
+        for i in range(N):
+            img,predictions = self.predict(x,i)
+            if y[i] == np.argmax(predictions):
+                matches += 1
+        return N,matches/N
+
 
 class Cluster(Command):
     def __init__(self):
