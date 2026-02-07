@@ -483,6 +483,21 @@ class CalculateA(Command):
 
         return A/ A.sum(axis=0)
 
+class Recognize(Command):
+    '''
+    Use A matrices to recognize class
+    '''
+    def __init__(self):
+        super().__init__('Use A matrices to recognize class','recognize')
+
+    def _execute(self):
+        '''
+        For each pixel, determine the probability of belonging to each digit and style
+        '''
+        loaded_data = np.load(join(self.args.data,self.args.A))
+        class_styles = loaded_data['class_styles']
+        A = loaded_data['A']
+        z=0
 
 class Cluster(Command):
     def __init__(self):
@@ -529,8 +544,7 @@ class Cluster(Command):
         return np.histogram(create_mutual_info(),bins,density=True)[0]
 
 def parse_args(command_names,text):
-    parser = ArgumentParser(__doc__,formatter_class=RawDescriptionHelpFormatter,
-      epilog=dedent(text))
+    parser = ArgumentParser(__doc__,formatter_class=RawDescriptionHelpFormatter, epilog=dedent(text))
     parser.add_argument('command',choices=command_names,help='The command to be executed')
     parser.add_argument('-o','--out',nargs='?')
     parser.add_argument('--show', default=False, action='store_true', help='Controls whether plot will be displayed')
@@ -560,9 +574,10 @@ def parse_args(command_names,text):
     group_explore_clusters.add_argument('--npairs', default=128, type=int, help='Number of pairs for each class')
 
     group_calculate_A = parser.add_argument_group('Options for calculate-A')
-    group_calculate_A.add_argument('--pseudocount', default=0.5, type=float,
-                        help='Used to intialize counts')
+    group_calculate_A.add_argument('--pseudocount', default=0.5, type=float,help='Used to intialize counts')
 
+    group_recognize = parser.add_argument_group('Options for recognize')
+    group_recognize.add_argument('--A', default='A.npy', help='Location where A matrices files have been saved')
 
     return parser.parse_args()
 
@@ -581,6 +596,7 @@ if __name__ == '__main__':
         EstablishStyles(),
         DisplayStyles(),
         CalculateA(),
+        Recognize(),
         Cluster()
     ])
     args = parse_args(Command.get_command_names(),Command.get_command_help())
