@@ -93,10 +93,12 @@ class Command(ABC):
         self.x = np.multiply(x, self.mask)
 
         if self.needs_index_file:
-            self.indices = np.load(join(self.args.data, self.args.indices)).astype(int)
-            n_examples, n_classes = self.indices.shape
-            assert n_classes == 10
-
+            file_name = join(self.args.data, self.args.indices)
+            try:
+                self.indices = np.load(file_name).astype(int)
+            except FileNotFoundError:
+                print (f'Failed to find index file {file_name}')
+                exit (1)
         self._execute()   # Perform actual command
 
     @abstractmethod
