@@ -16,7 +16,7 @@
 # along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.
 
 '''
-    This program schedules commands to create file in pipeline
+    This program schedules commands to create files in pipeline.
 '''
 from abc import ABC,abstractmethod
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
