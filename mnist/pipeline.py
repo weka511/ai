@@ -139,10 +139,9 @@ class EDA(Command):
         '''
         Plot some raw data, with or without masking
         '''
-        m,n = 10,10  #FIXME
         fig = figure(figsize=(20, 8))
-        for k,img in self.generate_images(n=n,m=args.nimages,size=args.size):
-            ax = fig.add_subplot(n,args.nimages,k)
+        for k,img in self.generate_images(classes=args.classes,m=args.nimages,size=args.size):
+            ax = fig.add_subplot(len(args.classes),args.nimages,k)
             ax.imshow(img, cmap=args.cmap)
             ax.axis('off')
 
@@ -152,22 +151,21 @@ class EDA(Command):
         fig.tight_layout(pad=2,h_pad=2,w_pad=2)
         fig.savefig(join(args.figs,Path(__file__).stem))
 
-    def generate_images(self,n=10,m=20,size=28):
+    def generate_images(self,classes=list(range(10)),m=20,size=28):
         '''
         Used to iterate through all the images that need to be displayed
 
         Parameters:
-            n          Number of classes
+            classes    List of classes to be displayed
             m          Number of images for each class
             size       Size of image size x size
         '''
         x = np.array(self.x_train)
         k = 0
-        for i in range(n):
+        for i in classes:
             for j in range(m):
                 k += 1
                 yield k,resize(x[self.indices[j,i]],(size,size))
-
 
 class EDA_MI(Command):
     '''
