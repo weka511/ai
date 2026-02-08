@@ -93,11 +93,11 @@ class Command(ABC):
         self.x = np.multiply(x, self.mask)
 
         if self.needs_index_file:
-            file_name = join(self.args.data, self.args.indices)
+            file = Path(join(self.args.data, self.args.indices)).with_suffix('.npy')
             try:
-                self.indices = np.load(file_name).astype(int)
+                self.indices = np.load(file).astype(int)
             except FileNotFoundError:
-                print (f'Failed to find index file {file_name}')
+                print (f'Failed to find index file {file}')
                 exit (1)
         self._execute()   # Perform actual command
 
