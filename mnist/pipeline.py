@@ -112,16 +112,18 @@ class EstablishSubsets(Command):
     '''
 
     def __init__(self):
-        super().__init__('Establish Subsets','establish-subsets',needs_output_file=True,needs_index_file=False)
+        super().__init__('Establish Subsets','establish-subsets',
+                         needs_output_file=True,
+                         needs_index_file=False)
 
     def _execute(self):
         '''
         Extract subsets of MNIST and save to index file
         '''
-        indices = create_indices(self.ytrain, nimages=args.nimages, rng=self.rng)
+        indices = create_indices(self.y_train, nimages=args.nimages, rng=self.rng)
         file = Path(join(args.data, args.out)).with_suffix('.npy')
         np.save(file, indices)
-        m, n = indices.shape
+        m,n = indices.shape
         print(f'Saved {m} labels for each of {n} classes in {file.resolve()}')
 
 class EDA(Command):
