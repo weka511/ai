@@ -22,6 +22,7 @@ from os.path import join
 from pathlib import Path
 import struct
 from array import array
+from time import time
 import numpy as np
 from matplotlib.pyplot import figure, show
 from matplotlib import rc, cm
@@ -36,9 +37,18 @@ class MnistDataloader(object):
     Read MNIST data
 
     snarfed from https://www.kaggle.com/code/hojjatk/read-mnist-dataset
+
+    Data Members:
+        training_images_filepath
+        training_labels_filepath
+        test_images_filepath
+        test_labels_filepath
     '''
     @staticmethod
     def create(data = './data'):
+        '''
+        Create a MnistDataloader, setting up pathnames for all datasets
+        '''
         training_images_filepath = join(data, 'train-images-idx3-ubyte/train-images-idx3-ubyte')
         training_labels_filepath = join(data, 'train-labels-idx1-ubyte/train-labels-idx1-ubyte')
         test_images_filepath = join(data, 't10k-images-idx3-ubyte/t10k-images-idx3-ubyte')
@@ -53,29 +63,53 @@ class MnistDataloader(object):
         self.test_labels_filepath = test_labels_filepath
 
     def read_images_labels(self, images_filepath, labels_filepath):
-        labels = []
-        with open(labels_filepath, 'rb') as file:
-            magic, size = struct.unpack(">II", file.read(8))
-            if magic != 2049:
-                raise ValueError('Magic number mismatch, expected 2049, got {}'.format(magic))
-            labels = array("B", file.read())
+        '''
+        Used to read one set of images and labels, either training or test
 
-        with open(images_filepath, 'rb') as file:
-            magic, size, rows, cols = struct.unpack(">IIII", file.read(16))
-            if magic != 2051:
-                raise ValueError('Magic number mismatch, expected 2051, got {}'.format(magic))
-            image_data = array("B", file.read())
-        images = []
-        for i in range(size):
-            images.append([0] * rows * cols)
-        for i in range(size):
-            img = np.array(image_data[i * rows * cols:(i + 1) * rows * cols])
-            img = img.reshape(28, 28)
-            images[i][:] = img
+        Parameters:
+            images_filepath   Full pathname for images
+            labels_filepath   Full pathname for labels
 
-        return images, labels
+        Returns:  images, labels
+
+        If either file is missing, program will exit
+        '''
+        try:
+            labels = []
+            with open(labels_filepath, 'rb') as file:
+                magic, size = struct.unpack(">II", file.read(8))
+                if magic != 2049:
+                    raise ValueError(f'Magic number mismatch, expected 2049, got {magic}')
+                labels = array("B", file.read())
+            with open(images_filepath, 'rb') as file:
+                magic, size, rows, cols = struct.unpack(">IIII", file.read(16))
+                if magic != 2051:
+                    raise ValueError(f'Magic number mismatch, expected 2051, got {magic}')
+                image_data = array("B", file.read())
+            images = []
+            for i in range(size):
+                images.append([0] * rows * cols)
+            for i in range(size):
+                img = np.array(image_data[i * rows * cols:(i + 1) * rows * cols])
+                img = img.reshape(28, 28)
+                images[i][:] = img
+
+            return images, labels
+        except FileNotFoundError as e:
+            print (f'Could not find file {e.filename}')
+            exit(1)
+        except ValueError as e:
+            print (e)
+            exit(1)
+
 
     def load_data(self):
+        '''
+        Load training and test data
+
+        Returns:  (x_train, y_train), (x_test, y_test)
+
+        '''
         x_train, y_train = self.read_images_labels(self.training_images_filepath, self.training_labels_filepath)
         x_test, y_test = self.read_images_labels(self.test_images_filepath, self.test_labels_filepath)
         return (x_train, y_train), (x_test, y_test)
@@ -85,6 +119,7 @@ def parse_args():
     parser = ArgumentParser(__doc__)
     parser.add_argument('--show', default=False, action='store_true', help='Controls whether plot will be displayed')
     parser.add_argument('--figs', default='./figs', help='Location for storing plot files')
+    parser.add_argument('--cmap',default='Blues',help='Colour map')
     return parser.parse_args()
 
 def histeq(im, nbr_bins=256):
@@ -190,12 +225,12 @@ if __name__ == '__main__':
 
         ax1 = fig.add_subplot(m, 4, 4*i+1)
         ax1.axis('off')
-        ax1.imshow(img, cmap=cm.gray)
+        ax1.imshow(img, cmap=args.cmap)
         ax2 = fig.add_subplot(m, 4, 4*i+2)
         ax2.hist(img)
 
         ax3 = fig.add_subplot(m, 4, 4*i+3)
-        ax3.imshow(equalize_hist(img), cmap=cm.gray)
+        ax3.imshow(equalize_hist(img), cmap=args.cmap)
         ax1.axis('off')
         ax4 = fig.add_subplot(m, 4, 4*i+4)
         ax4.hist(equalize_hist(img))
