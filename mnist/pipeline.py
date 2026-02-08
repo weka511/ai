@@ -143,7 +143,7 @@ class EDA(Command):
         fig = figure(figsize=(20, 8))
         for k,img in self.generate_images(n=n,m=args.nimages,size=args.size):
             ax = fig.add_subplot(n,args.nimages,k)
-            ax.imshow(img, cmap=cm.Blues)
+            ax.imshow(img, cmap=args.cmap)
             ax.axis('off')
 
         fig.suptitle(('No mask' if args.mask == None
@@ -194,7 +194,7 @@ class EDA_MI(Command):
 
         fig = figure(figsize=(20, 8))
         ax1 = fig.add_subplot(1,2,1)
-        fig.colorbar(ax1.imshow(MI_between_classes, cmap='Blues', interpolation='nearest'),
+        fig.colorbar(ax1.imshow(MI_between_classes, cmap=args.cmap, interpolation='nearest'),
                      orientation='vertical')
         ax1.set_title('Mutual Information between classes')
         EDA_MI.annotate(MI_between_classes,ax=ax1)
