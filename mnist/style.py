@@ -44,6 +44,10 @@ class StyleList(object):
     '''
     @staticmethod
     def build(x,indices,i_class=0,nimages=10,threshold=0.1):
+        '''
+        Construct list of styles. Add each new image to an existing style if it is
+        close enough, otherwise create a new style
+        '''
         x_class = x[indices[:,i_class],:]   # All vectors in this digit-class
         product = StyleList(x_class)
         steps = []
@@ -68,6 +72,16 @@ class StyleList(object):
         self.styles.append(style)
 
     def get_best_match(self,index):
+        '''
+        Locate the style that best matches a new image
+
+        Parameters:
+            index     The index of the image
+
+        Returns:
+            style that is the best matchc
+            the mutual information
+        '''
         style_best_match = None
         mi_best_match = -1
         x = self.x_class[index,:]
