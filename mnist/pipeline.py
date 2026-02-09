@@ -392,8 +392,11 @@ class EstablishStyles(Command):
         Display representatives of all styles created by establish_styles.py
         '''
         n_examples, n_classes = self.indices.shape
-        for i_class in args.classes:
-            style_list = StyleList.build(self.x, self.indices,
+        N = np.zeros((args.nimages,len(args.classes)))
+        L = 0
+        max_steps = -1
+        for j,i_class in enumerate(args.classes):
+            style_list,steps = StyleList.build(self.x, self.indices,
                                          i_class=i_class,
                                          nimages=min(n_examples,args.nimages),
                                          threshold=args.threshold)
@@ -406,6 +409,17 @@ class EstablishStyles(Command):
             fig.savefig(join(args.figs, Path(__file__).stem + str(i_class)))
             file = Path(join(args.data, args.out+str(i_class))).with_suffix('.npy')
             style_list.save(file)
+            for i in steps:
+                N[i+1:,j] += 1
+            max_steps = max(max_steps,steps[-1])
+        fig = figure(figsize=(8, 8))
+        ax2 = fig.add_subplot(1, 1, 1)
+        for j,i_class in enumerate(args.classes):
+            ax2.plot(list(range(max_steps)),N[0:max_steps,j],label={i_class})
+        ax2.set_xlabel('Number of exemplars')
+        ax2.set_ylabel('Number of styles')
+        ax2.legend()
+        fig.savefig(join(args.figs, Path(__file__).stem))
 
 class DisplayStyles(Command):
     '''

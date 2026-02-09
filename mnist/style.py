@@ -46,13 +46,16 @@ class StyleList(object):
     def build(x,indices,i_class=0,nimages=10,threshold=0.1):
         x_class = x[indices[:,i_class],:]   # All vectors in this digit-class
         product = StyleList(x_class)
+        steps = []
         for j in range(nimages):
             matching_style,mi = product.get_best_match(j)
             if matching_style == None or mi < threshold:
                 product.add(Style(j))
+                steps.append(j)
             else:
                 matching_style.add(j)
-        return product
+
+        return product,steps
 
     def  __init__(self,x_class):
         self.styles = []
