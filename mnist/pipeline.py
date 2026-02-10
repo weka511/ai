@@ -532,31 +532,32 @@ class Recognize(Command):
 
     def predict(self,img,nclasses=10):
         '''
-        Compute the probability of each digit as a cause for imgage
+        Compute the probability of each digit as a cause for image.
+        We will accumulate the posterior probilities for each
+        style within each class,
         '''
-        post = self.A @ img.reshape(-1)
+        posterior_for_styles = self.A @ img.reshape(-1)  # Not normalized
         predictions = np.zeros((nclasses))
-        m,n = self.class_styles.shape
+        m,_ = self.class_styles.shape
         for i in range(m):
             iclass = self.class_styles[i,0]
-            istyle = self.class_styles[i,1]
-            predictions[iclass] += post[i]
+            istyle = self.class_styles[i,1]   # Not used...see Issue #49
+            predictions[iclass] += posterior_for_styles[i]
 
         return softmax(predictions)
 
     def get_accuracy(self,x,y):
         '''
-        Estimate accuracy of predictions
+        Compute accuracy of predictions: predict the class of each image,
+        and compare with label.
         '''
         matches = 0
         N = len(y)
         for i in range(N):
-            img = np.array(x[i])
-            predictions = self.predict(img)
-            if y[i] == np.argmax(predictions):
-                matches += 1
-        return N,matches/N
+            predictions = self.predict(np.array(x[i]))
+            if y[i] == np.argmax(predictions):  matches += 1
 
+        return N,matches/N
 
 class Cluster(Command):
     '''
