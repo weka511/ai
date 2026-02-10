@@ -499,17 +499,17 @@ class CalculateA(Command):
         n_class_styles,_ = class_styles.shape
         A = args.pseudocount*np.ones((n_class_styles,n_pixels))
         for i_class in self.args.classes:
-                x_class = self.x[self.indices[:,i_class],:]
-                _,n_pixels = x_class.shape
-                Allocation = np.load(join(self.args.data, self.args.styles+str(i_class)+'.npy')).astype(int)
-                n_styles,n_images = Allocation.shape
-                for i_style in range(n_styles):
-                    for image_seq in range(n_images):
-                        image_index = Allocation[i_style,image_seq]
-                        if image_index < 0: break
-                        img = x_class[image_index]
-                        i = index_style_start[i_class] + i_style
-                        A[i,:] += img
+            x_class = self.x[self.indices[:,i_class],:]
+            _,n_pixels = x_class.shape
+            Allocation = np.load(join(self.args.data, self.args.styles+str(i_class)+'.npy')).astype(int)
+            n_styles,n_images = Allocation.shape
+            for i_style in range(n_styles):
+                for image_seq in range(n_images):
+                    image_index = Allocation[i_style,image_seq]
+                    if image_index < 0: break
+                    img = x_class[image_index]
+                    i = index_style_start[i_class] + i_style
+                    A[i,:] += img
 
         return A/ A.sum(axis=0)
 
