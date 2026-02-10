@@ -94,11 +94,8 @@ class Command(ABC):
 
         if self.needs_index_file:
             file = Path(join(self.args.data, self.args.indices)).with_suffix('.npy')
-            try:
-                self.indices = np.load(file).astype(int)
-            except FileNotFoundError:
-                print (f'Failed to find index file {file}')
-                exit (1)
+            self.indices = np.load(file).astype(int)
+
         self._execute()   # Perform actual command
 
     @abstractmethod
@@ -668,7 +665,11 @@ if __name__ == '__main__':
     args = parse_args(Command.get_command_names(),Command.get_command_help())
     command = Command.commands[args.command]
     command.set_args(args)
-    command.execute()
+    try:
+        command.execute()
+    except FileNotFoundError as e:
+        print(f'Error: {e.filename} not found.')
+        exit (1)
 
     elapsed = time() - start
     minutes = int(elapsed / 60)
