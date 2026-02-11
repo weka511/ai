@@ -15,7 +15,10 @@
 # You should have received a copy of the GNU General Public License
 # along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.
 
-'''Read and display MNIST data'''
+'''
+    This module contains functions to read MNIST data, sample the data,
+    equalize the histogram of pixels, and read a mask file.
+'''
 
 from argparse import ArgumentParser
 from os.path import join
@@ -28,9 +31,6 @@ from matplotlib.pyplot import figure, show
 from matplotlib import rc, cm
 from skimage.exposure import equalize_hist
 from skimage.transform import resize
-from sklearn.feature_selection import mutual_info_classif
-import kagglehub
-
 
 class MnistDataloader(object):
     '''
@@ -81,17 +81,22 @@ class MnistDataloader(object):
                 if magic != 2049:
                     raise ValueError(f'Magic number mismatch, expected 2049, got {magic}')
                 labels = array("B", file.read())
+
             with open(images_filepath, 'rb') as file:
-                magic, size, rows, cols = struct.unpack(">IIII", file.read(16))
+                magic, size1, rows, cols = struct.unpack(">IIII", file.read(16))
                 if magic != 2051:
                     raise ValueError(f'Magic number mismatch, expected 2051, got {magic}')
                 image_data = array("B", file.read())
+                assert size1 == size
+                assert rows == 28
+                assert cols == 28
+
             images = []
             for i in range(size):
                 images.append([0] * rows * cols)
             for i in range(size):
                 img = np.array(image_data[i * rows * cols:(i + 1) * rows * cols])
-                img = img.reshape(28, 28)
+                img = img.reshape(rows, cols)
                 images[i][:] = img
 
             return images, labels
@@ -120,6 +125,9 @@ def parse_args():
     parser.add_argument('--show', default=False, action='store_true', help='Controls whether plot will be displayed')
     parser.add_argument('--figs', default='./figs', help='Location for storing plot files')
     parser.add_argument('--cmap',default='Blues',help='Colour map')
+    parser.add_argument('--resize', default=None,type=int,nargs='+',help='Used to resize image')
+    parser.add_argument('--m', '-m', default=12,type=int,help='Number of rows for display')
+    parser.add_argument('--seed', default=None, type=int, help='For initializing random number generator')
     return parser.parse_args()
 
 def histeq(im, nbr_bins=256):
@@ -178,7 +186,7 @@ def create_indices(y, nclasses=10, nimages=1000, rng=np.random.default_rng()):
 
     Returns:
         An array with one column per digit class, one
-        row for sequnce within class
+        row for sequence within class
     '''
     product = np.zeros((nimages, nclasses), dtype=int)
     class_counts = np.zeros((nclasses), dtype=int)
@@ -194,17 +202,6 @@ def create_indices(y, nclasses=10, nimages=1000, rng=np.random.default_rng()):
 
     raise RuntimeError(f'Failed to find {nimages} labels in {nclasses} classes')
 
-def get_mutual_information(x,y):
-    '''
-    Calculate mutual information between two vectors. This is a wrapper for
-    sklearn.feature_selection.mutual_info_classif, which expects X to be a matrix
-
-    Parameters:
-        x     A vector
-        y     Another vector
-    '''
-    return mutual_info_classif(x[:, np.newaxis],y)
-
 if __name__ == '__main__':
     rc('font', **{'family': 'serif',
                   'serif': ['Palatino'],
@@ -213,28 +210,37 @@ if __name__ == '__main__':
     fig = figure(figsize=(8, 12))
     start = time()
     args = parse_args()
-    rng = np.random.default_rng()
+    rng = np.random.default_rng(args.seed)
 
     mnist_dataloader = MnistDataloader.create()
+    (x_train,y_train),_ = mnist_dataloader.load_data()
 
-    (x_train, y_train), (x_test, y_test) = mnist_dataloader.load_data()
-    m = 8
-    for i in range(m):
+    for i in range(args.m):
         k = rng.choice(len(x_train))
-        img = resize(np.array(x_train[k]),(32,32))
-
-        ax1 = fig.add_subplot(m, 4, 4*i+1)
+        img = np.array(x_train[k])
+        if args.resize != None:
+            rows = args.resize[0]
+            cols = args.resize[1] if len(args.resize) > 1 else rows
+            img = resize(img,(rows,cols))
+        ax1 = fig.add_subplot(args.m, 4, 4*i+1)
         ax1.axis('off')
         ax1.imshow(img, cmap=args.cmap)
-        ax2 = fig.add_subplot(m, 4, 4*i+2)
-        ax2.hist(img)
 
-        ax3 = fig.add_subplot(m, 4, 4*i+3)
+        ax2 = fig.add_subplot(args.m, 4, 4*i+2)
+        ax2.hist(img.reshape(-1),bins=16)
+
+        ax3 = fig.add_subplot(args.m, 4, 4*i+3)
         ax3.imshow(equalize_hist(img), cmap=args.cmap)
-        ax1.axis('off')
-        ax4 = fig.add_subplot(m, 4, 4*i+4)
-        ax4.hist(equalize_hist(img))
+        ax3.axis('off')
 
+        ax4 = fig.add_subplot(args.m, 4, 4*i+4)
+        ax4.hist(equalize_hist(img.reshape(-1)))
+
+        if i==0:
+            ax2.set_title('Raw' if args.resize == None else 'Resized')
+            ax4.set_title('After equalization')
+
+    fig.suptitle('MNIST')
     fig.tight_layout(pad=3,h_pad=3,w_pad=3)
     fig.savefig(join(args.figs,Path(__file__).stem))
 
