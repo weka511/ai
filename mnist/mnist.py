@@ -16,8 +16,7 @@
 # along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.
 
 '''
-    This module contains functions to read MNIST data, sample the data,
-    equalize the histogram of pixels, and read a mask file.
+    This module contains functions to read and sample MNIST data.
 '''
 
 from argparse import ArgumentParser
@@ -27,6 +26,7 @@ import struct
 from array import array
 from time import time
 import numpy as np
+from scipy.stats import entropy
 from matplotlib.pyplot import figure, show
 from matplotlib import rc, cm
 from skimage.exposure import equalize_hist
@@ -49,11 +49,11 @@ class MnistDataloader(object):
         '''
         Create a MnistDataloader, setting up pathnames for all datasets
         '''
-        training_images_filepath = join(data, 'train-images-idx3-ubyte/train-images-idx3-ubyte')
-        training_labels_filepath = join(data, 'train-labels-idx1-ubyte/train-labels-idx1-ubyte')
-        test_images_filepath = join(data, 't10k-images-idx3-ubyte/t10k-images-idx3-ubyte')
-        test_labels_filepath = join(data, 't10k-labels-idx1-ubyte/t10k-labels-idx1-ubyte')
-        return MnistDataloader(training_images_filepath, training_labels_filepath, test_images_filepath, test_labels_filepath)
+        return MnistDataloader(
+            training_images_filepath = join(data, 'train-images-idx3-ubyte/train-images-idx3-ubyte'),
+            training_labels_filepath = join(data, 'train-labels-idx1-ubyte/train-labels-idx1-ubyte'),
+            test_images_filepath = join(data, 't10k-images-idx3-ubyte/t10k-images-idx3-ubyte'),
+            test_labels_filepath = join(data, 't10k-labels-idx1-ubyte/t10k-labels-idx1-ubyte'))
 
     def __init__(self, training_images_filepath, training_labels_filepath,
                  test_images_filepath, test_labels_filepath):
@@ -130,14 +130,6 @@ def parse_args():
     parser.add_argument('--seed', default=None, type=int, help='For initializing random number generator')
     return parser.parse_args()
 
-def histeq(im, nbr_bins=256):
-    '''
-    Histogram equalization after https://www.janeriksolem.net/histogram-equalization-with-python-and.html
-    '''
-    imhist, bins = np.histogram(im.flatten(), nbr_bins)
-    cdf = np.cumsum(imhist)
-    cdf = (nbr_bins - 1) * cdf / cdf[-1]
-    return np.interp(im.flatten(), bins[:-1], cdf).reshape(im.shape)
 
 def create_mask(mask_file=None,data='../data',size=28):
     '''
@@ -202,6 +194,42 @@ def create_indices(y, nclasses=10, nimages=1000, rng=np.random.default_rng()):
 
     raise RuntimeError(f'Failed to find {nimages} labels in {nclasses} classes')
 
+def create_entropies(images,selector,bins=20,m=28):
+    '''
+    Used to determine which pixels have the most information
+
+    Parameters:
+        images     Raw images from NIST
+        selector   Indices of images that need to be included
+        bins       Number of bins
+        m          We will standardize images to be mxm
+    '''
+    n = len(selector)
+    def create_1d_images():
+        '''
+        Convert images to be mxm, equalize, then convert to 1d
+        '''
+        m0,_ = images[0].shape
+        product = np.zeros((n, m*m))
+        for i in selector:
+            right_sized_image = images[i] if m == m0 else resize(np.array(images[i]),(m,m))
+            img = equalize_hist(right_sized_image)
+            product[i] = np.reshape(img,-1)
+        return product
+
+    def create_entropies_from_1d_images(images1d):
+        '''
+        Calculate probability density for each pixel, then calculate entropy
+        '''
+        product = np.zeros((m*m))
+        for i in range((m*m)):
+            hist,edges = np.histogram(images1d[i],bins=bins,density=True)
+            pdf = hist/np.sum(hist)
+            product[i] = entropy(pdf)
+        return product
+
+    return create_entropies_from_1d_images(create_1d_images())
+
 if __name__ == '__main__':
     rc('font', **{'family': 'serif',
                   'serif': ['Palatino'],
@@ -228,13 +256,13 @@ if __name__ == '__main__':
 
         ax2 = fig.add_subplot(args.m, 4, 4*i+2)
         ax2.hist(img.reshape(-1),bins=16)
-
+        img_eq = equalize_hist(img)
         ax3 = fig.add_subplot(args.m, 4, 4*i+3)
-        ax3.imshow(equalize_hist(img), cmap=args.cmap)
+        ax3.imshow(img_eq, cmap=args.cmap)
         ax3.axis('off')
 
         ax4 = fig.add_subplot(args.m, 4, 4*i+4)
-        ax4.hist(equalize_hist(img.reshape(-1)))
+        ax4.hist(img_eq.reshape(-1))
 
         if i==0:
             ax2.set_title('Raw' if args.resize == None else 'Resized')
