@@ -31,6 +31,7 @@ from matplotlib.pyplot import figure, show
 from matplotlib import rc, cm
 from skimage.exposure import equalize_hist
 from skimage.transform import resize
+from sklearn.feature_selection import mutual_info_classif
 
 class MnistDataloader(object):
     '''
@@ -229,6 +230,17 @@ def create_entropies(images,selector,bins=20,m=28):
         return product
 
     return create_entropies_from_1d_images(create_1d_images())
+
+def get_mutual_information(x,y):
+    '''
+    Calculate mutual information between two vectors. This is a wrapper for
+    sklearn.feature_selection.mutual_info_classif, which expects X to be a matrix
+
+    Parameters:
+        x     A vector
+        y     Another vector
+    '''
+    return mutual_info_classif(x[:, np.newaxis],y)
 
 if __name__ == '__main__':
     rc('font', **{'family': 'serif',

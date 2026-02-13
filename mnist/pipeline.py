@@ -27,12 +27,11 @@ from time import time, strftime,localtime
 from matplotlib.pyplot import figure, show
 from matplotlib import rc, cm
 import numpy as np
-from scipy.stats import entropy
 from skimage.exposure import equalize_hist
 from sklearn.feature_selection import mutual_info_classif
 from skimage.transform import resize
 from pymdp.maths import softmax
-from mnist import MnistDataloader, create_mask, columnize,create_indices,histeq
+from mnist import MnistDataloader, create_mask, columnize,create_indices,create_entropies
 from style import StyleList
 
 class Command(ABC):
@@ -78,7 +77,9 @@ class Command(ABC):
 
     def execute(self):
         '''
-        Execute command: shared code. Load mnist images and other data used by commands
+        Shared code for executing command:
+        - Load mnist images and other data used by commands
+        - apply mask
         '''
         print (self.get_name(),strftime("%a, %d %b %Y %H:%M:%S +0000", localtime()))
         if self.needs_output_file and args.out == None:
@@ -137,8 +138,8 @@ class EDA(Command):
         Plot some raw data, with or without masking
         '''
         fig = figure(figsize=(20, 8))
-        for k,img in self.generate_images(classes=args.classes,m=args.nimages,size=args.size):
-            ax = fig.add_subplot(len(args.classes),args.nimages,k)
+        for k,img in self.generate_images(classes=args.classes,m=args.images_per_digit,size=args.size):
+            ax = fig.add_subplot(len(args.classes),args.images_per_digit,k)
             ax.imshow(img, cmap=args.cmap)
             ax.axis('off')
 
@@ -250,61 +251,30 @@ class EstablishPixels(Command):
         '''
         x_train = np.array(self.x_train)
         indices = self.indices.reshape(-1)
-        entropies = self.create_entropies(x_train[indices],list(range(len(indices))),bins=args.bins,m=args.size)
+        entropies = create_entropies(x_train[indices],
+                                     list(range(len(indices))),
+                                     bins=args.bins,
+                                     m=args.size)
         mu = np.mean(entropies)
         sigma = np.std(entropies)
         min0 = np.min(entropies)
         img = np.reshape(entropies,(args.size,args.size))
         mask = self.cull(entropies,-args.fraction,mu,sigma,clip=True).reshape(args.size,args.size)
-        file = Path(join(args.data, args.out)).with_suffix('.npy')
-        np.save(file, mask)
-        fig = figure(figsize=(12, 12))
-        self.show_image(img,ax=fig.add_subplot(2,2,1),fig=fig,cmap=args.cmap)
-        self.show_culled(img,-args.fraction,mu,sigma,min0,ax = fig.add_subplot(2,2,2),cmap=args.cmap)
-        self.show_mask(mask,cmap=args.cmap,ax = fig.add_subplot(2,2,3),size=args.size)
-        self.show_histogram(img,mu,sigma,threshold=args.fraction,ax=fig.add_subplot(2,2,4))
 
+        fig = figure(figsize=(12, 12))
+        self.show_image(img,ax=fig.add_subplot(2,3,1),fig=fig,cmap=args.cmap)
+        self.show_culled(img,-args.fraction,mu,sigma,min0,ax = fig.add_subplot(2,3,2),cmap=args.cmap)
+        self.show_mask(mask,cmap=args.cmap,ax = fig.add_subplot(2,3,4),size=args.size)
+        self.show_histogram(img,mu,sigma,threshold=args.fraction,ax=fig.add_subplot(2,3,5))
+        n,bins = self.show_pixels(mask,ax=fig.add_subplot(2,3,3))
         fig.suptitle(r'Processed \emph{' + f'{args.indices}'
                      ',} '  f'{len(indices) // 10:,d} images per class, {args.bins} bins')
-        fig.savefig(join(args.figs,Path(__file__).stem))
+        fig.savefig(join(args.figs,args.out))
 
-        print(f'Processed {args.indices}, {len(indices) // 10:,d} images per class, {args.bins} bins')
+        file = Path(join(args.data, args.out)).with_suffix('.npz')
+        np.savez(file, mask=mask,n=n,bins=bins)
 
-    def create_entropies(self,images,selector,bins=20,m=32):
-        '''
-        Used to determine which pixels have the most information
-
-        Parameters:
-            images     Raw images from NIST
-            selector   Indices of images that need to be included
-            bins       Number of bins
-            m          We will standardize images to be mxm
-        '''
-        n = len(selector)
-        def create_1d_images():
-            '''
-            Convert images to be mxm, equalize, then convert to 1d
-            '''
-            m0,_ = images[0].shape
-            product = np.zeros((n, m*m))
-            for i in selector:
-                right_sized_image = images[i] if m == m0 else resize(np.array(images[i]),(m,m))
-                img = equalize_hist(right_sized_image)
-                product[i] = np.reshape(img,-1)
-            return product
-
-        def create_entropies_from_1d_images(images1d):
-            '''
-            Calculate probability density for each pixel, then calculate entropy
-            '''
-            product = np.zeros((m*m))
-            for i in range((m*m)):
-                hist,edges = np.histogram(images1d[i],bins=bins,density=True)
-                pdf = hist/np.sum(hist)
-                product[i] = entropy(pdf)
-            return product
-
-        return create_entropies_from_1d_images(create_1d_images())
+        print(f'Processed {args.indices}, {len(indices) // 10:,d} images per class, {args.bins} bins, saved mask in {file}')
 
     def cull(self,img,n,mu,sigma,min0=0,clip=False):
         '''
@@ -375,7 +345,58 @@ class EstablishPixels(Command):
         ax.axvline(mu-threshold*sigma,c='xkcd:red',ls=':',label=r'$\mu' f'{-threshold}' r'\sigma$')
         ax.legend()
 
+    def show_pixels(self,mask,ax=None,bins=10):
+        '''
+        Show histogram of pixel intensity
 
+        Parameters:
+            mask    The mask, identifying which pixels contain the most information
+            ax      Axis for plotting
+            bins    Number of bins to histogram
+
+        Returns:
+            n          Counts in each bin
+            bin_edges  The edges of the bins that were actually used
+        '''
+        def generate_images():
+            '''
+            Used to iterate over all images that have been sampled via Establish Subsets
+            '''
+            m,n = self.indices.shape
+            for i in range(m):
+                for j in range(n):
+                    yield self.indices[i,j]
+
+        def collect_pixels():
+            '''
+            Use mask to segregate pixels into in-group and out-group
+
+            Returns:
+                Values of pixels that will be included
+                Values of pixels that will be masked out
+            '''
+            pixels = []
+            masked_out = []
+            for index in generate_images():
+                img = equalize_hist(np.array(self.x_train[index]))
+                m,n = img.shape
+                for i in range(m):
+                    for j in range(n):
+                        if mask[i,j] == 1:
+                            pixels.append(img[i,j])
+                        else:
+                            masked_out.append(img[i,j])
+
+            return pixels,masked_out
+
+        pixels,masked_out = collect_pixels()
+        ax.hist(pixels + masked_out,bins=bins,color='xkcd:blue',alpha=1.0,label='All')
+        n,bin_edges,_ = ax.hist(pixels,bins=bins,facecolor='xkcd:red',alpha=1.0,label='Included in mask',hatch='/', edgecolor='k')
+        ax.legend()
+        ax.set_xlabel('Intensity')
+        ax.set_ylabel('Frequency')
+        ax.set_title('Intensity of pixels')
+        return n,bin_edges
 
 class EstablishStyles(Command):
     '''
@@ -394,9 +415,9 @@ class EstablishStyles(Command):
         max_steps = -1
         for j,i_class in enumerate(self.args.classes):
             style_list,steps = StyleList.build(self.x, self.indices,
-                                         i_class=i_class,
-                                         nimages=min(n_examples,self.args.nimages),
-                                         threshold=self.args.threshold)
+                                               i_class=i_class,
+                                               nimages=min(n_examples,self.args.nimages),
+                                               threshold=self.args.threshold)
 
             file = Path(join(self.args.data, self.args.out+str(i_class))).with_suffix('.npy')
             style_list.save(file)
@@ -497,7 +518,7 @@ class CalculateA(Command):
         Add up pixels for each combination of class,style and normalize
         '''
         n_class_styles,_ = class_styles.shape
-        A = args.pseudocount*np.ones((n_class_styles,n_pixels))
+        A = args.pseudocount*np.ones((n_class_styles,n_pixels))  # levels?
         for i_class in self.args.classes:
             x_class = self.x[self.indices[:,i_class],:]
             _,n_pixels = x_class.shape
@@ -509,7 +530,7 @@ class CalculateA(Command):
                     if image_index < 0: break
                     img = x_class[image_index]
                     i = index_style_start[i_class] + i_style
-                    A[i,:] += img
+                    A[i,:] += histeq(img)
 
         return A/ A.sum(axis=0)
 
@@ -536,7 +557,7 @@ class Recognize(Command):
         We will accumulate the posterior probilities for each
         style within each class,
         '''
-        posterior_for_styles = self.A @ img.reshape(-1)  # Not normalized
+        posterior_for_styles = self.A @ equalize_hist(img.reshape(-1))  # Not normalized
         predictions = np.zeros((nclasses))
         m,_ = self.class_styles.shape
         for i in range(m):
@@ -622,6 +643,9 @@ def parse_args(command_names,text):
     parser.add_argument('--bins', default=12, type=int, help='Number of bins for histograms')
     parser.add_argument('--seed', default=None, type=int, help='For initializing random number generator')
     parser.add_argument('--cmap',default='Blues',help='Colour map')
+
+    group_eda = parser.add_argument_group('Options for eda')
+    group_eda.add_argument('--images_per_digit',default=8,type=int,help='Number of images in each digit class')
 
     group_establish_pixels = parser.add_argument_group('Options for establish-pixels')
     group_establish_pixels.add_argument('--fraction', default=0.5, type=float,
