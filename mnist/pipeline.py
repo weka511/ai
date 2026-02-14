@@ -506,7 +506,7 @@ class CalculateA(Command):
         A = self.create_A(index_style_start,class_styles)
         file = Path(join(args.data, args.out)).with_suffix('.npz')
         np.savez(file,A=A,class_styles=class_styles)
-        print (f'Saved A and class_styles from {join(self.args.data, self.args.styles+'*.npy')} in {file}')
+        print (f'Saved A and class_styles from {join(self.args.data, self.args.styles)} in {file}')
 
     def create_class_styles(self):
         '''
@@ -514,11 +514,13 @@ class CalculateA(Command):
         '''
         product = []
         index_style_start = np.zeros(len(self.args.classes),dtype=int)
+        style_data = np.load(Path(join(self.args.data, self.args.styles)).with_suffix('.npz'),allow_pickle=True)
+        self.Allocations = style_data['Allocations']
         for i_class in self.args.classes:
             x_class = self.x[self.indices[:,i_class],:]
             _,n_pixels = x_class.shape
-            Allocation = np.load(join(self.args.data, self.args.styles+str(i_class)+'.npy')).astype(int)
-            n_styles,n_images = Allocation.shape
+            # Allocation = np.load(join(self.args.data, self.args.styles+str(i_class)+'.npy')).astype(int)
+            n_styles,n_images = self.Allocations[i_class].shape
             index_style_start[i_class] = len(product)
             for i in range(n_styles):
                 product.append([i_class,int(i + index_style_start[i_class])]) # avoid messy np.int64
@@ -530,19 +532,20 @@ class CalculateA(Command):
         Add up pixels for each combination of class,style and normalize
         '''
         n_class_styles,_ = class_styles.shape
-        A = args.pseudocount*np.ones((n_class_styles,n_pixels))  # levels?
+        A = args.pseudocount*np.ones((n_class_styles,n_pixels,len(self.bins)+1))  # FIXME
         for i_class in self.args.classes:
-            x_class = self.x[self.indices[:,i_class],:]
+            x_class = np.digitize(self.x[self.indices[:,i_class],:],self.bins)
             _,n_pixels = x_class.shape
-            Allocation = np.load(join(self.args.data, self.args.styles+str(i_class)+'.npy')).astype(int)
-            n_styles,n_images = Allocation.shape
+            # Allocation = np.load(join(self.args.data, self.args.styles+str(i_class)+'.npy')).astype(int)
+            n_styles,n_images = self.Allocations[i_class].shape
             for i_style in range(n_styles):
                 for image_seq in range(n_images):
-                    image_index = Allocation[i_style,image_seq]
+                    image_index = self.Allocations[i_class][i_style,image_seq]
                     if image_index < 0: break
                     img = x_class[image_index]
                     i = index_style_start[i_class] + i_style
-                    A[i,:] += histeq(img)
+                    for j in range(n_pixels):
+                        A[i,j,img[j]] += 1
 
         return A/ A.sum(axis=0)
 
