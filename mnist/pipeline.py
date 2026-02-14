@@ -26,6 +26,7 @@ from pathlib import Path
 from time import time, strftime,localtime
 from matplotlib.pyplot import figure, show
 from matplotlib import rc, cm
+from matplotlib.ticker import MaxNLocator
 import numpy as np
 from skimage.exposure import equalize_hist
 from sklearn.feature_selection import mutual_info_classif
@@ -89,13 +90,14 @@ class Command(ABC):
         (self.x_train, self.y_train), (self.x_test, self.y_test), = mnist_dataloader.load_data()
         x = columnize(self.x_train)
 
-        self.mask, self.mask_text = create_mask(mask_file=self.args.mask, data=self.args.data, size=self.args.size)
+        self.mask, self.mask_text,self.n,self.bins = create_mask(mask_file=self.args.mask, data=self.args.data, size=self.args.size)
         self.mask = self.mask.reshape(-1)
         self.x = np.multiply(x, self.mask)
 
         if self.needs_index_file:
             file = Path(join(self.args.data, self.args.indices)).with_suffix('.npy')
             self.indices = np.load(file).astype(int)
+            print (f'Loaded indices from {file}')
 
         self._execute()   # Perform actual command
 
@@ -404,6 +406,10 @@ class EstablishStyles(Command):
     '''
     def __init__(self):
         super().__init__('Establish Styles','establish-styles',needs_output_file=True)
+        self.colours = ['lightgreen', 'orange','teal',
+                        'lightblue', 'red', 'brown',
+                        'pink',	'blue', 'green', 'purple'
+        ]
 
     def _execute(self):
         '''
@@ -413,46 +419,52 @@ class EstablishStyles(Command):
         N = np.zeros((args.nimages,len(args.classes)))
         L = 0
         max_steps = -1
+        Allocations = np.empty((10),dtype=np.ndarray)
+        fig = figure(figsize=(12, 8))
         for j,i_class in enumerate(self.args.classes):
             style_list,steps = StyleList.build(self.x, self.indices,
                                                i_class=i_class,
                                                nimages=min(n_examples,self.args.nimages),
                                                threshold=self.args.threshold)
 
-            file = Path(join(self.args.data, self.args.out+str(i_class))).with_suffix('.npy')
-            style_list.save(file)
-            print(f'Class {i_class} contains {len(style_list)} Styles. Stored in {file}')
-            self.plot_lengths(style_list,i_class)
+            Allocations[j] = style_list.create_allocations()
+            print(f'Class {i_class} contains {len(style_list)} Styles.')
+            self.plot_lengths(style_list,i_class, ax = fig.add_subplot(3, 4, 1+j)  )
             for i in steps:
                 N[i+1:,j] += 1
             max_steps = max(max_steps,steps[-1])
-        self.plot_styles_versus_exemplars(max_steps,N)
 
-    def plot_lengths(self,style_list,i_class):
+        file = Path(join(self.args.data, self.args.out)).with_suffix('.npz')
+        np.savez(file,Allocations=Allocations)
+        print (f'Saved styles in {file}')
+        self.plot_styles_versus_exemplars(max_steps,N, fig=fig)
+        fig.tight_layout(pad=2,h_pad=2,w_pad=2)
+        fig.savefig(Path(join(self.args.figs, self.args.out)).with_suffix('.png'))
+
+    def plot_lengths(self,style_list,i_class,ax=None):
         '''
         Plot histogram of lengths of styles within list
         '''
-        fig = figure(figsize=(8, 8))
-        ax = fig.add_subplot(1, 1, 1)
-        ax.hist([len(style) for style in style_list.styles])
-        ax.set_title(f'Lengths of style for {len(style_list)} styles')
-        fig.suptitle(f'Digit Class = {i_class}, threshold={self.args.threshold}')
-        fig.savefig(Path(join(self.args.figs, self.args.out+str(i_class))).with_suffix('.png'))
+        ax.hist([len(style) for style in style_list.styles],color='xkcd:'+self.colours[i_class])
+        ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+        ax.set_title(f'Digit Class {i_class}, Lengths for {len(style_list)} styles')
+        ax.set_xlabel('Length')
 
-
-    def plot_styles_versus_exemplars(self,max_steps,N):
+    def plot_styles_versus_exemplars(self,max_steps,N,fig=None):
         '''
-        Plot the length of each style as a funtion of number of exemplars
+        Plot the length of each style as a function of number of exemplars
         '''
-        fig = figure(figsize=(8, 8))
-        ax = fig.add_subplot(1, 1, 1)
+        ax1 = fig.add_subplot(3, 4, 11)
         for j,i_class in enumerate(self.args.classes):
-            ax.plot(list(range(max_steps)),N[0:max_steps,j],label={i_class})
-        ax.set_xlabel('Number of exemplars')
-        ax.set_ylabel('Number of styles')
-        ax.set_title('Style Learning')
-        ax.legend(title='Classes')
-        fig.savefig(Path(join(self.args.figs, self.args.out)).with_suffix('.png'))
+            ax1.plot(list(range(max_steps)),N[0:max_steps,j],label={i_class},c='xkcd:'+self.colours[j])
+        ax1.set_xlabel('Number of exemplars')
+        ax1.set_ylabel('Number of styles')
+        ax1.set_title('Style Learning')
+        handles, labels = ax1.get_legend_handles_labels()
+
+        ax2 = fig.add_subplot(3, 4, 12)
+        ax2.legend(handles, labels, loc='center left', frameon=False,title='Classes')
+        ax2.axis('off')
 
 class DisplayStyles(Command):
     '''

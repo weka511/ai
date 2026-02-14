@@ -114,10 +114,13 @@ class MnistDataloader(object):
         Load training and test data
 
         Returns:  (x_train, y_train), (x_test, y_test)
-
         '''
         x_train, y_train = self.read_images_labels(self.training_images_filepath, self.training_labels_filepath)
+        print (f'Loaded training data from {self.training_images_filepath},')
+        print (f'labels from {self.training_labels_filepath}')
         x_test, y_test = self.read_images_labels(self.test_images_filepath, self.test_labels_filepath)
+        print (f'Loaded test data from {self.test_images_filepath},')
+        print (f'labels from {self.test_labels_filepath}')
         return (x_train, y_train), (x_test, y_test)
 
 
@@ -146,11 +149,16 @@ def create_mask(mask_file=None,data='../data',size=28):
         An array containing the actual mask
         Text showing mask file name
     '''
-    if mask_file == None:  return np.ones((size,size)),'no mask'
-    mask_path = Path(join(data, mask_file)).with_suffix('.npy')
-    product = np.load(mask_path)
+    if mask_file == None:
+        print ('No mask specified')
+        return np.ones((size,size)),'no mask',[],[]
+    mask_path = Path(join(data, mask_file)).with_suffix('.npz')
+    mask_data = np.load(mask_path)
+    product = mask_data['mask']
+    bins = mask_data['bins']
+    n = mask_data['n']
     print (f'Loaded mask from {mask_path}')
-    return product,f'Mask = {mask_file}'
+    return product,f'Mask = {mask_file}',n,bins
 
 def columnize(x):
     '''

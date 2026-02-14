@@ -96,13 +96,11 @@ class StyleList(object):
 
         return  style_best_match,mi_best_match
 
-    def save(self,file):
+    def create_allocations(self):#,file):
         m = len(self.styles)
         n = max(len(style) for style in self.styles)
-        Allocations = -1 * np.ones((m,n),dtype=int)
+        Product = -1 * np.ones((m,n),dtype=int)
         for i,style in enumerate(self.styles):
             for j,index in enumerate(style.indices):
-                Allocations[i,j] = index
-        np.save(file,Allocations)
-        print (f'Saved styles in {file}')
-
+                Product[i,j] = index
+        return Product
