@@ -95,8 +95,9 @@ class Command(ABC):
         self.x = np.multiply(x, self.mask)
 
         if self.needs_index_file:
-            file = Path(join(self.args.data, self.args.indices)).with_suffix('.npy')
-            self.indices = np.load(file).astype(int)
+            file = Path(join(self.args.data, self.args.indices)).with_suffix('.npz')
+            index_data = np.load(file)
+            self.indices = index_data['indices']
             print (f'Loaded indices from {file}')
 
         self._execute()   # Perform actual command
@@ -123,8 +124,8 @@ class EstablishSubsets(Command):
         Extract subsets of MNIST and save to index file
         '''
         indices = create_indices(self.y_train, nimages=args.nimages, rng=self.rng)
-        file = Path(join(args.data, args.out)).with_suffix('.npy')
-        np.save(file, indices)
+        file = Path(join(args.data, args.out)).with_suffix('.npz')
+        np.savez(file, indices=indices)
         m,n = indices.shape
         print(f'Saved {m} labels for each of {n} classes in {file.resolve()}')
 
@@ -480,14 +481,13 @@ class DisplayStyles(Command):
         for i_class in self.args.classes:
             fig = figure(figsize=(8, 8))
             x_class = self.x[self.indices[:,i_class],:]
-            Allocation = np.load(join(self.args.data, self.args.styles+str(i_class)+'.npy')).astype(int)
-            n_styles,n_images = Allocation.shape
+            n_styles,n_images = self.Allocations[i_class].shape
             if self.args.nimages != None:
                 n_images = min(n_images,self.args.nimages)
             for j in range(n_styles):
                 for k in range(n1):
                     ax = fig.add_subplot(n_styles, n1, j*n1 + k + 1)
-                    img = x_class[Allocation[j,k]].reshape(args.size,args.size)
+                    img = x_class[self.Allocations[i_class][j,k]].reshape(args.size,args.size)
                     ax.imshow(img,cmap=args.cmap)
                     ax.axis('off')
 
@@ -519,7 +519,6 @@ class CalculateA(Command):
         for i_class in self.args.classes:
             x_class = self.x[self.indices[:,i_class],:]
             _,n_pixels = x_class.shape
-            # Allocation = np.load(join(self.args.data, self.args.styles+str(i_class)+'.npy')).astype(int)
             n_styles,n_images = self.Allocations[i_class].shape
             index_style_start[i_class] = len(product)
             for i in range(n_styles):
@@ -534,9 +533,9 @@ class CalculateA(Command):
         n_class_styles,_ = class_styles.shape
         A = args.pseudocount*np.ones((n_class_styles,n_pixels,len(self.bins)+1))  # FIXME
         for i_class in self.args.classes:
-            x_class = np.digitize(self.x[self.indices[:,i_class],:],self.bins)
+            eq = equalize_hist(self.x[self.indices[:,i_class],:])
+            x_class = np.digitize(eq,self.bins)
             _,n_pixels = x_class.shape
-            # Allocation = np.load(join(self.args.data, self.args.styles+str(i_class)+'.npy')).astype(int)
             n_styles,n_images = self.Allocations[i_class].shape
             for i_style in range(n_styles):
                 for image_seq in range(n_images):
@@ -560,7 +559,7 @@ class Recognize(Command):
         '''
         For each pixel, determine the probability of belonging to each digit and style
         '''
-        loaded_data = np.load(join(self.args.data,self.args.A))
+        loaded_data = np.load(join(self.args.data,self.args.A)) #FIXME #51
         self.class_styles = loaded_data['class_styles']
         self.A = loaded_data['A']
         print ( self.get_accuracy(self.x_train,self.y_train))
@@ -650,7 +649,7 @@ def parse_args(command_names,text):
     parser.add_argument('--show', default=False, action='store_true', help='Controls whether plot will be displayed')
     parser.add_argument('--figs', default='./figs', help='Location for storing plot files')
     parser.add_argument('--data', default='./data', help='Location for storing data files')
-    parser.add_argument('--indices', default='baseline.npy', help='Location where index files have been saved')
+    parser.add_argument('--indices', default='baseline.npz', help='Location where index files have been saved')
     parser.add_argument('--nimages', default=1000, type=int, help='Maximum number of images for each class')
     parser.add_argument('--mask', default=None, help='Name of mask file (omit for no mask)')
     parser.add_argument('--size', default=28, type=int, help='Number of row/cols in each image: shape will be will be mxm')
@@ -680,7 +679,7 @@ def parse_args(command_names,text):
     group_calculate_A.add_argument('--pseudocount', default=0.5, type=float,help='Used to initialize counts')
 
     group_recognize = parser.add_argument_group('Options for recognize')
-    group_recognize.add_argument('--A', default='A.npy', help='Location where A matrices files have been saved')
+    group_recognize.add_argument('--A', default='A.npz', help='Location where A matrices files have been saved')
 
     return parser.parse_args()
 
