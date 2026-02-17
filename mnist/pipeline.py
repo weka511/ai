@@ -109,6 +109,13 @@ class Command(ABC):
         '''
         ...
 
+    def load_allocations(self):
+        file = Path(join(self.args.data, self.args.styles)).with_suffix('.npz')
+        style_data = np.load(file,allow_pickle=True)
+        Allocations = style_data['Allocations']
+        print (f'Load Allocations from {file}')
+        return Allocations
+
 class EstablishSubsets(Command):
     '''
     Extract subsets of MNIST to facilitate replication
@@ -469,34 +476,40 @@ class EstablishStyles(Command):
 
 class DisplayStyles(Command):
     '''
-    Display representatives of all styles created by establish_styles.py
+    Display representatives of all styles created by EstablishStyles
     '''
     def __init__(self):
         super().__init__('Display Styles','display-styles')
 
+
     def _execute(self):
         '''
-        Display representatives of all styles created by establish_styles.py
+        Display representatives of all styles created by establish-styles
         '''
+        Allocations = self.load_allocations()
+
         for i_class in self.args.classes:
             fig = figure(figsize=(8, 8))
             x_class = self.x[self.indices[:,i_class],:]
-            n_styles,n_images = self.Allocations[i_class].shape
+            n_styles,n_images = Allocations[i_class].shape
             if self.args.nimages != None:
                 n_images = min(n_images,self.args.nimages)
+            n_styles=min(n_styles,7)  #FIXNE
             for j in range(n_styles):
-                for k in range(n1):
-                    ax = fig.add_subplot(n_styles, n1, j*n1 + k + 1)
-                    img = x_class[self.Allocations[i_class][j,k]].reshape(args.size,args.size)
+                for k in range(n_images):
+                    ax = fig.add_subplot(n_styles, n_images, j*n_images + k + 1)
+                    img = x_class[Allocations[i_class][j,k]].reshape(args.size,args.size)
                     ax.imshow(img,cmap=args.cmap)
                     ax.axis('off')
+            fig.tight_layout(pad=2,h_pad=2,w_pad=2)
+            fig.savefig(Path(join(self.args.figs, self.args.styles+str(i_class))).with_suffix('.png'))
 
-class CalculateA(Command):
+class CalculateLikelihoods(Command):
     '''
     Calculate the A matrices
     '''
     def __init__(self):
-        super().__init__('Calculate the A matrices','calculate-A',needs_output_file=True)
+        super().__init__('Calculate the Likelihood matrices','calculate-likelihood',needs_output_file=True)
 
     def _execute(self):
         '''
@@ -513,7 +526,7 @@ class CalculateA(Command):
         Create mapping between class/style and position in A matrix
         '''
         product = []
-        index_style_start = np.zeros(len(self.args.classes),dtype=int)
+        index_style_start = np.zeros(len(self.args.classes),dtype=int)  # FIXME - duplicate code
         style_data = np.load(Path(join(self.args.data, self.args.styles)).with_suffix('.npz'),allow_pickle=True)
         self.Allocations = style_data['Allocations']
         for i_class in self.args.classes:
@@ -698,7 +711,7 @@ if __name__ == '__main__':
         Cluster(),
         EstablishStyles(),
         DisplayStyles(),
-        CalculateA(),
+        CalculateLikelihoods(),
         Recognize()
     ])
     args = parse_args(Command.get_command_names(),Command.get_command_help())
