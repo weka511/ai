@@ -63,11 +63,12 @@ class Command(ABC):
         '''
         return ''.join([f'{key}\t{value.name}\n' for key,value in Command.commands.items()])
 
-    def __init__(self,name,command_name,needs_output_file=False,needs_index_file=True):
+    def __init__(self,name,command_name,needs_output_file=False,needs_index_file=True,needs_style_file=False):
         self.name = name
         self.command_name = command_name
         self.needs_output_file = needs_output_file
         self.needs_index_file = needs_index_file
+        self.needs_style_file = needs_style_file
 
     def get_name(self):
         return self.name
@@ -100,6 +101,12 @@ class Command(ABC):
             self.indices = index_data['indices']
             print (f'Loaded indices from {file}')
 
+        if self.needs_style_file:
+            file = Path(join(self.args.data, self.args.styles)).with_suffix('.npz')
+            style_data = np.load(file,allow_pickle=True)
+            self.Allocations = style_data['Allocations']
+            print (f'Loaded Allocations from {file}')
+
         self._execute()   # Perform actual command
 
     @abstractmethod
@@ -109,12 +116,6 @@ class Command(ABC):
         '''
         ...
 
-    def load_allocations(self):
-        file = Path(join(self.args.data, self.args.styles)).with_suffix('.npz')
-        style_data = np.load(file,allow_pickle=True)
-        Allocations = style_data['Allocations']
-        print (f'Load Allocations from {file}')
-        return Allocations
 
 class EstablishSubsets(Command):
     '''
@@ -479,26 +480,24 @@ class DisplayStyles(Command):
     Display representatives of all styles created by EstablishStyles
     '''
     def __init__(self):
-        super().__init__('Display Styles','display-styles')
+        super().__init__('Display Styles','display-styles',needs_style_file=True)
 
 
     def _execute(self):
         '''
         Display representatives of all styles created by establish-styles
         '''
-        Allocations = self.load_allocations()
-
         for i_class in self.args.classes:
             fig = figure(figsize=(8, 8))
             x_class = self.x[self.indices[:,i_class],:]
-            n_styles,n_images = Allocations[i_class].shape
+            n_styles,n_images = self.Allocations[i_class].shape
             if self.args.nimages != None:
                 n_images = min(n_images,self.args.nimages)
-            n_styles=min(n_styles,7)  #FIXNE
+            n_styles = min(n_styles,args.nstyles)
             for j in range(n_styles):
                 for k in range(n_images):
                     ax = fig.add_subplot(n_styles, n_images, j*n_images + k + 1)
-                    img = x_class[Allocations[i_class][j,k]].reshape(args.size,args.size)
+                    img = x_class[self.Allocations[i_class][j,k]].reshape(args.size,args.size)
                     ax.imshow(img,cmap=args.cmap)
                     ax.axis('off')
             fig.tight_layout(pad=2,h_pad=2,w_pad=2)
@@ -509,7 +508,7 @@ class CalculateLikelihoods(Command):
     Calculate the A matrices
     '''
     def __init__(self):
-        super().__init__('Calculate the Likelihood matrices','calculate-likelihood',needs_output_file=True)
+        super().__init__('Calculate the Likelihood matrices','calculate-likelihood',needs_output_file=True,needs_style_file=True)
 
     def _execute(self):
         '''
@@ -526,13 +525,13 @@ class CalculateLikelihoods(Command):
         Create mapping between class/style and position in A matrix
         '''
         product = []
-        index_style_start = np.zeros(len(self.args.classes),dtype=int)  # FIXME - duplicate code
-        style_data = np.load(Path(join(self.args.data, self.args.styles)).with_suffix('.npz'),allow_pickle=True)
-        self.Allocations = style_data['Allocations']
+        index_style_start = np.zeros(len(self.args.classes),dtype=int)
+        Allocations = self.load_allocations()
+
         for i_class in self.args.classes:
             x_class = self.x[self.indices[:,i_class],:]
             _,n_pixels = x_class.shape
-            n_styles,n_images = self.Allocations[i_class].shape
+            n_styles,n_images = Allocations[i_class].shape
             index_style_start[i_class] = len(product)
             for i in range(n_styles):
                 product.append([i_class,int(i + index_style_start[i_class])]) # avoid messy np.int64
@@ -684,6 +683,7 @@ def parse_args(command_names,text):
 
     group_display_styles = parser.add_argument_group('Options for display-styles')
     group_display_styles.add_argument('--styles', default=Path(__file__).stem, help='Location where styles have been stored')
+    group_display_styles.add_argument('--nstyles', default=7, type=int,help='Maximum number of styles to be displayed')
 
     group_explore_clusters = parser.add_argument_group('Options for explore-clusters')
     group_explore_clusters.add_argument('--npairs', default=128, type=int, help='Number of pairs for each class')
