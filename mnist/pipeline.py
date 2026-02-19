@@ -526,12 +526,11 @@ class CalculateLikelihoods(Command):
         '''
         product = []
         index_style_start = np.zeros(len(self.args.classes),dtype=int)
-        Allocations = self.load_allocations()
 
         for i_class in self.args.classes:
             x_class = self.x[self.indices[:,i_class],:]
             _,n_pixels = x_class.shape
-            n_styles,n_images = Allocations[i_class].shape
+            n_styles,n_images = self.Allocations[i_class].shape
             index_style_start[i_class] = len(product)
             for i in range(n_styles):
                 product.append([i_class,int(i + index_style_start[i_class])]) # avoid messy np.int64
