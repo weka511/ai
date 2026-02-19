@@ -63,12 +63,17 @@ class Command(ABC):
         '''
         return ''.join([f'{key}\t{value.description}\n' for key,value in Command.commands.items()])
 
-    def __init__(self,description,name,needs_output_file=False,needs_index_file=True,needs_style_file=False):
+    def __init__(self,description,name,
+                 needs_output_file=False,
+                 needs_index_file=True,
+                 needs_style_file=False,
+                 needs_likelihoods_file=False):
         self.description = description
         self.name = name
         self.needs_output_file = needs_output_file
         self.needs_index_file = needs_index_file
         self.needs_style_file = needs_style_file
+        self.needs_likelihoods_file = needs_likelihoods_file
 
     def get_description(self):
         return self.description
@@ -106,6 +111,13 @@ class Command(ABC):
             style_data = np.load(file,allow_pickle=True)
             self.Allocations = style_data['Allocations']
             print (f'Loaded Allocations from {file}')
+
+        if self.needs_likelihoods_file:
+            file = Path(join(self.args.data, self.args.likelihoods)).with_suffix('.npz')
+            loaded_data = np.load(file,allow_pickle=True)
+            self.class_styles = loaded_data['class_styles']
+            self.A = loaded_data['A']
+            print (f'Loaded Likelihoods from {file}')
 
         self._execute()   # Perform actual command
 
@@ -573,15 +585,13 @@ class Recognize(Command):
     Use A matrices to recognize class
     '''
     def __init__(self):
-        super().__init__('Use A matrices to recognize class','recognize')
+        super().__init__('Use likelihood matrices to recognize class','recognize',
+                         needs_likelihoods_file=True)
 
     def _execute(self):
         '''
         For each pixel, determine the probability of belonging to each digit and style
         '''
-        loaded_data = np.load(join(self.args.data,self.args.A)) #FIXME #51
-        self.class_styles = loaded_data['class_styles']
-        self.A = loaded_data['A']
         print ( self.get_accuracy(self.x_train,self.y_train))
         print ( self.get_accuracy(self.x_test,self.y_test))
 
@@ -700,7 +710,7 @@ def parse_args(names,text):
     group_calculate_A.add_argument('--pseudocount', default=0.05, type=float,help='Used to initialize counts')
 
     group_recognize = parser.add_argument_group('Options for recognize')
-    group_recognize.add_argument('--A', default='A.npz', help='Location where A matrices files have been saved')
+    group_recognize.add_argument('--likelihoods', default='A.npz', help='Location where A matrices files have been saved')
 
     return parser.parse_args()
 
