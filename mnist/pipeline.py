@@ -505,7 +505,7 @@ class DisplayStyles(Command):
 
 class CalculateLikelihoods(Command):
     '''
-    Calculate the A matrices
+    Calculate the Likelihood matrices, A
     '''
     def __init__(self):
         super().__init__('Calculate the Likelihood matrices','calculate-likelihood',needs_output_file=True,needs_style_file=True)
@@ -551,20 +551,20 @@ class CalculateLikelihoods(Command):
         Add up pixels for each combination of class,style and normalize
         '''
         n_class_styles,_ = class_styles.shape
-        A = args.pseudocount*np.ones((n_class_styles,n_pixels,len(self.bins)+1))  # FIXME
+        A = args.pseudocount*np.ones((n_class_styles,n_pixels,len(self.bins)+1))
         for i_class in self.args.classes:
-            eq = equalize_hist(self.x[self.indices[:,i_class],:])
-            x_class = np.digitize(eq,self.bins)
-            _,n_pixels = x_class.shape
-            n_styles,n_images = self.Allocations[i_class].shape
-            for i_style in range(n_styles):
-                for image_seq in range(n_images):
+            equalized_images = equalize_hist(self.x[self.indices[:,i_class],:])
+            digitized_images = np.digitize(equalized_images,self.bins)
+            _,n_pixels = digitized_images.shape
+            n_styles,n_images_for_style = self.Allocations[i_class].shape
+            for i_style in range(n_styles):                  # Accumulate counts for all styles
+                i_class_style = index_style_start[i_class] + i_style
+                for image_seq in range(n_images_for_style):  # Accumulate counts for all images in specific style
                     image_index = self.Allocations[i_class][i_style,image_seq]
-                    if image_index < 0: break
-                    img = x_class[image_index]
-                    i = index_style_start[i_class] + i_style
-                    for j in range(n_pixels):
-                        A[i,j,img[j]] += 1
+                    if image_index >= 0:
+                        img = digitized_images[image_index]
+                        for j in range(n_pixels):
+                            A[i_class_style,j,img[j]] += 1
 
         return A/ A.sum(axis=0)
 
