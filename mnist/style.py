@@ -31,9 +31,18 @@ class Style(object):
         self.indices = [exemplar_index]
 
     def __len__(self):
+        '''
+        Returns: number of images assigned to this style
+        '''
         return len(self.indices)
 
     def add(self,new_index):
+        '''
+        Add image to style.
+
+        Parameters:
+            new_index     Inde of new image
+        '''
         self.indices.append(new_index)
 
 
@@ -66,9 +75,19 @@ class StyleList(object):
         self.x_class = x_class
 
     def __len__(self):
+        '''
+        Returns:
+            Number of Styles in this digit class
+        '''
         return len(self.styles)
 
     def add(self,style):
+        '''
+        Add style to digit class
+
+        Parameters:
+            style      The style to be added
+        '''
         self.styles.append(style)
 
     def get_best_match(self,index):
@@ -96,11 +115,21 @@ class StyleList(object):
 
         return  style_best_match,mi_best_match
 
-    def create_allocations(self):#,file):
+    def create_allocations(self):
+        '''
+        Create a matrix showing which images are allocated to each style
+
+        Returns:
+            A matrix with one row for each style (within current class), and sufficient columns to
+            represent all images in the most numerous style in the class. Each potiion contains the
+            index of one images from the style, or -1 if there are insufficient images to fill
+            the row.
+        '''
         m = len(self.styles)
         n = max(len(style) for style in self.styles)
         Product = -1 * np.ones((m,n),dtype=int)
         for i,style in enumerate(self.styles):
             for j,index in enumerate(style.indices):
                 Product[i,j] = index
+
         return Product
