@@ -47,10 +47,10 @@ class Command(ABC):
         Load a list of commands that are available for execution
         '''
         for command in command_list:
-            Command.commands[command.command_name] = command
+            Command.commands[command.name] = command
 
     @staticmethod
-    def get_command_names():
+    def get_names():
         '''
         Used to construct command line argument
         '''
@@ -61,17 +61,17 @@ class Command(ABC):
         '''
         Used to construct command line argument
         '''
-        return ''.join([f'{key}\t{value.name}\n' for key,value in Command.commands.items()])
+        return ''.join([f'{key}\t{value.description}\n' for key,value in Command.commands.items()])
 
-    def __init__(self,name,command_name,needs_output_file=False,needs_index_file=True,needs_style_file=False):
+    def __init__(self,description,name,needs_output_file=False,needs_index_file=True,needs_style_file=False):
+        self.description = description
         self.name = name
-        self.command_name = command_name
         self.needs_output_file = needs_output_file
         self.needs_index_file = needs_index_file
         self.needs_style_file = needs_style_file
 
-    def get_name(self):
-        return self.name
+    def get_description(self):
+        return self.description
 
     def set_args(self,args):
         self.args = args
@@ -83,7 +83,7 @@ class Command(ABC):
         - Load mnist images and other data used by commands
         - apply mask
         '''
-        print (self.get_name(),strftime("%a, %d %b %Y %H:%M:%S +0000", localtime()))
+        print (self.get_description(),strftime("%a, %d %b %Y %H:%M:%S +0000", localtime()))
         if self.needs_output_file and args.out == None:
             print ('Output file must be specified')
             exit(1)
@@ -514,15 +514,24 @@ class CalculateLikelihoods(Command):
         '''
         For each pixel, determine the probability of belonging to each digit and style
         '''
-        index_style_start,class_styles = self.create_class_styles()
-        A = self.create_A(index_style_start,class_styles)
         file = Path(join(args.data, args.out)).with_suffix('.npz')
-        np.savez(file,A=A,class_styles=class_styles)
-        print (f'Saved A and class_styles from {join(self.args.data, self.args.styles)} in {file}')
+        class_styles,index_style_start = self.create_class_styles()
+        np.savez(file,
+                 A=self.create_likelihoods(index_style_start,class_styles),
+                 class_styles=class_styles)
+        print (f'Saved Likelihoods and class/styles from {join(self.args.data, self.args.styles)} in {file}')
 
     def create_class_styles(self):
         '''
-        Create mapping between class/style and position in A matrix
+        Create mapping between class/style and position in the Likelihood matrix,A
+
+        Returns:
+            class_styles       An array, each row representing a digit class and a style.
+                               [0,0],...[0,n-1],[1,n],..., where n is the number of styles in class zero.
+                               So the row index of [i,j] is the position of class i style j in the
+                               Likelihood matrix
+            index_style_start  The positions, in the Likelihood matrix, correspond to the first
+                               style in each digit class
         '''
         product = []
         index_style_start = np.zeros(len(self.args.classes),dtype=int)
@@ -535,9 +544,9 @@ class CalculateLikelihoods(Command):
             for i in range(n_styles):
                 product.append([i_class,int(i + index_style_start[i_class])]) # avoid messy np.int64
 
-        return index_style_start,np.array(product)
+        return np.array(product),index_style_start
 
-    def create_A(self,index_style_start,class_styles,n_pixels = 784 ): #FIXME
+    def create_likelihoods(self,index_style_start,class_styles,n_pixels = 28*28 ): #FIXME
         '''
         Add up pixels for each combination of class,style and normalize
         '''
@@ -653,9 +662,9 @@ class Cluster(Command):
 
         return np.histogram(create_mutual_info(),bins,density=True)[0]
 
-def parse_args(command_names,text):
+def parse_args(names,text):
     parser = ArgumentParser(__doc__,formatter_class=RawDescriptionHelpFormatter, epilog=dedent(text))
-    parser.add_argument('command',choices=command_names,help='The command to be executed')
+    parser.add_argument('command',choices=names,help='The command to be executed')
     parser.add_argument('-o','--out',nargs='?')
     parser.add_argument('--show', default=False, action='store_true', help='Controls whether plot will be displayed')
     parser.add_argument('--figs', default='./figs', help='Location for storing plot files')
@@ -687,8 +696,8 @@ def parse_args(command_names,text):
     group_explore_clusters = parser.add_argument_group('Options for explore-clusters')
     group_explore_clusters.add_argument('--npairs', default=128, type=int, help='Number of pairs for each class')
 
-    group_calculate_A = parser.add_argument_group('Options for calculate-A')
-    group_calculate_A.add_argument('--pseudocount', default=0.5, type=float,help='Used to initialize counts')
+    group_calculate_A = parser.add_argument_group('Options for calculate-likelihoods')
+    group_calculate_A.add_argument('--pseudocount', default=0.05, type=float,help='Used to initialize counts')
 
     group_recognize = parser.add_argument_group('Options for recognize')
     group_recognize.add_argument('--A', default='A.npz', help='Location where A matrices files have been saved')
@@ -713,7 +722,7 @@ if __name__ == '__main__':
         CalculateLikelihoods(),
         Recognize()
     ])
-    args = parse_args(Command.get_command_names(),Command.get_command_help())
+    args = parse_args(Command.get_names(),Command.get_command_help())
     command = Command.commands[args.command]
     command.set_args(args)
     try:
