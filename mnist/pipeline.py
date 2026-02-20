@@ -138,7 +138,6 @@ class Command(ABC):
         '''
         ...
 
-
 class EstablishSubsets(Command):
     '''
     Extract subsets of MNIST to facilitate replication
@@ -502,7 +501,8 @@ class DisplayStyles(Command):
     Display representatives of all styles created by EstablishStyles
     '''
     def __init__(self):
-        super().__init__('Display Styles','display-styles',needs_style_file=True)
+        super().__init__('Display Styles','display-styles',
+                         needs_style_file=True)
 
 
     def _execute(self):
@@ -596,17 +596,22 @@ class RecognizeDigits(Command):
     '''
     def __init__(self):
         super().__init__('Use likelihood matrices to recognize class','recognize-digits',
-                         needs_likelihoods_file=True)
+                         needs_likelihoods_file=True,needs_output_file=True)
 
     def _execute(self):
         '''
         For each pixel, determine the probability of belonging to each digit and style
         '''
         self.logA = np.log(self.A)
-        # print ( self.get_accuracy(self.x_train,self.y_train))
 
         N,accuracy,mismatches = self.get_accuracy(self.x_test,self.y_test)
         print (f'{N} images, accuracy={accuracy}')
+        self.plot_mismatches(N,accuracy,mismatches)
+
+    def plot_mismatches(self,N,accuracy,mismatches):
+        '''
+        Plot mismatched images
+        '''
         fig = figure(figsize=(8,8))
         m,n = get_subplot_shape(len(mismatches))
         for k,(img,y,prediction) in enumerate(mismatches):
@@ -614,9 +619,10 @@ class RecognizeDigits(Command):
             ax.imshow(img,cmap=args.cmap)
             ax.axis('off')
             ax.set_title(f'{prediction} ({y})')
-            k += 1
+
+        fig.suptitle(f'{N} images, accuracy={accuracy}')
         fig.tight_layout(pad=2,h_pad=2,w_pad=2)
-        fig.savefig(join(args.figs,Path(__file__).stem))
+        fig.savefig(Path(join(self.args.figs, self.args.out)).with_suffix('.png'))
 
     def predict(self,img,nclasses=10):
         '''
@@ -650,7 +656,8 @@ class RecognizeDigits(Command):
         N = len(y)
         if args.N != None:
             N = min(N,args.N)
-        for i in range(N):
+        Selection = self.rng.choice(len(y),N,replace=False) if N < len(y) else range(N)
+        for i in Selection:
             prediction = self.predict(np.array(x[i]))
             if y[i] == prediction:
                 matches += 1
