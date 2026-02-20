@@ -96,10 +96,20 @@ class Command(ABC):
         (self.x_train, self.y_train), (self.x_test, self.y_test), = mnist_dataloader.load_data()
         x = columnize(self.x_train)
 
-        self.mask, self.mask_text,self.n,self.bins = create_mask(mask_file=self.args.mask, data=self.args.data, size=self.args.size)
+        self.mask, self.mask_text,self.n,self.bins = create_mask(mask_file=self.args.mask,
+                                                                 data=self.args.data,
+                                                                 size=self.args.size)
         self.mask = self.mask.reshape(-1)
         self.x = np.multiply(x, self.mask)
 
+        self.load_supplementary_files()
+
+        self._execute()   # Perform actual command
+
+    def load_supplementary_files(self):
+        '''
+        Load additional file needed by some commands
+        '''
         if self.needs_index_file:
             file = Path(join(self.args.data, self.args.indices)).with_suffix('.npz')
             index_data = np.load(file)
@@ -119,7 +129,7 @@ class Command(ABC):
             self.A = loaded_data['A']
             print (f'Loaded Likelihoods from {file}')
 
-        self._execute()   # Perform actual command
+
 
     @abstractmethod
     def _execute(self):
@@ -580,36 +590,55 @@ class CalculateLikelihoods(Command):
 
         return A/ A.sum(axis=0)
 
-class Recognize(Command):
+class RecognizeDigits(Command):
     '''
     Use A matrices to recognize class
     '''
     def __init__(self):
-        super().__init__('Use likelihood matrices to recognize class','recognize',
+        super().__init__('Use likelihood matrices to recognize class','recognize-digits',
                          needs_likelihoods_file=True)
 
     def _execute(self):
         '''
         For each pixel, determine the probability of belonging to each digit and style
         '''
-        print ( self.get_accuracy(self.x_train,self.y_train))
-        print ( self.get_accuracy(self.x_test,self.y_test))
+        self.logA = np.log(self.A)
+        # print ( self.get_accuracy(self.x_train,self.y_train))
+
+        N,accuracy,mismatches = self.get_accuracy(self.x_test,self.y_test)
+        print (f'{N} images, accuracy={accuracy}')
+        fig = figure(figsize=(8,8))
+        m,n = get_subplot_shape(len(mismatches))
+        for k,(img,y,prediction) in enumerate(mismatches):
+            ax = fig.add_subplot(m,n,k+1)
+            ax.imshow(img,cmap=args.cmap)
+            ax.axis('off')
+            ax.set_title(f'{prediction} ({y})')
+            k += 1
+        fig.tight_layout(pad=2,h_pad=2,w_pad=2)
+        fig.savefig(join(args.figs,Path(__file__).stem))
 
     def predict(self,img,nclasses=10):
         '''
         Compute the probability of each digit as a cause for image.
         We will accumulate the posterior probilities for each
         style within each class,
-        '''
-        posterior_for_styles = self.A @ equalize_hist(img.reshape(-1))  # Not normalized
-        predictions = np.zeros((nclasses))
-        m,_ = self.class_styles.shape
-        for i in range(m):
-            iclass = self.class_styles[i,0]
-            istyle = self.class_styles[i,1]   # Not used...see Issue #49
-            predictions[iclass] += posterior_for_styles[i]
 
-        return softmax(predictions)
+        Parameters:
+            img
+            nclasses
+        '''
+        equalized_image = equalize_hist(img.reshape(-1))
+        digitized_image = np.digitize(equalized_image,self.bins)
+        K,J,_ = self.A.shape
+        log_posterior_for_styles = np.zeros((K))
+        for k in range(K):
+            for j in range(K):
+                if self.mask[j]:
+                    log_posterior_for_styles[k] += self.logA[k,j,digitized_image[j]]
+
+        i = np.argmax(log_posterior_for_styles)
+        return self.class_styles[i,0]
 
     def get_accuracy(self,x,y):
         '''
@@ -617,12 +646,18 @@ class Recognize(Command):
         and compare with label.
         '''
         matches = 0
+        mismatches = []
         N = len(y)
+        if args.N != None:
+            N = min(N,args.N)
         for i in range(N):
-            predictions = self.predict(np.array(x[i]))
-            if y[i] == np.argmax(predictions):  matches += 1
+            prediction = self.predict(np.array(x[i]))
+            if y[i] == prediction:
+                matches += 1
+            else:
+                mismatches.append((x[i],y[i],prediction))
 
-        return N,matches/N
+        return N,matches/N,mismatches
 
 class Cluster(Command):
     '''
@@ -672,6 +707,26 @@ class Cluster(Command):
 
         return np.histogram(create_mutual_info(),bins,density=True)[0]
 
+def get_subplot_shape(N):
+    '''
+    Determine the number of rows and columns needed for a specified number of subplots
+
+    Parameters:
+        N       Number of subplots
+
+    Returns:
+       m     Number of rows
+       n     Numbers of columns
+
+    Post Condition:
+        m*n >= N, n >= m, and n - m is as small as possible
+    '''
+    m = int(np.sqrt(N))
+    n = N // m
+    while m*n < N:
+        n += 1
+    return m,n
+
 def parse_args(names,text):
     parser = ArgumentParser(__doc__,formatter_class=RawDescriptionHelpFormatter, epilog=dedent(text))
     parser.add_argument('command',choices=names,help='The command to be executed')
@@ -711,6 +766,7 @@ def parse_args(names,text):
 
     group_recognize = parser.add_argument_group('Options for recognize')
     group_recognize.add_argument('--likelihoods', default='A.npz', help='Location where A matrices files have been saved')
+    group_recognize.add_argument('--N', default=None,type=int, help='Maximum number of images')
 
     return parser.parse_args()
 
@@ -730,7 +786,7 @@ if __name__ == '__main__':
         EstablishStyles(),
         DisplayStyles(),
         CalculateLikelihoods(),
-        Recognize()
+        RecognizeDigits()
     ])
     args = parse_args(Command.get_names(),Command.get_command_help())
     command = Command.commands[args.command]
