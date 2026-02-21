@@ -194,7 +194,6 @@ class Cluster(Command):
     '''
     def _execute(self):
         fig = figure(figsize=(8, 8))
-
         m,n = self.indices.shape
         npairs = min(m,self.args.npairs)
         bins = np.linspace(0,1,num=self.args.bins+1)
@@ -230,6 +229,34 @@ class Cluster(Command):
 
         return np.histogram(create_mutual_info(),bins,density=True)[0]
 
+class DisplayStyles(Command):
+    '''
+    Display representatives of all styles created by EstablishStyles
+    '''
+    def __init__(self):
+        super().__init__('Display Styles','display-styles',
+                         needs_style_file=True)
+
+    def _execute(self):
+        '''
+        Display representatives of all styles created by establish-styles
+        '''
+        for i_class in self.args.classes:
+            fig = figure(figsize=(8, 8))
+            x_class = self.x[self.indices[:,i_class],:]
+            n_styles,n_images = self.Allocations[i_class].shape
+            if self.args.nimages != None:
+                n_images = min(n_images,self.args.nimages)
+            n_styles = min(n_styles,args.nstyles)
+            for j in range(n_styles):
+                for k in range(n_images):
+                    ax = fig.add_subplot(n_styles, n_images, j*n_images + k + 1)
+                    img = x_class[self.Allocations[i_class][j,k]].reshape(args.size,args.size)
+                    ax.imshow(img,cmap=args.cmap)
+                    ax.axis('off')
+            fig.tight_layout(pad=2,h_pad=2,w_pad=2)
+            fig.savefig(Path(join(self.args.figs, self.args.styles+str(i_class))).with_suffix('.png'))
+
 
 def parse_args(names):
     parser = ArgumentParser(__doc__)
@@ -255,6 +282,11 @@ def parse_args(names):
     group_explore_clusters = parser.add_argument_group('Options for explore-clusters')
     group_explore_clusters.add_argument('--npairs', default=128, type=int, help='Number of pairs for each class')
 
+    group_display_styles = parser.add_argument_group('Options for display-styles')
+    group_display_styles.add_argument('--styles', default=Path(__file__).stem, help='Location where styles have been stored')
+    group_display_styles.add_argument('--nstyles', default=7, type=int,help='Maximum number of styles to be displayed')
+
+
     return parser.parse_args()
 
 if __name__ == '__main__':
@@ -269,6 +301,7 @@ if __name__ == '__main__':
     Command.build([
         Visualize(),
         Cluster(),
+        DisplayStyles(),
         EDA(),
         EDA_MI()
     ])

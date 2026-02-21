@@ -389,34 +389,6 @@ class EstablishStyles(Command):
         ax2.legend(handles, labels, loc='center left', frameon=False,title='Classes')
         ax2.axis('off')
 
-class DisplayStyles(Command):
-    '''
-    Display representatives of all styles created by EstablishStyles
-    '''
-    def __init__(self):
-        super().__init__('Display Styles','display-styles',
-                         needs_style_file=True)
-
-
-    def _execute(self):
-        '''
-        Display representatives of all styles created by establish-styles
-        '''
-        for i_class in self.args.classes:
-            fig = figure(figsize=(8, 8))
-            x_class = self.x[self.indices[:,i_class],:]
-            n_styles,n_images = self.Allocations[i_class].shape
-            if self.args.nimages != None:
-                n_images = min(n_images,self.args.nimages)
-            n_styles = min(n_styles,args.nstyles)
-            for j in range(n_styles):
-                for k in range(n_images):
-                    ax = fig.add_subplot(n_styles, n_images, j*n_images + k + 1)
-                    img = x_class[self.Allocations[i_class][j,k]].reshape(args.size,args.size)
-                    ax.imshow(img,cmap=args.cmap)
-                    ax.axis('off')
-            fig.tight_layout(pad=2,h_pad=2,w_pad=2)
-            fig.savefig(Path(join(self.args.figs, self.args.styles+str(i_class))).with_suffix('.png'))
 
 class CalculateLikelihoods(Command):
     '''
@@ -596,8 +568,6 @@ def parse_args(names):
     parser.add_argument('--seed', default=None, type=int, help='For initializing random number generator')
     parser.add_argument('--cmap',default='Blues',help='Colour map')
 
-
-
     group_establish_pixels = parser.add_argument_group('Options for establish-pixels')
     group_establish_pixels.add_argument('--fraction', default=0.5, type=float,
                         help='Include pixel if entropy exceeds mean - fraction*sd')
@@ -605,12 +575,6 @@ def parse_args(names):
     group_establish_styles = parser.add_argument_group('Options for establish-styles')
     group_establish_styles.add_argument('--threshold', default=0.1, type=float,
                           help='Include image in same style if mutual information exceeds threshold')
-
-    group_display_styles = parser.add_argument_group('Options for display-styles')
-    group_display_styles.add_argument('--styles', default=Path(__file__).stem, help='Location where styles have been stored')
-    group_display_styles.add_argument('--nstyles', default=7, type=int,help='Maximum number of styles to be displayed')
-
-
 
     group_calculate_A = parser.add_argument_group('Options for calculate-likelihoods')
     group_calculate_A.add_argument('--pseudocount', default=0.05, type=float,help='Used to initialize counts')
@@ -621,7 +585,6 @@ def parse_args(names):
 
     return parser.parse_args()
 
-
 if __name__ == '__main__':
     rc('font', **{'family': 'serif',
                   'serif': ['Palatino'],
@@ -631,9 +594,7 @@ if __name__ == '__main__':
     Command.build([
         EstablishSubsets(),
         EstablishPixels(),
-
         EstablishStyles(),
-        DisplayStyles(),
         CalculateLikelihoods(),
         RecognizeDigits()
     ])

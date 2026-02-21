@@ -9,6 +9,6 @@ The inspiration comes from the following papers by Friston et al:
 File|Description
 -------------------------------------|-----------------------------------------------------------------------------------------
 mnist.py|Functions for accessing MNIST data
-pipeline.py|Program for creating files needed for analysis pipeline
+pipeline.py|Program for creating files needed for each step in analysis pipeline
 style.py|Classes to manange character styles
 visualize.py|Visualise MNIST data
