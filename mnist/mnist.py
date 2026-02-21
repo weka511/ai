@@ -26,7 +26,6 @@ from array import array
 from unittest import TestCase,main
 import numpy as np
 from scipy.stats import entropy
-
 from skimage.transform import resize
 from sklearn.feature_selection import mutual_info_classif
 
@@ -384,6 +383,3 @@ class TestSequence(TestCase):
 
 if __name__ == '__main__':
     main()
-
-
-
