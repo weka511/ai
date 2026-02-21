@@ -11,3 +11,4 @@ File|Description
 mnist.py|Functions for accessing MNIST data
 pipeline.py|Program for creating files needed for analysis pipeline
 style.py|Classes to manange character styles
+visualize.py|Visualise MNIST data
