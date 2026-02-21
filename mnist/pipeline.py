@@ -16,7 +16,7 @@
 # along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.
 
 '''
-    This program schedules commands to create files in pipeline.
+    This program schedules commands to create files in the pipeline.
 '''
 from abc import ABC,abstractmethod
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
@@ -89,7 +89,7 @@ class Command(ABC):
         - apply mask
         '''
         print (self.get_description(),strftime("%a, %d %b %Y %H:%M:%S +0000", localtime()))
-        if self.needs_output_file and args.out == None:
+        if self.needs_output_file and self.args.out == None:
             print ('Output file must be specified')
             exit(1)
         dataloader = MnistDataloader.create(data=self.args.data)
@@ -160,77 +160,7 @@ class EstablishSubsets(Command):
 
 
 
-class EDA_MI(Command):
-    '''
-    Exploratory Data Analysis for MNIST: determine variability of
-    mutual information within and between classes
-    '''
-    def __init__(self):
-        super().__init__('EDA Mutual Information','eda-mi')
 
-    '''
-    Determine variability of mutual information within and between classes
-    '''
-    def _execute(self):
-        n_examples,n_classes = self.indices.shape
-        Exemplars = self.create_exemplars()
-        MI_between_classes = np.zeros((n_classes,n_classes))
-        for i in range(n_classes):
-            MI_between_classes[i] = mutual_info_classif(Exemplars.T,Exemplars[i,:])
-
-        MI_within_classes = np.zeros((n_classes,args.nimages))
-        for i in range(n_classes):
-            companions = self.create_companions(i,n_comparison=args.nimages)
-            MI_within_classes[i] = mutual_info_classif(companions.T,Exemplars[i,:])
-
-        fig = figure(figsize=(20, 8))
-        ax1 = fig.add_subplot(1,2,1)
-        fig.colorbar(ax1.imshow(MI_between_classes, cmap=args.cmap, interpolation='nearest'),
-                     orientation='vertical')
-        ax1.set_title('Mutual Information between classes')
-        EDA_MI.annotate(MI_between_classes,ax=ax1)
-
-        ax2 = fig.add_subplot(1,2,2)
-        fig.colorbar(ax2.imshow(MI_within_classes.T, cmap='Reds', interpolation='nearest'),
-                     orientation='vertical')
-        ax2.set_title('Mutual Information within classes')
-        EDA_MI.annotate(MI_within_classes.T,ax=ax2)
-
-        fig.tight_layout(pad=2,h_pad=2,w_pad=2)
-        fig.savefig(join(args.figs,Path(__file__).stem))
-
-    def create_exemplars(self):
-        '''
-        Create an array containing one element from each class
-        '''
-        exemplar_indices = self.indices[0,:]
-        return np.array( [ self.x[i,:] for i in exemplar_indices])
-
-    def create_companions(self,iclass,n_comparison=7):
-        '''
-        Create a collection of vectors belonging to same class
-
-        Parameters:
-            iclass         The digit class we are considering
-            n_comparison   The number of images we will compare
-        '''
-        companion_indices = self.indices[1:n_comparison+1,iclass]
-        return np.array( [ self.x[i,:] for i in companion_indices])
-
-    @staticmethod
-    def annotate(MI,ax=None,color='k'):
-        '''
-        Annotate heatmap with values of mutual information
-
-        Parameters:
-            MI          Vaues for annotation
-            ax          Axis for display
-            color       Colour for annotations
-        '''
-        m,n = MI.shape
-        for i in range(m):
-            for j in range(n):
-                ax.text(j, i, f'{MI[i,j]:.2e}',ha='center', va='center', color='k')
 
 
 class EstablishPixels(Command):
@@ -629,53 +559,6 @@ class RecognizeDigits(Command):
 
         return N,matches/N,mismatches
 
-class Cluster(Command):
-    '''
-    Plot mutual information between classes
-    '''
-    def __init__(self):
-        super().__init__('Cluster','explore-clusters',needs_output_file=True)
-
-    '''
-    Plot mutual information between classes
-    '''
-    def _execute(self):
-        fig = figure(figsize=(8, 8))
-
-        m,n = self.indices.shape
-        npairs = min(m,self.args.npairs)
-        bins = np.linspace(0,1,num=self.args.bins+1)
-        assert n == 10
-        ax = fig.add_subplot(1,1,1)
-        for i_class in self.args.classes:
-            print (f'Class {i_class}')
-            ax.plot(0.5*(bins[:-1] + bins[1:]),
-                    self.create_frequencies(i_class,bins,npairs=npairs,m=m,rng=self.rng),label=str(i_class))
-
-        ax.set_xlabel('Mutual Information')
-        ax.set_ylabel('Frequency')
-        ax.set_title(f'Mutual Information within classes based on {npairs} pairs, {self.mask_text}')
-        ax.legend(title='Digit classes')
-        fig.savefig(join(self.args.figs,args.out))
-
-    def create_frequencies(self,i_class,bins=[],npairs=128,m=1000,rng=None):
-        '''
-        Generate a histogram of mutual information between pairs of images from the same digit class
-
-        Parameters:
-            npairs    Number of pairs to select
-            m         Number of images in class
-        '''
-        def create_mutual_info():
-            product = np.zeros((npairs))
-            for i in range(npairs):
-                K = rng.choice(m,size=2)
-                x_class = self.x[self.indices[K,i_class],:]
-                mi = mutual_info_classif(x_class.T,x_class[0,:])
-                product[i] = mi[-1]
-            return product
-
-        return np.histogram(create_mutual_info(),bins,density=True)[0]
 
 def get_subplot_shape(N):
     '''
@@ -727,8 +610,7 @@ def parse_args(names):
     group_display_styles.add_argument('--styles', default=Path(__file__).stem, help='Location where styles have been stored')
     group_display_styles.add_argument('--nstyles', default=7, type=int,help='Maximum number of styles to be displayed')
 
-    group_explore_clusters = parser.add_argument_group('Options for explore-clusters')
-    group_explore_clusters.add_argument('--npairs', default=128, type=int, help='Number of pairs for each class')
+
 
     group_calculate_A = parser.add_argument_group('Options for calculate-likelihoods')
     group_calculate_A.add_argument('--pseudocount', default=0.05, type=float,help='Used to initialize counts')
@@ -748,10 +630,8 @@ if __name__ == '__main__':
     start = time()
     Command.build([
         EstablishSubsets(),
-        EDA(),
         EstablishPixels(),
-        EDA_MI(),
-        Cluster(),
+
         EstablishStyles(),
         DisplayStyles(),
         CalculateLikelihoods(),
