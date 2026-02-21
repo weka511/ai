@@ -92,8 +92,8 @@ class Command(ABC):
         if self.needs_output_file and args.out == None:
             print ('Output file must be specified')
             exit(1)
-        mnist_dataloader = MnistDataloader.create(data=self.args.data)
-        (self.x_train, self.y_train), (self.x_test, self.y_test), = mnist_dataloader.load_data()
+        dataloader = MnistDataloader.create(data=self.args.data)
+        (self.x_train, self.y_train), (self.x_test, self.y_test), = dataloader.load_data()
         x = columnize(self.x_train)
 
         self.mask, self.mask_text,self.n,self.bins = create_mask(mask_file=self.args.mask,
@@ -150,7 +150,7 @@ class EstablishSubsets(Command):
 
     def _execute(self):
         '''
-        Extract subsets of MNIST and save to index file
+        Extract subsets of MNIST of a specified size, and save to index file
         '''
         indices = create_indices(self.y_train, nimages=args.nimages, rng=self.rng)
         file = Path(join(args.data, args.out)).with_suffix('.npz')
@@ -158,44 +158,7 @@ class EstablishSubsets(Command):
         m,n = indices.shape
         print(f'Saved {m} labels for each of {n} classes in {file.resolve()}')
 
-class EDA(Command):
-    '''
-        Exploratory Data Analysis for MNIST: plot some raw data, with or without masking
-    '''
-    def __init__(self):
-        super().__init__('Exploratory Data Analysis','eda')
 
-    def _execute(self):
-        '''
-        Plot some raw data, with or without masking
-        '''
-        fig = figure(figsize=(20, 8))
-        for k,img in self.generate_images(classes=args.classes,m=args.images_per_digit,size=args.size):
-            ax = fig.add_subplot(len(args.classes),args.images_per_digit,k)
-            ax.imshow(img, cmap=args.cmap)
-            ax.axis('off')
-
-        fig.suptitle(('No mask' if args.mask == None
-                      else rf'Mask preserving {int(100*self.mask.sum()/(self.args.size*self.args.size))}\% of pixels'))
-
-        fig.tight_layout(pad=2,h_pad=2,w_pad=2)
-        fig.savefig(join(args.figs,Path(__file__).stem))
-
-    def generate_images(self,classes=list(range(10)),m=20,size=28):
-        '''
-        Used to iterate through all the images that need to be displayed
-
-        Parameters:
-            classes    List of classes to be displayed
-            m          Number of images for each class
-            size       Size of image size x size
-        '''
-        x = np.array(self.x_train)
-        k = 0
-        for i in classes:
-            for j in range(m):
-                k += 1
-                yield k,resize(x[self.indices[j,i]],(size,size))
 
 class EDA_MI(Command):
     '''
@@ -734,8 +697,8 @@ def get_subplot_shape(N):
         n += 1
     return m,n
 
-def parse_args(names,text):
-    parser = ArgumentParser(__doc__,formatter_class=RawDescriptionHelpFormatter, epilog=dedent(text))
+def parse_args(names):
+    parser = ArgumentParser(__doc__)
     parser.add_argument('command',choices=names,help='The command to be executed')
     parser.add_argument('-o','--out',nargs='?')
     parser.add_argument('--show', default=False, action='store_true', help='Controls whether plot will be displayed')
@@ -750,8 +713,7 @@ def parse_args(names,text):
     parser.add_argument('--seed', default=None, type=int, help='For initializing random number generator')
     parser.add_argument('--cmap',default='Blues',help='Colour map')
 
-    group_eda = parser.add_argument_group('Options for eda')
-    group_eda.add_argument('--images_per_digit',default=8,type=int,help='Number of images in each digit class')
+
 
     group_establish_pixels = parser.add_argument_group('Options for establish-pixels')
     group_establish_pixels.add_argument('--fraction', default=0.5, type=float,
@@ -795,7 +757,7 @@ if __name__ == '__main__':
         CalculateLikelihoods(),
         RecognizeDigits()
     ])
-    args = parse_args(Command.get_names(),Command.get_command_help())
+    args = parse_args(Command.get_names())
     command = Command.commands[args.command]
     command.set_args(args)
     try:
