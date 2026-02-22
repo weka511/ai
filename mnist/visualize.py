@@ -42,34 +42,34 @@ class Visualize(Command):
 
     def _execute(self):
         fig = figure(figsize=(8, 12))
-        for i in range(args.m):
+        for i in range(self.args.m):
             k = self.rng.choice(len(self.x_train))
             img = np.array(self.x_train[k])
-            if args.resize != None:
-                rows = args.resize[0]
-                cols = args.resize[1] if len(args.resize) > 1 else rows
+            if self.args.resize != None:
+                rows = self.args.resize[0]
+                cols = self.args.resize[1] if len(self.args.resize) > 1 else rows
                 img = resize(img,(rows,cols))
-            ax1 = fig.add_subplot(args.m, 4, 4*i+1)
+            ax1 = fig.add_subplot(self.args.m, 4, 4*i+1)
             ax1.axis('off')
-            ax1.imshow(img, cmap=args.cmap)
+            ax1.imshow(img, cmap=self.args.cmap)
 
-            ax2 = fig.add_subplot(args.m, 4, 4*i+2)
+            ax2 = fig.add_subplot(self.args.m, 4, 4*i+2)
             ax2.hist(img.reshape(-1),bins=16)
             img_eq = equalize_hist(img)
-            ax3 = fig.add_subplot(args.m, 4, 4*i+3)
-            ax3.imshow(img_eq, cmap=args.cmap)
+            ax3 = fig.add_subplot(self.args.m, 4, 4*i+3)
+            ax3.imshow(img_eq, cmap=self.args.cmap)
             ax3.axis('off')
 
-            ax4 = fig.add_subplot(args.m, 4, 4*i+4)
+            ax4 = fig.add_subplot(self.args.m, 4, 4*i+4)
             ax4.hist(img_eq.reshape(-1))
 
             if i==0:
-                ax2.set_title('Raw' if args.resize == None else 'Resized')
+                ax2.set_title('Raw' if self.args.resize == None else 'Resized')
                 ax4.set_title('After equalization')
 
         fig.suptitle('MNIST')
         fig.tight_layout(pad=3,h_pad=3,w_pad=3)
-        fig.savefig(join(args.figs,Path(__file__).stem))
+        fig.savefig(join(self.args.figs,Path(__file__).stem))
 
 class EDA(Command):
     '''
@@ -83,16 +83,16 @@ class EDA(Command):
         Plot some raw data, with or without masking
         '''
         fig = figure(figsize=(20, 8))
-        for k,img in self.generate_images(classes=args.classes,m=args.images_per_digit,size=args.size):
-            ax = fig.add_subplot(len(args.classes),args.images_per_digit,k)
-            ax.imshow(img, cmap=args.cmap)
+        for k,img in self.generate_images(classes=self.args.classes,m=self.args.images_per_digit,size=self.args.size):
+            ax = fig.add_subplot(len(self.args.classes),self.args.images_per_digit,k)
+            ax.imshow(img, cmap=self.args.cmap)
             ax.axis('off')
 
-        fig.suptitle(('No mask' if args.mask == None
+        fig.suptitle(('No mask' if self.args.mask == None
                       else rf'Mask preserving {int(100*self.mask.sum()/(self.args.size*self.args.size))}\% of pixels'))
 
         fig.tight_layout(pad=2,h_pad=2,w_pad=2)
-        fig.savefig(join(args.figs,Path(__file__).stem))
+        fig.savefig(join(self.args.figs,Path(__file__).stem))
 
     def generate_images(self,classes=list(range(10)),m=20,size=28):
         '''
@@ -128,14 +128,14 @@ class EDA_MI(Command):
         for i in range(n_classes):
             MI_between_classes[i] = mutual_info_classif(Exemplars.T,Exemplars[i,:])
 
-        MI_within_classes = np.zeros((n_classes,args.nimages))
+        MI_within_classes = np.zeros((n_classes,self.args.nimages))
         for i in range(n_classes):
-            companions = self.create_companions(i,n_comparison=args.nimages)
+            companions = self.create_companions(i,n_comparison=self.args.nimages)
             MI_within_classes[i] = mutual_info_classif(companions.T,Exemplars[i,:])
 
         fig = figure(figsize=(20, 8))
         ax1 = fig.add_subplot(1,2,1)
-        fig.colorbar(ax1.imshow(MI_between_classes, cmap=args.cmap, interpolation='nearest'),
+        fig.colorbar(ax1.imshow(MI_between_classes, cmap=self.args.cmap, interpolation='nearest'),
                      orientation='vertical')
         ax1.set_title('Mutual Information between classes')
         EDA_MI.annotate(MI_between_classes,ax=ax1)
@@ -147,7 +147,7 @@ class EDA_MI(Command):
         EDA_MI.annotate(MI_within_classes.T,ax=ax2)
 
         fig.tight_layout(pad=2,h_pad=2,w_pad=2)
-        fig.savefig(join(args.figs,Path(__file__).stem))
+        fig.savefig(join(self.args.figs,Path(__file__).stem))
 
     def create_exemplars(self):
         '''
@@ -208,7 +208,7 @@ class Cluster(Command):
         ax.set_ylabel('Frequency')
         ax.set_title(f'Mutual Information within classes based on {npairs} pairs, {self.mask_text}')
         ax.legend(title='Digit classes')
-        fig.savefig(join(self.args.figs,args.out))
+        fig.savefig(join(self.args.figs,self.args.out))
 
     def create_frequencies(self,i_class,bins=[],npairs=128,m=1000,rng=None):
         '''
@@ -247,12 +247,12 @@ class DisplayStyles(Command):
             n_styles,n_images = self.Allocations[i_class].shape
             if self.args.nimages != None:
                 n_images = min(n_images,self.args.nimages)
-            n_styles = min(n_styles,args.nstyles)
+            n_styles = min(n_styles,self.args.nstyles)
             for j in range(n_styles):
                 for k in range(n_images):
                     ax = fig.add_subplot(n_styles, n_images, j*n_images + k + 1)
-                    img = x_class[self.Allocations[i_class][j,k]].reshape(args.size,args.size)
-                    ax.imshow(img,cmap=args.cmap)
+                    img = x_class[self.Allocations[i_class][j,k]].reshape(self.args.size,self.args.size)
+                    ax.imshow(img,cmap=self.args.cmap)
                     ax.axis('off')
             fig.tight_layout(pad=2,h_pad=2,w_pad=2)
             fig.savefig(Path(join(self.args.figs, self.args.styles+str(i_class))).with_suffix('.png'))
@@ -272,7 +272,7 @@ def parse_args(names):
     parser.add_argument('--size', default=28, type=int, help='Number of row/cols in each image: shape will be will be mxm')
     parser.add_argument('--indices', default=None, help='Location where index files have been saved')
     parser.add_argument('--classes', default=list(range(10)), type=int, nargs='+', help='List of digit classes')
-    parser.add_argument('--nimages', default=1000, type=int, help='Maximum number of images for each class')
+    parser.add_argument('--nimages', default=11, type=int, help='Maximum number of images for each class')
     parser.add_argument('-o','--out',nargs='?')
     parser.add_argument('--bins', default=12, type=int, help='Number of bins for histograms')
 

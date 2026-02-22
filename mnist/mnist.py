@@ -26,6 +26,7 @@ from array import array
 from unittest import TestCase,main
 import numpy as np
 from scipy.stats import entropy
+from skimage.exposure import equalize_hist
 from skimage.transform import resize
 from sklearn.feature_selection import mutual_info_classif
 
@@ -120,10 +121,6 @@ class MnistDataloader(object):
             print (f'Loaded test data from {self.test_images_filepath},')
             print (f'labels from {self.test_labels_filepath}')
         return (x_train, y_train), (x_test, y_test)
-
-
-
-
 
 def create_mask(mask_file=None,data='../data',size=28):
     '''

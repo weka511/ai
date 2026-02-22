@@ -89,22 +89,35 @@ class Command(ABC):
         - apply mask
         '''
         print (self.get_description(),strftime("%a, %d %b %Y %H:%M:%S +0000", localtime()))
+
         if self.needs_output_file and self.args.out == None:
             print ('Output file must be specified')
             exit(1)
+
+        self.load_mnist_data()
+        self.load_and_apply_mask()
+        self.load_supplementary_files()
+
+        self._execute()   # Perform actual command
+
+    def load_mnist_data(self):
+        '''
+        Load training and test data
+        '''
         dataloader = MnistDataloader.create(data=self.args.data)
         (self.x_train, self.y_train), (self.x_test, self.y_test), = dataloader.load_data()
-        x = columnize(self.x_train)
+        self.x = columnize(self.x_train)
 
+    def load_and_apply_mask(self):
+        '''
+        Read a mask from a file, if one is provided, and apply to training data
+        If there is no mask file, set mask to all ones.
+        '''
         self.mask, self.mask_text,self.n,self.bins = create_mask(mask_file=self.args.mask,
                                                                  data=self.args.data,
                                                                  size=self.args.size)
         self.mask = self.mask.reshape(-1)
-        self.x = np.multiply(x, self.mask)
-
-        self.load_supplementary_files()
-
-        self._execute()   # Perform actual command
+        self.x = np.multiply(self.x, self.mask)
 
     def load_supplementary_files(self):
         '''
@@ -129,8 +142,6 @@ class Command(ABC):
             self.A = loaded_data['A']
             print (f'Loaded Likelihoods from {file}')
 
-
-
     @abstractmethod
     def _execute(self):
         '''
@@ -142,7 +153,6 @@ class EstablishSubsets(Command):
     '''
     Extract subsets of MNIST to facilitate replication
     '''
-
     def __init__(self):
         super().__init__('Establish Subsets','establish-subsets',
                          needs_output_file=True,
@@ -152,8 +162,8 @@ class EstablishSubsets(Command):
         '''
         Extract subsets of MNIST of a specified size, and save to index file
         '''
-        indices = create_indices(self.y_train, nimages=args.nimages, rng=self.rng)
-        file = Path(join(args.data, args.out)).with_suffix('.npz')
+        indices = create_indices(self.y_train, nimages=self.args.nimages, rng=self.rng)
+        file = Path(join(self.args.data, self.args.out)).with_suffix('.npz')
         np.savez(file, indices=indices)
         m,n = indices.shape
         print(f'Saved {m} labels for each of {n} classes in {file.resolve()}')
@@ -178,43 +188,43 @@ class EstablishPixels(Command):
         indices = self.indices.reshape(-1)
         entropies = create_entropies(x_train[indices],
                                      list(range(len(indices))),
-                                     bins=args.bins,
-                                     m=args.size)
+                                     bins=self.args.bins,
+                                     m=self.args.size)
         mu = np.mean(entropies)
         sigma = np.std(entropies)
-        min0 = np.min(entropies)
-        img = np.reshape(entropies,(args.size,args.size))
-        mask = self.cull(entropies,-args.fraction,mu,sigma,clip=True).reshape(args.size,args.size)
+        min_entropy = np.min(entropies)
+        img = np.reshape(entropies,(self.args.size,self.args.size))
+        mask = self.cull(entropies,-self.args.fraction,mu,sigma,clip=True).reshape(self.args.size,self.args.size)
 
         fig = figure(figsize=(12, 12))
-        self.show_image(img,ax=fig.add_subplot(2,3,1),fig=fig,cmap=args.cmap)
-        self.show_culled(img,-args.fraction,mu,sigma,min0,ax = fig.add_subplot(2,3,2),cmap=args.cmap)
-        self.show_mask(mask,cmap=args.cmap,ax = fig.add_subplot(2,3,4),size=args.size)
-        self.show_histogram(img,mu,sigma,threshold=args.fraction,ax=fig.add_subplot(2,3,5))
+        self.show_image(img,ax=fig.add_subplot(2,3,1),fig=fig,cmap=self.args.cmap)
+        self.show_culled(img,-self.args.fraction,mu,sigma,min_entropy,ax = fig.add_subplot(2,3,2),cmap=self.args.cmap)
+        self.show_mask(mask,cmap=self.args.cmap,ax = fig.add_subplot(2,3,4),size=self.args.size)
+        self.show_histogram(img,mu,sigma,threshold=self.args.fraction,ax=fig.add_subplot(2,3,5))
         n,bins = self.show_pixels(mask,ax=fig.add_subplot(2,3,3))
-        fig.suptitle(r'Processed \emph{' + f'{args.indices}'
-                     ',} '  f'{len(indices) // 10:,d} images per class, {args.bins} bins')
-        fig.savefig(join(args.figs,args.out))
+        fig.suptitle(r'Processed \emph{' + f'{self.args.indices}'
+                     ',} '  f'{len(indices) // 10:,d} images per class, {self.args.bins} bins')
+        fig.savefig(join(self.args.figs,self.args.out))
 
-        file = Path(join(args.data, args.out)).with_suffix('.npz')
+        file = Path(join(self.args.data, self.args.out)).with_suffix('.npz')
         np.savez(file, mask=mask,n=n,bins=bins)
 
-        print(f'Processed {args.indices}, {len(indices) // 10:,d} images per class, {args.bins} bins, saved mask in {file}')
+        print(f'Processed {self.args.indices}, {len(indices) // 10:,d} images per class, {self.args.bins} bins, saved mask in {file}')
 
-    def cull(self,img,n,mu,sigma,min0=0,clip=False):
+    def cull(self,img,n,mu,sigma,min_entropy=0,clip=False):
         '''
         Cull data for display
 
         Parameters:
-            img    An array of entropies, with one entry for each pixel
-            n      Threshold for culling: number of standard deviations below mean
-            mu     Mean entropy
-            sigma  Standard deviation for entropy
-            min0   Minimum entropy over all pixels
-            clip   Set to true to set pixels to 1 if they survive culling
+            img          An array of entropies, with one entry for each pixel
+            n            Threshold for culling: number of standard deviations below mean
+            mu           Mean entropy
+            sigma        Standard deviation for entropy
+            min_entropy  Minimum entropy over all pixels
+            clip         Set to true to set pixels to 1 if they survive culling
         '''
         product = np.copy(img)
-        product[product < mu + n*sigma] = min0
+        product[product < mu + n*sigma] = min_entropy
         if clip:
             product[product >= mu + n*sigma] = 1
         return product
@@ -232,22 +242,25 @@ class EstablishPixels(Command):
             ax.imshow(entropies,cmap=cmap),label='Entropy')
         ax.set_title('All pixels')
 
-    def show_culled(self,entropies,n,mu,sigma,min0,ax=None,cmap='Blues'):
+    def show_culled(self,entropies,n,mu,sigma,min_entropy,ax=None,cmap='Blues'):
         '''
         Cull data and display
 
         Parameters:
-            entropies  An array of entropies, with one entry for each pixel
-            n          Threshold for culling: number of standard deviations below mean
-            mu         Mean entropy
-            sigma      Standard deviation for entropy
-            min0       Minimum entropy over all pixels
-            ax         Axis for displaying data
+            entropies    An array of entropies, with one entry for each pixel
+            n            Threshold for culling: number of standard deviations below mean
+            mu           Mean entropy
+            sigma        Standard deviation for entropy
+            min_entropy  Minimum entropy over all pixels
+            ax           Axis for displaying data
         '''
-        ax.imshow(self.cull(entropies,n,mu,sigma,min0),cmap=cmap)
+        ax.imshow(self.cull(entropies,n,mu,sigma,min_entropy),cmap=cmap)
         ax.set_title(rf'Culled {abs(n)}$\sigma$ below $\mu$' if n != 0 else r'Culled all below $\mu$')
 
     def show_mask(self,mask,cmap='Blues',ax=None,size=28):
+        '''
+        Show which pixels are included or excluded by mask
+        '''
         ax.imshow(mask,cmap=cmap)
         ax.set_title(rf'Mask preserving {int(100*mask.sum()/(size**2))}\% of pixels')
 
@@ -339,7 +352,7 @@ class EstablishStyles(Command):
         Allocate exemplars to styles
         '''
         n_examples, n_classes = self.indices.shape
-        N = np.zeros((args.nimages,len(args.classes)))
+        N = np.zeros((self.args.nimages,len(self.args.classes)))
         L = 0
         max_steps = -1
         Allocations = np.empty((10),dtype=np.ndarray)
@@ -401,7 +414,7 @@ class CalculateLikelihoods(Command):
         '''
         For each pixel, determine the probability of belonging to each digit and style
         '''
-        file = Path(join(args.data, args.out)).with_suffix('.npz')
+        file = Path(join(self.args.data, self.args.out)).with_suffix('.npz')
         class_styles,index_style_start = self.create_class_styles()
         np.savez(file,
                  A=self.create_likelihoods(index_style_start,class_styles),
@@ -438,7 +451,7 @@ class CalculateLikelihoods(Command):
         Add up pixels for each combination of class,style and normalize
         '''
         n_class_styles,_ = class_styles.shape
-        A = args.pseudocount*np.ones((n_class_styles,n_pixels,len(self.bins)+1))
+        A = self.args.pseudocount*np.ones((n_class_styles,n_pixels,len(self.bins)+1))
         for i_class in self.args.classes:
             equalized_images = equalize_hist(self.x[self.indices[:,i_class],:])
             digitized_images = np.digitize(equalized_images,self.bins)
@@ -481,7 +494,7 @@ class RecognizeDigits(Command):
         m,n = get_subplot_shape(len(mismatches))
         for k,(img,y,prediction) in enumerate(mismatches):
             ax = fig.add_subplot(m,n,k+1)
-            ax.imshow(img,cmap=args.cmap)
+            ax.imshow(img,cmap=self.args.cmap)
             ax.axis('off')
             ax.set_title(f'{prediction} ({y})')
 
@@ -519,8 +532,8 @@ class RecognizeDigits(Command):
         matches = 0
         mismatches = []
         N = len(y)
-        if args.N != None:
-            N = min(N,args.N)
+        if self.args.N != None:
+            N = min(N,self.args.N)
         Selection = self.rng.choice(len(y),N,replace=False) if N < len(y) else range(N)
         for i in Selection:
             prediction = self.predict(np.array(x[i]))
