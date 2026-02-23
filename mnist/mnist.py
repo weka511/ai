@@ -237,6 +237,17 @@ def get_mutual_information(x,y):
     '''
     return mutual_info_classif(x[:, np.newaxis],y)
 
+class Digit(object):
+    colours = [
+        'lightgreen', 'orange','teal',
+        'lightblue', 'red', 'brown',
+        'pink',	'blue', 'green', 'purple'
+    ]
+
+    @staticmethod
+    def get_colour(iclass):
+        return f'xkcd:{Digit.colours[iclass]}'
+
 class TestSequence(TestCase):
 
     def setUp(self):

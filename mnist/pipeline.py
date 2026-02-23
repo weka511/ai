@@ -32,7 +32,7 @@ from skimage.exposure import equalize_hist
 from sklearn.feature_selection import mutual_info_classif
 from skimage.transform import resize
 from pymdp.maths import softmax
-from mnist import MnistDataloader, create_mask, columnize,create_indices,create_entropies
+from mnist import MnistDataloader, create_mask, columnize,create_indices,create_entropies,Digit
 from style import StyleList
 
 class Command(ABC):
@@ -74,10 +74,6 @@ class Command(ABC):
         self.needs_index_file = needs_index_file
         self.needs_style_file = needs_style_file
         self.needs_likelihoods_file = needs_likelihoods_file
-        self.colours = ['lightgreen', 'orange','teal',
-                        'lightblue', 'red', 'brown',
-                        'pink',	'blue', 'green', 'purple'
-        ]
 
     def get_description(self):
         return self.description
@@ -382,7 +378,7 @@ class EstablishStyles(Command):
         '''
         Plot histogram of lengths of styles within list
         '''
-        ax.hist([len(style) for style in style_list.styles],color='xkcd:'+self.colours[i_class])
+        ax.hist([len(style) for style in style_list.styles],color=Digit.get_colour(i_class))
         ax.xaxis.set_major_locator(MaxNLocator(integer=True))
         ax.set_title(f'Digit Class {i_class}, Lengths for {len(style_list)} styles')
         ax.set_xlabel('Length')
@@ -393,7 +389,7 @@ class EstablishStyles(Command):
         '''
         ax1 = fig.add_subplot(3, 4, 11)
         for j,i_class in enumerate(self.args.classes):
-            ax1.plot(list(range(max_steps)),N[0:max_steps,j],label={i_class},c='xkcd:'+self.colours[j])
+            ax1.plot(list(range(max_steps)),N[0:max_steps,j],label={i_class},c=Digit.get_colour(i_class))
         ax1.set_xlabel('Number of exemplars')
         ax1.set_ylabel('Number of styles')
         ax1.set_title('Style Learning')

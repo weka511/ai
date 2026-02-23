@@ -28,16 +28,16 @@ from matplotlib import rc, cm
 from skimage.exposure import equalize_hist
 from skimage.transform import resize
 from sklearn.feature_selection import mutual_info_classif
-from mnist import MnistDataloader
+from mnist import MnistDataloader,Digit
 from pipeline import Command
 
-class Visualize(Command):
+class HistEq(Command):
     '''
         Visualise histogram equalization of MNIST data
     '''
     def __init__(self):
         super().__init__(' Visualise histogram equalization of MNIST data','histeq',
-                         needs_output_file=False,
+                         needs_output_file=True,
                          needs_index_file=False)
 
     def _execute(self):
@@ -67,16 +67,17 @@ class Visualize(Command):
                 ax2.set_title('Raw' if self.args.resize == None else 'Resized')
                 ax4.set_title('After equalization')
 
-        fig.suptitle('MNIST')
+        fig.suptitle('Histogram Equalization of MNIST data')
         fig.tight_layout(pad=3,h_pad=3,w_pad=3)
-        fig.savefig(join(self.args.figs,Path(__file__).stem))
+        fig.savefig(Path(join(self.args.figs, self.args.out)).with_suffix('.png'))
 
 class EDA(Command):
     '''
         Exploratory Data Analysis for MNIST: plot some raw data, with or without masking
     '''
     def __init__(self):
-        super().__init__('Exploratory Data Analysis','eda')
+        super().__init__('Exploratory Data Analysis','eda',
+                         needs_output_file=True)
 
     def _execute(self):
         '''
@@ -92,7 +93,7 @@ class EDA(Command):
                       else rf'Mask preserving {int(100*self.mask.sum()/(self.args.size*self.args.size))}\% of pixels'))
 
         fig.tight_layout(pad=2,h_pad=2,w_pad=2)
-        fig.savefig(join(self.args.figs,Path(__file__).stem))
+        fig.savefig(Path(join(self.args.figs, self.args.out)).with_suffix('.png'))
 
     def generate_images(self,classes=list(range(10)),m=20,size=28):
         '''
@@ -116,7 +117,8 @@ class EDA_MI(Command):
     mutual information within and between classes
     '''
     def __init__(self):
-        super().__init__('EDA Mutual Information','eda-mi')
+        super().__init__('EDA Mutual Information','eda-mi',
+                         needs_output_file=True)
 
     '''
     Determine variability of mutual information within and between classes
@@ -147,7 +149,7 @@ class EDA_MI(Command):
         EDA_MI.annotate(MI_within_classes.T,ax=ax2)
 
         fig.tight_layout(pad=2,h_pad=2,w_pad=2)
-        fig.savefig(join(self.args.figs,Path(__file__).stem))
+        fig.savefig(Path(join(self.args.figs, self.args.out)).with_suffix('.png'))
 
     def create_exemplars(self):
         '''
@@ -187,7 +189,8 @@ class Cluster(Command):
     Plot mutual information between classes
     '''
     def __init__(self):
-        super().__init__('Cluster','explore-clusters',needs_output_file=True)
+        super().__init__('Cluster','explore-clusters',
+                         needs_output_file=True)
 
     '''
     Plot mutual information between classes
@@ -208,7 +211,7 @@ class Cluster(Command):
         ax.set_ylabel('Frequency')
         ax.set_title(f'Mutual Information within classes based on {npairs} pairs, {self.mask_text}')
         ax.legend(title='Digit classes')
-        fig.savefig(join(self.args.figs,self.args.out))
+        fig.savefig(Path(join(self.args.figs, self.args.out)).with_suffix('.png'))
 
     def create_frequencies(self,i_class,bins=[],npairs=128,m=1000,rng=None):
         '''
@@ -245,7 +248,7 @@ class StyleFrequency(Command):
         for i_class in self.args.classes:
             style_lengths = [len([d for d in style if d > -1]) for style in self.Allocations[i_class]]
             n,_ = np.histogram(style_lengths,bins=bins)
-            ax.plot(0.5*(bins[:-1]+bins[1:]),n,c='xkcd:' +self.colours[i_class],label=f'{str(i_class)}')
+            ax.plot(0.5*(bins[:-1]+bins[1:]),n,c=Digit.get_colour(i_class),label=f'{str(i_class)}')
         ax.legend(title='Digit Class')
         ax.set_xlabel('Styles')
         ax.set_ylabel('Occurences')
@@ -262,7 +265,8 @@ class DisplayStyles(Command):
     '''
     def __init__(self):
         super().__init__('Display Styles','display-styles',
-                         needs_style_file=True)
+                         needs_style_file=True,
+                         needs_output_file=True)
 
     def _execute(self):
         '''
@@ -282,7 +286,7 @@ class DisplayStyles(Command):
                     ax.imshow(img,cmap=self.args.cmap)
                     ax.axis('off')
             fig.tight_layout(pad=2,h_pad=2,w_pad=2)
-            fig.savefig(Path(join(self.args.figs, self.args.styles+str(i_class))).with_suffix('.png'))
+            fig.savefig(Path(join(self.args.figs, self.args.out+str(i_class))).with_suffix('.png'))
 
 
 def parse_args(names):
@@ -326,7 +330,7 @@ if __name__ == '__main__':
     start = time()
 
     Command.build([
-        Visualize(),
+        HistEq(),
         Cluster(),
         DisplayStyles(),
         StyleFrequency(),
