@@ -74,6 +74,10 @@ class Command(ABC):
         self.needs_index_file = needs_index_file
         self.needs_style_file = needs_style_file
         self.needs_likelihoods_file = needs_likelihoods_file
+        self.colours = ['lightgreen', 'orange','teal',
+                        'lightblue', 'red', 'brown',
+                        'pink',	'blue', 'green', 'purple'
+        ]
 
     def get_description(self):
         return self.description
@@ -342,10 +346,7 @@ class EstablishStyles(Command):
     '''
     def __init__(self):
         super().__init__('Establish Styles','establish-styles',needs_output_file=True)
-        self.colours = ['lightgreen', 'orange','teal',
-                        'lightblue', 'red', 'brown',
-                        'pink',	'blue', 'green', 'purple'
-        ]
+
 
     def _execute(self):
         '''

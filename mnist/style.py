@@ -98,8 +98,7 @@ class StyleList(object):
             index     The index of the image
 
         Returns:
-            style that is the best matchc
-            the mutual information
+            style that is the best match, based on mutual information
         '''
         style_best_match = None
         mi_best_match = -1
@@ -121,7 +120,7 @@ class StyleList(object):
 
         Returns:
             A matrix with one row for each style (within current class), and sufficient columns to
-            represent all images in the most numerous style in the class. Each potiion contains the
+            represent all images in the most numerous style in the class. Each element contains the
             index of one images from the style, or -1 if there are insufficient images to fill
             the row.
         '''

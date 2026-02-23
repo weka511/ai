@@ -229,6 +229,33 @@ class Cluster(Command):
 
         return np.histogram(create_mutual_info(),bins,density=True)[0]
 
+class StyleFrequency(Command):
+    '''
+    Display Frequency of Images in each Style
+    '''
+    def __init__(self):
+        super().__init__('Display Frequency of Images in each Style','style-frequency',
+                         needs_style_file=True,
+                         needs_output_file=True)
+
+    def _execute(self):
+        fig = figure(figsize=(8, 8))
+        ax = fig.add_subplot(1,1,1)
+        bins = np.linspace(0,self.count_styles(),num=args.bins)
+        for i_class in self.args.classes:
+            style_lengths = [len([d for d in style if d > -1]) for style in self.Allocations[i_class]]
+            n,_ = np.histogram(style_lengths,bins=bins)
+            ax.plot(0.5*(bins[:-1]+bins[1:]),n,c='xkcd:' +self.colours[i_class],label=f'{str(i_class)}')
+        ax.legend(title='Digit Class')
+        ax.set_xlabel('Styles')
+        ax.set_ylabel('Occurences')
+        ax.set_title('Frequency')
+        fig.tight_layout(pad=2,h_pad=2,w_pad=2)
+        fig.savefig(Path(join(self.args.figs, self.args.out)).with_suffix('.png'))
+
+    def count_styles(self):
+        return max([self.Allocations[i_class].shape[0] for i_class in self.args.classes])
+
 class DisplayStyles(Command):
     '''
     Display representatives of all styles created by EstablishStyles
@@ -302,6 +329,7 @@ if __name__ == '__main__':
         Visualize(),
         Cluster(),
         DisplayStyles(),
+        StyleFrequency(),
         EDA(),
         EDA_MI()
     ])
