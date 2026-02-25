@@ -203,7 +203,7 @@ class Cluster(Command):
         assert n == 10
         ax = fig.add_subplot(1,1,1)
         for i_class in self.args.classes:
-            print (f'Class {i_class}')
+            self.log (f'Class {i_class}')
             ax.plot(0.5*(bins[:-1] + bins[1:]),
                     self.create_frequencies(i_class,bins,npairs=npairs,m=m,rng=self.rng),label=str(i_class))
 
@@ -306,6 +306,7 @@ def parse_args(names):
     parser.add_argument('--nimages', default=11, type=int, help='Maximum number of images for each class')
     parser.add_argument('-o','--out',nargs='?')
     parser.add_argument('--bins', default=12, type=int, help='Number of bins for histograms')
+    parser.add_argument('--logs', default='./logs', help='Location for storing log files')
 
     group_eda = parser.add_argument_group('Options for eda')
     group_eda.add_argument('--images_per_digit',default=8,type=int,help='Number of images in each digit class')
@@ -340,17 +341,19 @@ if __name__ == '__main__':
 
     args = parse_args(Command.get_names())
     command = Command.commands[args.command]
-    command.set_args(args)
-    try:
-        command.execute()
-    except FileNotFoundError as e:
-        print(f'Error: {e.filename} not found.')
-        exit (1)
+    with Logger(Path(__file__).stem,path=args.logs) as logger:
+        command.set_args(args)
+        command.set_logger(logger)
+        try:
+            command.execute()
+        except FileNotFoundError as e:
+            logger.log(f'Error: {e.filename} not found.')
+            exit (1)
 
-    elapsed = time() - start
-    minutes = int(elapsed/60)
-    seconds = elapsed - 60*minutes
-    print (f'Elapsed Time {minutes} m {seconds:.2f} s')
+        elapsed = time() - start
+        minutes = int(elapsed/60)
+        seconds = elapsed - 60*minutes
+        logger.log (f'Elapsed Time {minutes} m {seconds:.2f} s')
 
-    if args.show:
-        show()
+        if args.show:
+            show()

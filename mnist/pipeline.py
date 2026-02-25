@@ -364,7 +364,7 @@ class EstablishStyles(Command):
                                                threshold=self.args.threshold)
 
             Allocations[j] = style_list.create_allocations()
-            print(f'Class {i_class} contains {len(style_list)} Styles.')
+            self.log(f'Class {i_class} contains {len(style_list)} Styles.')
             self.plot_lengths(style_list,i_class, ax = fig.add_subplot(3, 4, 1+j)  )
             for i in steps:
                 N[i+1:,j] += 1
@@ -372,7 +372,7 @@ class EstablishStyles(Command):
 
         file = Path(join(self.args.data, self.args.out)).with_suffix('.npz')
         np.savez(file,Allocations=Allocations)
-        print (f'Saved styles in {file}')
+        self.log (f'Saved styles in {file}')
         self.plot_styles_versus_exemplars(max_steps,N, fig=fig)
         fig.tight_layout(pad=2,h_pad=2,w_pad=2)
         fig.savefig(Path(join(self.args.figs, self.args.out)).with_suffix('.png'))
@@ -419,7 +419,7 @@ class CalculateLikelihoods(Command):
         np.savez(file,
                  A=self.create_likelihoods(index_style_start,class_styles),
                  class_styles=class_styles)
-        print (f'Saved Likelihoods and class/styles from {join(self.args.data, self.args.styles)} in {file}')
+        self.log (f'Saved Likelihoods and class/styles from {join(self.args.data, self.args.styles)} in {file}')
 
     def create_class_styles(self):
         '''
@@ -483,7 +483,7 @@ class RecognizeDigits(Command):
         self.logA = np.log(self.A)
 
         N,accuracy,mismatches = self.get_accuracy(self.x_test,self.y_test)
-        print (f'{N} images, accuracy={accuracy}')
+        self.log (f'{N} images, accuracy={accuracy}')
         self.plot_mismatches(N,accuracy,mismatches)
 
     def plot_mismatches(self,N,accuracy,mismatches):
@@ -621,7 +621,7 @@ if __name__ == '__main__':
         try:
             command.execute()
         except FileNotFoundError as e:
-            print(f'Error: {e.filename} not found.')
+            self.log(f'Error: {e.filename} not found.')
             exit (1)
 
         elapsed = time() - start
