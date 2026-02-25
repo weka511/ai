@@ -21,6 +21,13 @@
 
 import numpy as np
 from mnist import get_mutual_information
+from shared.utils import user_has_requested_stop
+
+class StylesStoppedBuilding(Exception):
+    '''
+    This exception is thrown when the user creates a stop token while styles are being built.
+    '''
+    pass
 
 class Style(object):
     '''
@@ -61,6 +68,7 @@ class StyleList(object):
         product = StyleList(x_class)
         steps = []
         for j in range(nimages):
+            if user_has_requested_stop(): raise StylesStoppedBuilding()
             matching_style,mi = product.get_best_match(j)
             if matching_style == None or mi < threshold:
                 product.add(Style(j))

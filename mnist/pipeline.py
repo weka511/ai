@@ -34,7 +34,7 @@ from sklearn.feature_selection import mutual_info_classif
 from skimage.transform import resize
 from pymdp.maths import softmax
 from mnist import MnistDataloader, create_mask, columnize,create_indices,create_entropies,Digit
-from style import StyleList
+from style import StyleList,StylesStoppedBuilding
 from shared.utils import Logger,user_has_requested_stop
 
 class Command(ABC):
@@ -358,25 +358,33 @@ class EstablishStyles(Command):
         max_steps = -1
         Allocations = self.create_allocations()
         fig = figure(figsize=(12, 8))
+
         for j,i_class in enumerate(self.args.classes):
             if user_has_requested_stop(): break
-            style_list,steps = StyleList.build(self.x, self.indices,
-                                               i_class=i_class,
-                                               nimages=min(n_examples,self.args.nimages),
-                                               threshold=self.args.threshold)
+            try:
+                style_list,steps = StyleList.build(self.x, self.indices,
+                                                   i_class=i_class,
+                                                   nimages=min(n_examples,self.args.nimages),
+                                                   threshold=self.args.threshold)
 
-            Allocations[i_class] = style_list.create_allocations()
-            self.plot_lengths(style_list,i_class, ax = fig.add_subplot(3, 4, 1+j)  )
-            for i in steps:
-                N[i+1:,j] += 1
-            max_steps = max(max_steps,steps[-1])
+                Allocations[i_class] = style_list.create_allocations()
+                self.plot_lengths(style_list,i_class, ax = fig.add_subplot(3, 4, 1+j)  )
+                for i in steps:
+                    N[i+1:,j] += 1
+                max_steps = max(max_steps,steps[-1])
 
-            file = Path(join(self.args.data, self.args.out)).with_suffix('.npz')
-            np.savez(file,Allocations=Allocations)
-            self.log(f'Class {i_class} contains {len(style_list)} Styles, saved styles in {file}')
-        self.plot_styles_versus_exemplars(max_steps,N, fig=fig)
-        fig.tight_layout(pad=2,h_pad=2,w_pad=2)
-        fig.savefig(Path(join(self.args.figs, self.args.out)).with_suffix('.png'))
+                file = Path(join(self.args.data, self.args.out)).with_suffix('.npz')
+                np.savez(file,Allocations=Allocations)
+                self.log(f'Class {i_class} contains {len(style_list)} Styles, saved styles in {file}')
+            except StylesStoppedBuilding:
+                self.log(f'Stopped while processing {i_class}')
+                break
+        try:
+            self.plot_styles_versus_exemplars(max_steps,N, fig=fig)
+            fig.tight_layout(pad=2,h_pad=2,w_pad=2)
+            fig.savefig(Path(join(self.args.figs, self.args.out)).with_suffix('.png'))
+        except ValueError:
+            return
 
     def create_allocations(self):
         '''
