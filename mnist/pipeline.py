@@ -174,19 +174,14 @@ class EstablishSubsets(Command):
         file = Path(join(self.args.data, self.args.out)).with_suffix('.npz')
         np.savez(file, indices=indices)
         m,n = indices.shape
-        print(f'Saved {m} labels for each of {n} classes in {file.resolve()}')
+        self.log(f'Saved {m} labels for each of {n} classes in {file.resolve()}')
 
-
-
-
-
-
-class EstablishPixels(Command):
+class EstablishMask(Command):
     '''
     Determine which pixels are most relevant to classifying images
     '''
     def __init__(self):
-        super().__init__('Establish Pixels','establish-pixels',needs_output_file=True)
+        super().__init__('Establish Mask','establish-mask',needs_output_file=True)
 
     def _execute(self):
         '''
@@ -217,7 +212,7 @@ class EstablishPixels(Command):
         file = Path(join(self.args.data, self.args.out)).with_suffix('.npz')
         np.savez(file, mask=mask,n=n,bins=bins)
 
-        print(f'Processed {self.args.indices}, {len(indices) // 10:,d} images per class, {self.args.bins} bins, saved mask in {file}')
+        self.log(f'Processed {self.args.indices}, {len(indices) // 10:,d} images per class, {self.args.bins} bins, saved mask in {file}')
 
     def cull(self,img,n,mu,sigma,min_entropy=0,clip=False):
         '''
@@ -578,7 +573,7 @@ def parse_args(names):
     parser.add_argument('--figs', default='./figs', help='Location for storing plot files')
     parser.add_argument('--data', default='./data', help='Location for storing data files')
     parser.add_argument('--indices', default='baseline.npz', help='Location where index files have been saved')
-    parser.add_argument('--nimages', default=1000, type=int, help='Maximum number of images for each class')
+    parser.add_argument('--nimages', default=2000, type=int, help='Maximum number of images for each class')
     parser.add_argument('--mask', default=None, help='Name of mask file (omit for no mask)')
     parser.add_argument('--size', default=28, type=int, help='Number of row/cols in each image: shape will be will be mxm')
     parser.add_argument('--classes', default=list(range(10)), type=int, nargs='+', help='List of digit classes')
@@ -588,7 +583,7 @@ def parse_args(names):
     parser.add_argument('--logs', default='./logs', help='Location for storing log files')
     parser.add_argument('--styles', default=Path(__file__).stem, help='Location where styles have been stored')
 
-    group_establish_pixels = parser.add_argument_group('Options for establish-pixels')
+    group_establish_pixels = parser.add_argument_group('Options for Establish-mask')
     group_establish_pixels.add_argument('--fraction', default=0.5, type=float,
                         help='Include pixel if entropy exceeds mean - fraction*sd')
 
@@ -613,7 +608,7 @@ if __name__ == '__main__':
     start = time()
     Command.build([
         EstablishSubsets(),
-        EstablishPixels(),
+        EstablishMask(),
         EstablishStyles(),
         CalculateLikelihoods(),
         RecognizeDigits()
