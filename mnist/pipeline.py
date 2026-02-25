@@ -24,6 +24,7 @@ from textwrap import dedent
 from os.path import join
 from pathlib import Path
 from time import time, strftime,localtime
+from shutil import copyfile
 from matplotlib.pyplot import figure, show
 from matplotlib import rc, cm
 from matplotlib.ticker import MaxNLocator
@@ -34,7 +35,7 @@ from skimage.transform import resize
 from pymdp.maths import softmax
 from mnist import MnistDataloader, create_mask, columnize,create_indices,create_entropies,Digit
 from style import StyleList
-from shared.utils import Logger
+from shared.utils import Logger,user_has_requested_stop
 
 class Command(ABC):
     '''
@@ -355,27 +356,51 @@ class EstablishStyles(Command):
         N = np.zeros((self.args.nimages,len(self.args.classes)))
         L = 0
         max_steps = -1
-        Allocations = np.empty((10),dtype=np.ndarray)
+        Allocations = self.create_allocations()
         fig = figure(figsize=(12, 8))
         for j,i_class in enumerate(self.args.classes):
+            if user_has_requested_stop(): break
             style_list,steps = StyleList.build(self.x, self.indices,
                                                i_class=i_class,
                                                nimages=min(n_examples,self.args.nimages),
                                                threshold=self.args.threshold)
 
-            Allocations[j] = style_list.create_allocations()
-            self.log(f'Class {i_class} contains {len(style_list)} Styles.')
+            Allocations[i_class] = style_list.create_allocations()
             self.plot_lengths(style_list,i_class, ax = fig.add_subplot(3, 4, 1+j)  )
             for i in steps:
                 N[i+1:,j] += 1
             max_steps = max(max_steps,steps[-1])
 
-        file = Path(join(self.args.data, self.args.out)).with_suffix('.npz')
-        np.savez(file,Allocations=Allocations)
-        self.log (f'Saved styles in {file}')
+            file = Path(join(self.args.data, self.args.out)).with_suffix('.npz')
+            np.savez(file,Allocations=Allocations)
+            self.log(f'Class {i_class} contains {len(style_list)} Styles, saved styles in {file}')
         self.plot_styles_versus_exemplars(max_steps,N, fig=fig)
         fig.tight_layout(pad=2,h_pad=2,w_pad=2)
         fig.savefig(Path(join(self.args.figs, self.args.out)).with_suffix('.png'))
+
+    def create_allocations(self):
+        '''
+        Create array of Allocations, either by reading from a file or from scratch.
+        '''
+        if self.args.restart:
+            file = Path(join(self.args.data, self.args.styles)).with_suffix('.npz')
+            style_data = np.load(file,allow_pickle=True)
+            self.log (f'Loaded Allocations from {file}')
+            self.verify_ok_to_write(file)
+            return style_data['Allocations']
+        else:
+            return np.empty((10),dtype=np.ndarray)
+
+    def verify_ok_to_write(self,file):
+        '''
+        Verify that we won't lose data when we write to output file,
+        by creating backup file if necessary
+
+        Parameters:
+            file     Full path name for styles
+        '''
+        if Path(self.args.out).stem == file.stem:
+            copyfile( file,file.with_suffix('.bak'))
 
     def plot_lengths(self,style_list,i_class,ax=None):
         '''
@@ -572,7 +597,7 @@ def parse_args(names):
     parser.add_argument('--show', default=False, action='store_true', help='Controls whether plot will be displayed')
     parser.add_argument('--figs', default='./figs', help='Location for storing plot files')
     parser.add_argument('--data', default='./data', help='Location for storing data files')
-    parser.add_argument('--indices', default='baseline.npz', help='Location where index files have been saved')
+    parser.add_argument('--indices', default=None, help='Location where index files have been saved')
     parser.add_argument('--nimages', default=2000, type=int, help='Maximum number of images for each class')
     parser.add_argument('--mask', default=None, help='Name of mask file (omit for no mask)')
     parser.add_argument('--size', default=28, type=int, help='Number of row/cols in each image: shape will be will be mxm')
@@ -581,15 +606,16 @@ def parse_args(names):
     parser.add_argument('--seed', default=None, type=int, help='For initializing random number generator')
     parser.add_argument('--cmap',default='Blues',help='Colour map')
     parser.add_argument('--logs', default='./logs', help='Location for storing log files')
-    parser.add_argument('--styles', default=Path(__file__).stem, help='Location where styles have been stored')
+    parser.add_argument('--styles', default=None, help='Location where styles have been stored')
 
-    group_establish_pixels = parser.add_argument_group('Options for Establish-mask')
-    group_establish_pixels.add_argument('--fraction', default=0.5, type=float,
+    group_establish_mask = parser.add_argument_group('Options for Establish mask')
+    group_establish_mask.add_argument('--fraction', default=0.5, type=float,
                         help='Include pixel if entropy exceeds mean - fraction*sd')
 
     group_establish_styles = parser.add_argument_group('Options for establish-styles')
     group_establish_styles.add_argument('--threshold', default=0.1, type=float,
                           help='Include image in same style if mutual information exceeds threshold')
+    group_establish_styles.add_argument('--restart',default=False,action='store_true',help='Continue processing styles')
 
     group_calculate_A = parser.add_argument_group('Options for calculate-likelihoods')
     group_calculate_A.add_argument('--pseudocount', default=0.05, type=float,help='Used to initialize counts')
