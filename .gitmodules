@@ -1,0 +1,3 @@
+[submodule "mnist/shared"]
+	path = mnist/shared
+	url = https://github.com/weka511/shared

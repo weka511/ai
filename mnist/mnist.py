@@ -43,7 +43,7 @@ class MnistDataloader(object):
         test_labels_filepath
     '''
     @staticmethod
-    def create(data = './data'):
+    def create(data = './data',report=print):
         '''
         Create a MnistDataloader, setting up pathnames for all datasets
         '''
@@ -51,14 +51,16 @@ class MnistDataloader(object):
             training_images_filepath = join(data, 'train-images-idx3-ubyte/train-images-idx3-ubyte'),
             training_labels_filepath = join(data, 'train-labels-idx1-ubyte/train-labels-idx1-ubyte'),
             test_images_filepath = join(data, 't10k-images-idx3-ubyte/t10k-images-idx3-ubyte'),
-            test_labels_filepath = join(data, 't10k-labels-idx1-ubyte/t10k-labels-idx1-ubyte'))
+            test_labels_filepath = join(data, 't10k-labels-idx1-ubyte/t10k-labels-idx1-ubyte'),
+            report = report)
 
     def __init__(self, training_images_filepath, training_labels_filepath,
-                 test_images_filepath, test_labels_filepath):
+                 test_images_filepath, test_labels_filepath,report=print):
         self.training_images_filepath = training_images_filepath
         self.training_labels_filepath = training_labels_filepath
         self.test_images_filepath = test_images_filepath
         self.test_labels_filepath = test_labels_filepath
+        self.report = report
 
     def read_images_labels(self, images_filepath, labels_filepath):
         '''
@@ -99,10 +101,10 @@ class MnistDataloader(object):
 
             return images, labels
         except FileNotFoundError as e:
-            print (f'Could not find file {e.filename}')
+            self.report (f'Could not find file {e.filename}')
             exit(1)
         except ValueError as e:
-            print (e)
+            self.report (e)
             exit(1)
 
 
@@ -114,15 +116,15 @@ class MnistDataloader(object):
         '''
         x_train, y_train = self.read_images_labels(self.training_images_filepath, self.training_labels_filepath)
         if verbose:
-            print (f'Loaded training data from {self.training_images_filepath},')
-            print (f'labels from {self.training_labels_filepath}')
+            self.report (f'Loaded training data from {self.training_images_filepath},')
+            self.report (f'labels from {self.training_labels_filepath}')
         x_test, y_test = self.read_images_labels(self.test_images_filepath, self.test_labels_filepath)
         if verbose:
-            print (f'Loaded test data from {self.test_images_filepath},')
-            print (f'labels from {self.test_labels_filepath}')
+            self.report (f'Loaded test data from {self.test_images_filepath},')
+            self.report (f'labels from {self.test_labels_filepath}')
         return (x_train, y_train), (x_test, y_test)
 
-def create_mask(mask_file=None,data='../data',size=28):
+def create_mask(mask_file=None,data='../data',size=28,report=print):
     '''
     Create a mask by reading from a file, if a name is provided.
     If there is no mask file, return all ones.
@@ -137,14 +139,14 @@ def create_mask(mask_file=None,data='../data',size=28):
         Text showing mask file name
     '''
     if mask_file == None:
-        print ('No mask specified')
+        report ('No mask specified')
         return np.ones((size,size)),'no mask',[],[]
     mask_path = Path(join(data, mask_file)).with_suffix('.npz')
     mask_data = np.load(mask_path)
     product = mask_data['mask']
     bins = mask_data['bins']
     n = mask_data['n']
-    print (f'Loaded mask from {mask_path}')
+    report (f'Loaded mask from {mask_path}')
     return product,f'Mask = {mask_file}',n,bins
 
 def columnize(x):

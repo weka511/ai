@@ -34,6 +34,7 @@ from skimage.transform import resize
 from pymdp.maths import softmax
 from mnist import MnistDataloader, create_mask, columnize,create_indices,create_entropies,Digit
 from style import StyleList
+from shared.utils import Logger
 
 class Command(ABC):
     '''
@@ -88,10 +89,10 @@ class Command(ABC):
         - Load mnist images and other data used by commands
         - apply mask
         '''
-        print (self.get_description(),strftime("%a, %d %b %Y %H:%M:%S +0000", localtime()))
+        self.log (f'{self.get_description()} {strftime("%a, %d %b %Y %H:%M:%S +0000", localtime())}')
 
         if self.needs_output_file and self.args.out == None:
-            print ('Output file must be specified')
+            self.log ('Output file must be specified')
             exit(1)
 
         self.load_mnist_data()
@@ -104,7 +105,7 @@ class Command(ABC):
         '''
         Load training and test data
         '''
-        dataloader = MnistDataloader.create(data=self.args.data)
+        dataloader = MnistDataloader.create(data=self.args.data,report = lambda x:self.log(x))
         (self.x_train, self.y_train), (self.x_test, self.y_test), = dataloader.load_data()
         self.x = columnize(self.x_train)
 
@@ -115,7 +116,8 @@ class Command(ABC):
         '''
         self.mask, self.mask_text,self.n,self.bins = create_mask(mask_file=self.args.mask,
                                                                  data=self.args.data,
-                                                                 size=self.args.size)
+                                                                 size=self.args.size,
+                                                                 report = lambda x:self.log(x))
         self.mask = self.mask.reshape(-1)
         self.x = np.multiply(self.x, self.mask)
 
@@ -127,20 +129,20 @@ class Command(ABC):
             file = Path(join(self.args.data, self.args.indices)).with_suffix('.npz')
             index_data = np.load(file)
             self.indices = index_data['indices']
-            print (f'Loaded indices from {file}')
+            self.log (f'Loaded indices from {file}')
 
         if self.needs_style_file:
             file = Path(join(self.args.data, self.args.styles)).with_suffix('.npz')
             style_data = np.load(file,allow_pickle=True)
             self.Allocations = style_data['Allocations']
-            print (f'Loaded Allocations from {file}')
+            self.log (f'Loaded Allocations from {file}')
 
         if self.needs_likelihoods_file:
             file = Path(join(self.args.data, self.args.likelihoods)).with_suffix('.npz')
             loaded_data = np.load(file,allow_pickle=True)
             self.class_styles = loaded_data['class_styles']
             self.A = loaded_data['A']
-            print (f'Loaded Likelihoods from {file}')
+            self.log (f'Loaded Likelihoods from {file}')
 
     @abstractmethod
     def _execute(self):
@@ -148,6 +150,12 @@ class Command(ABC):
         Execute command: must be implemented for each class
         '''
         ...
+
+    def set_logger(self,logger):
+        self.logger = logger
+
+    def log(self,message):
+        self.logger.log(message)
 
 class EstablishSubsets(Command):
     '''
@@ -577,6 +585,8 @@ def parse_args(names):
     parser.add_argument('--bins', default=12, type=int, help='Number of bins for histograms')
     parser.add_argument('--seed', default=None, type=int, help='For initializing random number generator')
     parser.add_argument('--cmap',default='Blues',help='Colour map')
+    parser.add_argument('--logs', default='./logs', help='Location for storing log files')
+    parser.add_argument('--styles', default=Path(__file__).stem, help='Location where styles have been stored')
 
     group_establish_pixels = parser.add_argument_group('Options for establish-pixels')
     group_establish_pixels.add_argument('--fraction', default=0.5, type=float,
@@ -609,18 +619,20 @@ if __name__ == '__main__':
         RecognizeDigits()
     ])
     args = parse_args(Command.get_names())
-    command = Command.commands[args.command]
-    command.set_args(args)
-    try:
-        command.execute()
-    except FileNotFoundError as e:
-        print(f'Error: {e.filename} not found.')
-        exit (1)
+    with Logger(Path(__file__).stem,path=args.logs) as logger:
+        command = Command.commands[args.command]
+        command.set_args(args)
+        command.set_logger(logger)
+        try:
+            command.execute()
+        except FileNotFoundError as e:
+            print(f'Error: {e.filename} not found.')
+            exit (1)
 
-    elapsed = time() - start
-    minutes = int(elapsed / 60)
-    seconds = elapsed - 60 * minutes
-    print(f'Elapsed Time {minutes} m {seconds:.2f} s')
+        elapsed = time() - start
+        minutes = int(elapsed / 60)
+        seconds = elapsed - 60 * minutes
+        logger.log(f'Elapsed Time {minutes} m {seconds:.2f} s')
 
-    if args.show:
-        show()
+        if args.show:
+            show()
