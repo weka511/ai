@@ -28,8 +28,9 @@ from matplotlib import rc, cm
 from skimage.exposure import equalize_hist
 from skimage.transform import resize
 from sklearn.feature_selection import mutual_info_classif
-from mnist import MnistDataloader,Digit
+from mnist import MnistDataloader
 from pipeline import Command
+from shared.utils import Logger,create_xkcd_colours
 
 class HistEq(Command):
     '''
@@ -205,7 +206,7 @@ class Cluster(Command):
         for i_class in self.args.classes:
             self.log (f'Class {i_class}')
             ax.plot(0.5*(bins[:-1] + bins[1:]),
-                    self.create_frequencies(i_class,bins,npairs=npairs,m=m,rng=self.rng),label=str(i_class))
+                    self.create_frequencies(i_class,bins,npairs=npairs,m=m,rng=self.rng),label=str(i_class),c=self.colours[i_class])
 
         ax.set_xlabel('Mutual Information')
         ax.set_ylabel('Frequency')
@@ -248,7 +249,7 @@ class StyleFrequency(Command):
         for i_class in self.args.classes:
             style_lengths = [len([d for d in style if d > -1]) for style in self.Allocations[i_class]]
             n,_ = np.histogram(style_lengths,bins=bins)
-            ax.plot(0.5*(bins[:-1]+bins[1:]),n,c=Digit.get_colour(i_class),label=f'{str(i_class)}')
+            ax.plot(0.5*(bins[:-1]+bins[1:]),n,c=self.colours[i_class],label=f'{str(i_class)}')
         ax.legend(title='Digit Class')
         ax.set_xlabel('Styles')
         ax.set_ylabel('Occurences')

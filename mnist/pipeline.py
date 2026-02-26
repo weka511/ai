@@ -33,9 +33,10 @@ from skimage.exposure import equalize_hist
 from sklearn.feature_selection import mutual_info_classif
 from skimage.transform import resize
 from pymdp.maths import softmax
-from mnist import MnistDataloader, create_mask, columnize,create_indices,create_entropies,Digit
+from mnist import MnistDataloader, create_mask, columnize,create_indices,create_entropies
 from style import StyleList,StylesStoppedBuilding
-from shared.utils import Logger,user_has_requested_stop
+from shared.utils import Logger,user_has_requested_stop,create_xkcd_colours
+
 
 class Command(ABC):
     '''
@@ -69,13 +70,15 @@ class Command(ABC):
                  needs_output_file=False,
                  needs_index_file=True,
                  needs_style_file=False,
-                 needs_likelihoods_file=False):
+                 needs_likelihoods_file=False,
+                 n=10):
         self.description = description
         self.name = name
         self.needs_output_file = needs_output_file
         self.needs_index_file = needs_index_file
         self.needs_style_file = needs_style_file
         self.needs_likelihoods_file = needs_likelihoods_file
+        self.colours = create_xkcd_colours(n)
 
     def get_description(self):
         return self.description
@@ -414,7 +417,7 @@ class EstablishStyles(Command):
         '''
         Plot histogram of lengths of styles within list
         '''
-        ax.hist([len(style) for style in style_list.styles],color=Digit.get_colour(i_class))
+        ax.hist([len(style) for style in style_list.styles],color=self.colours[i_class])
         ax.xaxis.set_major_locator(MaxNLocator(integer=True))
         ax.set_title(f'Digit Class {i_class}, Lengths for {len(style_list)} styles')
         ax.set_xlabel('Length')
@@ -425,7 +428,7 @@ class EstablishStyles(Command):
         '''
         ax1 = fig.add_subplot(3, 4, 11)
         for j,i_class in enumerate(self.args.classes):
-            ax1.plot(list(range(max_steps)),N[0:max_steps,j],label={i_class},c=Digit.get_colour(i_class))
+            ax1.plot(list(range(max_steps)),N[0:max_steps,j],label={i_class},c=self.colours[i_class])
         ax1.set_xlabel('Number of exemplars')
         ax1.set_ylabel('Number of styles')
         ax1.set_title('Style Learning')
