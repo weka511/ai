@@ -176,14 +176,14 @@ class EDA_MI(Command):
         Annotate heatmap with values of mutual information
 
         Parameters:
-            MI          Vaues for annotation
+            MI          Values for annotation
             ax          Axis for display
             color       Colour for annotations
         '''
         m,n = MI.shape
         for i in range(m):
             for j in range(n):
-                ax.text(j, i, f'{MI[i,j]:.2e}',ha='center', va='center', color='k')
+                ax.text(j, i, f'{MI[i,j]:.2e}',ha='center', va='center', color=color)
 
 class Cluster(Command):
     '''
