@@ -8,6 +8,7 @@ The inspiration comes from the following papers by Friston et al:
 
 File|Description
 -------------------------------------|-----------------------------------------------------------------------------------------
+build.sh|Shell script to build files in pipeline
 mnist.py|Functions for accessing MNIST data
 pipeline.py|Program for creating files needed for each step in analysis pipeline
 shared|Folder containing utilities, such as logger and check for stopped
