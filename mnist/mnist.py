@@ -221,7 +221,7 @@ def create_entropies(images,selector,bins=20,m=28):
         '''
         product = np.zeros((m*m))
         for i in range((m*m)):
-            hist,edges = np.histogram(images1d[i],bins=bins,density=True)
+            hist,edges = np.histogram(images1d[:,i],bins=bins,density=True)
             pdf = hist/np.sum(hist)
             product[i] = entropy(pdf)
         return product
