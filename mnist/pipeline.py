@@ -31,7 +31,6 @@ from matplotlib.ticker import MaxNLocator
 import numpy as np
 from skimage.exposure import equalize_hist
 from skimage.transform import resize
-from pymdp.maths import softmax
 from mnist import MnistDataloader, create_mask, columnize,create_indices,create_entropies
 from style import StyleList,StylesStoppedBuilding
 from shared.utils import Logger,user_has_requested_stop,create_xkcd_colours
@@ -261,7 +260,7 @@ class EstablishMask(Command):
             ax           Axis for displaying data
         '''
         ax.imshow(self.cull(entropies,n,mu,sigma,min_entropy),cmap=cmap)
-        ax.set_title(rf'Culled {abs(n)}$\sigma$ below $\mu$' if n != 0 else r'Culled all below $\mu$')
+        ax.set_title(rf'Culled pixels with $H<\mu-${abs(n)}$\sigma$' if n != 0 else r'Culled all below $\mu$')
 
     def show_mask(self,mask,cmap='Blues',ax=None,size=28):
         '''
@@ -619,7 +618,7 @@ def parse_args(names):
     parser.add_argument('--styles', default=None, help='Location where styles have been stored')
 
     group_establish_mask = parser.add_argument_group('Options for Establish mask')
-    group_establish_mask.add_argument('--fraction', default=0.5, type=float,
+    group_establish_mask.add_argument('--fraction', default=0.75, type=float,
                         help='Include pixel if entropy exceeds mean - fraction*sd')
 
     group_establish_styles = parser.add_argument_group('Options for establish-styles')
