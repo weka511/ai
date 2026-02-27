@@ -28,7 +28,6 @@ import numpy as np
 from scipy.stats import entropy
 from skimage.exposure import equalize_hist
 from skimage.transform import resize
-from sklearn.feature_selection import mutual_info_classif
 
 class MnistDataloader(object):
     '''
@@ -228,19 +227,11 @@ def create_entropies(images,selector,bins=20,m=28):
 
     return create_entropies_from_1d_images(create_1d_images())
 
-def get_mutual_information(x,y):
-    '''
-    Calculate mutual information between two vectors. This is a wrapper for
-    sklearn.feature_selection.mutual_info_classif, which expects X to be a matrix
-
-    Parameters:
-        x     A vector
-        y     Another vector
-    '''
-    return mutual_info_classif(x[:, np.newaxis],y)
 
 class TestSequence(TestCase):
-
+    '''
+    This test case verified that records are retrieved consitently.
+    '''
     def setUp(self):
         mnist_dataloader = MnistDataloader.create()
         (self.x_train,self.y_train),_ = mnist_dataloader.load_data(verbose=False)

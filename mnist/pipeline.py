@@ -30,7 +30,6 @@ from matplotlib import rc, cm
 from matplotlib.ticker import MaxNLocator
 import numpy as np
 from skimage.exposure import equalize_hist
-from sklearn.feature_selection import mutual_info_classif
 from skimage.transform import resize
 from pymdp.maths import softmax
 from mnist import MnistDataloader, create_mask, columnize,create_indices,create_entropies

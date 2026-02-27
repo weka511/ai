@@ -20,7 +20,7 @@
 '''
 
 import numpy as np
-from mnist import get_mutual_information
+from sklearn.feature_selection import mutual_info_classif
 from shared.utils import user_has_requested_stop
 
 class StylesStoppedBuilding(Exception):
@@ -115,12 +115,13 @@ class StyleList(object):
         for i in range(len(self.styles)):
             candidate_style = self.styles[i]
             y = self.x_class[candidate_style.exemplar_index,:]
-            mi_canditate = get_mutual_information(x,y)
+            mi_canditate =  mutual_info_classif(x[:, np.newaxis],y)
             if mi_canditate > mi_best_match:
                 mi_best_match = mi_canditate
                 style_best_match = candidate_style
 
         return  style_best_match,mi_best_match
+
 
     def create_allocations(self):
         '''
