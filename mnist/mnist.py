@@ -204,14 +204,17 @@ def create_entropies(images,selector,bins=20,m=28):
     n = len(selector)
     def create_1d_images():
         '''
-        Convert images to be mxm, equalize, then convert to 1d
+        Standardize images to be mxm, equalize, then convert to 1d
         '''
-        m0,_ = images[0].shape
+        m0,n0 = images[0].shape
         product = np.zeros((n, m*m))
         for i in selector:
-            right_sized_image = images[i] if m == m0 else resize(np.array(images[i]),(m,m))
-            img = equalize_hist(right_sized_image)
-            product[i] = np.reshape(img,-1)
+            if m == m0 and m == n0:
+                standard_image = images[i]
+            else:
+                standard_image = resize(np.array(images[i]),(m,m))
+            # img = equalize_hist(standard_image) Issue #61
+            product[i] = np.reshape(standard_image,-1) # Issue #61
         return product
 
     def create_entropies_from_1d_images(images1d):
