@@ -26,8 +26,14 @@ from array import array
 from unittest import TestCase,main
 import numpy as np
 from scipy.stats import entropy
-from skimage.exposure import equalize_hist
 from skimage.transform import resize
+
+class MnistException(Exception):
+    '''
+    Allows MnistDataloader to raise exceptions
+    '''
+    def __init__(self,message):
+        super().__init__(message)
 
 class MnistDataloader(object):
     '''
@@ -45,6 +51,10 @@ class MnistDataloader(object):
     def create(data = './data',report=print):
         '''
         Create a MnistDataloader, setting up pathnames for all datasets
+
+        Parameters:
+            data    Path to MNIST data
+            report  Function used to report progress
         '''
         return MnistDataloader(
             training_images_filepath = join(data, 'train-images-idx3-ubyte/train-images-idx3-ubyte'),
@@ -55,6 +65,14 @@ class MnistDataloader(object):
 
     def __init__(self, training_images_filepath, training_labels_filepath,
                  test_images_filepath, test_labels_filepath,report=print):
+        '''
+        Parameters:
+            training_images_filepath   Path to training images (relative to data path)
+            training_labels_filepath   Path to training labels (relative to data path)
+            test_images_filepath       Path to test images (relative to data path)
+            test_labels_filepath       Path to test labels (relative to data path)
+            report                     Function used to report progress
+        '''
         self.training_images_filepath = training_images_filepath
         self.training_labels_filepath = training_labels_filepath
         self.test_images_filepath = test_images_filepath
@@ -78,13 +96,13 @@ class MnistDataloader(object):
             with open(labels_filepath, 'rb') as file:
                 magic, size = struct.unpack(">II", file.read(8))
                 if magic != 2049:
-                    raise ValueError(f'Magic number mismatch, expected 2049, got {magic}')
+                    raise MnistException(f'Magic number mismatch, expected 2049, got {magic}')
                 labels = array("B", file.read())
 
             with open(images_filepath, 'rb') as file:
                 magic, size1, rows, cols = struct.unpack(">IIII", file.read(16))
                 if magic != 2051:
-                    raise ValueError(f'Magic number mismatch, expected 2051, got {magic}')
+                    raise MnistException(f'Magic number mismatch, expected 2051, got {magic}')
                 image_data = array("B", file.read())
                 assert size1 == size
                 assert rows == 28
@@ -100,27 +118,21 @@ class MnistDataloader(object):
 
             return images, labels
         except FileNotFoundError as e:
-            self.report (f'Could not find file {e.filename}')
-            exit(1)
-        except ValueError as e:
-            self.report (e)
-            exit(1)
+            raise MnistException(f'Could not find file {e.filename}')
 
-
-    def load_data(self,verbose=True):
+    def load_data(self):
         '''
         Load training and test data
 
         Returns:  (x_train, y_train), (x_test, y_test)
         '''
         x_train, y_train = self.read_images_labels(self.training_images_filepath, self.training_labels_filepath)
-        if verbose:
-            self.report (f'Loaded training data from {self.training_images_filepath},')
-            self.report (f'labels from {self.training_labels_filepath}')
+        self.report (f'Loaded training data from {self.training_images_filepath},')
+        self.report (f'labels from {self.training_labels_filepath}')
+
         x_test, y_test = self.read_images_labels(self.test_images_filepath, self.test_labels_filepath)
-        if verbose:
-            self.report (f'Loaded test data from {self.test_images_filepath},')
-            self.report (f'labels from {self.test_labels_filepath}')
+        self.report (f'Loaded test data from {self.test_images_filepath},')
+        self.report (f'labels from {self.test_labels_filepath}')
         return (x_train, y_train), (x_test, y_test)
 
 def create_mask(mask_file=None,data='../data',size=28,report=print):
@@ -230,7 +242,6 @@ def create_entropies(images,selector,bins=20,m=28):
 
     return create_entropies_from_1d_images(create_1d_images())
 
-
 class TestSequence(TestCase):
     '''
     This test case verified that records are retrieved consitently.
@@ -238,7 +249,6 @@ class TestSequence(TestCase):
     def setUp(self):
         mnist_dataloader = MnistDataloader.create()
         (self.x_train,self.y_train),_ = mnist_dataloader.load_data(verbose=False)
-
 
     def test_labels_match(self):
         '''
