@@ -28,7 +28,7 @@ from matplotlib import rc, cm
 from skimage.exposure import equalize_hist
 from skimage.transform import resize
 from sklearn.feature_selection import mutual_info_classif
-from mnist import MnistDataloader
+from mnist import MnistDataloader,MnistException
 from pipeline import Command
 from shared.utils import Logger,create_xkcd_colours
 
@@ -350,6 +350,9 @@ if __name__ == '__main__':
         except FileNotFoundError as e:
             logger.log(f'Error: {e.filename} not found.')
             exit (1)
+        except MnistException as e:
+            self.log('MnistException {e}')
+            exit(1)
 
         elapsed = time() - start
         minutes = int(elapsed/60)

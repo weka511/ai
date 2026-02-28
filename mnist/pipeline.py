@@ -31,7 +31,7 @@ from matplotlib.ticker import MaxNLocator
 import numpy as np
 from skimage.exposure import equalize_hist
 from skimage.transform import resize
-from mnist import MnistDataloader, create_mask, columnize,create_indices,create_entropies
+from mnist import MnistDataloader, create_mask, columnize,create_indices,create_entropies,MnistException
 from style import StyleList,StylesStoppedBuilding
 from shared.utils import Logger,user_has_requested_stop,create_xkcd_colours
 
@@ -154,10 +154,16 @@ class Command(ABC):
         ...
 
     def set_logger(self,logger):
+        '''
+        Attach a logger to Command
+        '''
         self.logger = logger
 
-    def log(self,message):
-        self.logger.log(message)
+    def log(self,message,level=Logger.INFO):
+        '''
+        Log messages
+        '''
+        self.logger.log(message,level=level)
 
 class EstablishSubsets(Command):
     '''
@@ -551,12 +557,12 @@ class RecognizeDigits(Command):
         K,J,_ = self.A.shape
         log_posterior_for_styles = np.zeros((K))
         for k in range(K):
-            for j in range(K):
+            for j in range(J):
                 if self.mask[j]:
                     log_posterior_for_styles[k] += self.logA[k,j,digitized_image[j]]
 
         i = np.argmax(log_posterior_for_styles)
-        return self.class_styles[i,0]
+        return self.class_styles[i,0],i,log_posterior_for_styles
 
     def get_accuracy(self,x,y):
         '''
@@ -570,11 +576,13 @@ class RecognizeDigits(Command):
             N = min(N,self.args.N)
         Selection = self.rng.choice(len(y),N,replace=False) if N < len(y) else range(N)
         for i in Selection:
-            prediction = self.predict(np.array(x[i]))
+            prediction,index,log_posterior_for_styles = self.predict(np.array(x[i]))
             if y[i] == prediction:
                 matches += 1
             else:
                 mismatches.append((x[i],y[i],prediction))
+                self.log(f'y={y[i]}, prediction={prediction}, index={index}',level=Logger.DEBUG)
+                self.log(str(log_posterior_for_styles),level=Logger.DEBUG)
 
         return N,matches/N,mismatches
 
@@ -656,8 +664,11 @@ if __name__ == '__main__':
         try:
             command.execute()
         except FileNotFoundError as e:
-            self.log(f'Error: {e.filename} not found.')
+            command.log(f'Error: {e.filename} not found.',level=Logger.ERROR)
             exit (1)
+        except MnistException as e:
+            command.log('MnistException {e}',level=Logger.ERROR)
+            exit(1)
 
         elapsed = time() - start
         minutes = int(elapsed / 60)
