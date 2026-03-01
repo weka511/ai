@@ -162,6 +162,13 @@ class Command(ABC):
         '''
         self.logger.log(message,level=level)
 
+    def digitize_images(self,imgs,equalize=False):
+        '''
+        Used by EstablishLikelihoods and RecognizeDigits to prepare images
+        '''
+        equalized_images = equalize_hist(imgs) if equalize else imgs
+        return np.digitize(equalized_images,self.bins)
+
 class EstablishSubsets(Command):
     '''
     Extract subsets of MNIST to facilitate replication
@@ -393,6 +400,9 @@ class EstablishStyles(Command):
     def create_allocations(self):
         '''
         Create array of Allocations, either by reading from a file or from scratch.
+
+        Returns:
+            A vector with one element per digit class
         '''
         if self.args.restart:
             file =  (self.data_path / self.args.styles).with_suffix('.npz')
@@ -442,68 +452,76 @@ class EstablishStyles(Command):
 
 class EstablishLikelihoods(Command):
     '''
-    Calculate the Likelihood matrices, A
+    Calculate the Likelihood matrices and save text
     '''
     def __init__(self):
-        super().__init__('Calculate the Likelihood matrices','establish-likelihoods',needs_output_file=True,needs_style_file=True)
+        super().__init__('Calculate the Likelihood matrices','establish-likelihoods',
+                         needs_output_file=True,
+                         needs_style_file=True)
 
     def _execute(self):
         '''
         For each pixel, determine the probability of belonging to each digit and style
         '''
         file =  (self.data_path / self.args.out).with_suffix('.npz')
-        class_styles,index_style_start = self.create_class_styles()
+        class_styles,starting_positions = self.build_class_style_mapping()
         np.savez(file,
-                 A=self.create_likelihoods(index_style_start,class_styles),
+                 A=self.create_likelihoods(starting_positions,class_styles),
                  class_styles=class_styles)
         self.log (f'Saved Likelihoods and class/styles from {(self.data_path / self.args.styles).with_suffix('.npz')} in {file}')
 
-    def create_class_styles(self):
+    def build_class_style_mapping(self):
         '''
-        Create mapping between class/style and position in the Likelihood matrix,A
+        Construct mapping between class/style and position in the Likelihood matrix,A
 
         Returns:
-            class_styles       An array, each row representing a digit class and a style.
-                               [0,0],...[0,n-1],[1,n],..., where n is the number of styles in class zero.
-                               So the row index of [i,j] is the position of class i style j in the
-                               Likelihood matrix
-            index_style_start  The positions, in the Likelihood matrix, correspond to the first
-                               style in each digit class
+            class_styles        An array, each row representing a digit class and a style.
+                                [0,0],...[0,n-1],[1,n],..., where n is the number of styles in class zero.
+                                So the row index of [i,j] is the position of class i style j in the
+                                Likelihood matrix
+            starting_positions  The positions in the Likelihood matrix corresponding to the first
+                                style in each digit class
         '''
-        product = []
-        index_style_start = np.zeros(len(self.args.classes),dtype=int)
+        class_styles = []
+        starting_positions = np.zeros(len(self.args.classes),dtype=int)
 
         for i_class in self.args.classes:
-            x_class = self.x[self.indices[:,i_class],:]
-            _,n_pixels = x_class.shape
-            n_styles,n_images = self.Allocations[i_class].shape
-            index_style_start[i_class] = len(product)
-            for i in range(n_styles):
-                product.append([i_class,int(i + index_style_start[i_class])]) # avoid messy np.int64
+            n_styles,_ = self.Allocations[i_class].shape
+            position_start = len(class_styles)
+            starting_positions[i_class] = position_start
+            run_for_this_class = [[i_class,position_start + i] for i in range(n_styles)]
+            class_styles += run_for_this_class
 
-        return np.array(product),index_style_start
+        return np.array(class_styles),starting_positions
 
-    def create_likelihoods(self,index_style_start,class_styles,n_pixels = 28*28 ): #FIXME
+    def create_likelihoods(self,starting_positions,class_styles,n_pixels = 28*28 ): #FIXME mask?
         '''
-        Add up pixels for each combination of class,style and normalize
+        Add up pixels for each combination of class,style and normalize.
         '''
         n_class_styles,_ = class_styles.shape
         A = self.args.pseudocount*np.ones((n_class_styles,n_pixels,len(self.bins)+1))
         for i_class in self.args.classes:
-            equalized_images = equalize_hist(self.x[self.indices[:,i_class],:])
-            digitized_images = np.digitize(equalized_images,self.bins)
+            digitized_images = self.digitize_images(self.x[self.indices[:,i_class],:])
             _,n_pixels = digitized_images.shape
+
+            # The Allocations vector has one element for each digit class;
+            # Allocations[i_class] is a matrix with one row for each style , and sufficient columns to
+            # represent all images in the most numerous style in the class. Each element contains the
+            # index of one images from the style, or -1 if there are insufficient images to fill the row.
             n_styles,n_images_for_style = self.Allocations[i_class].shape
             for i_style in range(n_styles):                  # Accumulate counts for all styles
-                i_class_style = index_style_start[i_class] + i_style
+                i_class_style = starting_positions[i_class] + i_style
                 for image_seq in range(n_images_for_style):  # Accumulate counts for all images in specific style
                     image_index = self.Allocations[i_class][i_style,image_seq]
-                    if image_index >= 0:
-                        img = digitized_images[image_index]
+                    if image_index > -1:      # skip unassigned positions
+                        this_image = digitized_images[image_index]
                         for j in range(n_pixels):
-                            A[i_class_style,j,img[j]] += 1
+                            if self.mask[j] and this_image[j] > 1: # No vote if pixel is zero
+                                A[i_class_style,j,this_image[j]] += 1
 
-        return A/ A.sum(axis=0)
+        Evidence = A.sum(axis=0)
+
+        return A / Evidence
 
 class RecognizeDigits(Command):
     '''
@@ -542,7 +560,7 @@ class RecognizeDigits(Command):
             ax.axis('off')
             ax.set_title(f'{prediction} ({y})')
 
-        fig.suptitle(f'{N} images, accuracy={accuracy}')
+        fig.suptitle(f'{N} images, accuracy={int(100*accuracy)}\\%')
         fig.tight_layout(pad=2,h_pad=2,w_pad=2)
         fig.savefig((self.figs_path / self.args.out).with_suffix('.png'))
 
@@ -556,8 +574,7 @@ class RecognizeDigits(Command):
             img
             nclasses
         '''
-        equalized_image = equalize_hist(img.reshape(-1))
-        digitized_image = np.digitize(equalized_image,self.bins)
+        digitized_image = self.digitize_images(img.reshape(-1))
         K,J,_ = self.A.shape
         log_posterior_for_styles = np.zeros((K))
         for k in range(K):
