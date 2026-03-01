@@ -115,6 +115,7 @@ class Command(ABC):
                                                                  data=self.args.data,
                                                                  size=self.args.size,
                                                                  report = lambda x:self.log(x))
+        self.mask_original_shape = self.mask.shape # Save so we can recover original mask later
         self.mask = self.mask.reshape(-1)
         self.x = np.multiply(self.x, self.mask)
 
@@ -524,13 +525,20 @@ class RecognizeDigits(Command):
 
     def plot_mismatches(self,N,accuracy,mismatches):
         '''
-        Plot mismatched images
+        Plot mismatched images, using mask as background (so we can be sure we aren't losing important information)
+
+        Parameters:
+            N           Number of images that we used for prediction
+            accuracy    Overall accuracy
+            mismatches  Array of indices of mismatched predictions
         '''
         fig = figure(figsize=(8,8))
         m,n = get_subplot_shape(len(mismatches))
+        mask = self.mask.reshape(self.mask_original_shape)
         for k,(img,y,prediction) in enumerate(mismatches):
             ax = fig.add_subplot(m,n,k+1)
-            ax.imshow(img,cmap=self.args.cmap)
+            ax.imshow(mask,cmap='Reds')
+            ax.imshow(img,cmap=self.args.cmap,alpha=0.5)
             ax.axis('off')
             ax.set_title(f'{prediction} ({y})')
 
@@ -564,6 +572,10 @@ class RecognizeDigits(Command):
         '''
         Compute accuracy of predictions: predict the class of each image,
         and compare with label.
+
+        Parameters:
+            x        Array of images
+            y        Array of expected labels
         '''
         matches = 0
         mismatches = []
