@@ -440,12 +440,12 @@ class EstablishStyles(Command):
         ax2.axis('off')
 
 
-class CalculateLikelihoods(Command):
+class EstablishLikelihoods(Command):
     '''
     Calculate the Likelihood matrices, A
     '''
     def __init__(self):
-        super().__init__('Calculate the Likelihood matrices','calculate-likelihood',needs_output_file=True,needs_style_file=True)
+        super().__init__('Calculate the Likelihood matrices','establish-likelihoods',needs_output_file=True,needs_style_file=True)
 
     def _execute(self):
         '''
@@ -661,7 +661,7 @@ if __name__ == '__main__':
         EstablishSubsets(),
         EstablishMask(),
         EstablishStyles(),
-        CalculateLikelihoods(),
+        EstablishLikelihoods(),
         RecognizeDigits()
     ])
     args = parse_args(Command.get_names())
