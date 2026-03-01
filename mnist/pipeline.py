@@ -21,7 +21,6 @@
 from abc import ABC,abstractmethod
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 from textwrap import dedent
-from os.path import join
 from pathlib import Path
 from time import time, strftime,localtime
 from shutil import copyfile
@@ -57,13 +56,6 @@ class Command(ABC):
         '''
         return [name for name in Command.commands.keys()]
 
-    @staticmethod
-    def get_command_help():
-        '''
-        Used to construct command line argument
-        '''
-        return ''.join([f'{key}\t{value.description}\n' for key,value in Command.commands.items()])
-
     def __init__(self,description,name,
                  needs_output_file=False,
                  needs_index_file=True,
@@ -97,6 +89,9 @@ class Command(ABC):
             self.log ('Output file must be specified')
             exit(1)
 
+        self.data_path = Path(self.args.data).resolve()
+        self.figs_path = Path(self.args.figs).resolve()
+
         self.load_mnist_data()
         self.load_and_apply_mask()
         self.load_supplementary_files()
@@ -123,24 +118,25 @@ class Command(ABC):
         self.mask = self.mask.reshape(-1)
         self.x = np.multiply(self.x, self.mask)
 
+
     def load_supplementary_files(self):
         '''
         Load additional file needed by some commands
         '''
         if self.needs_index_file:
-            file = Path(join(self.args.data, self.args.indices)).with_suffix('.npz')
+            file =  (self.data_path / self.args.indices).with_suffix('.npz')
             index_data = np.load(file)
             self.indices = index_data['indices']
             self.log (f'Loaded indices from {file}')
 
         if self.needs_style_file:
-            file = Path(join(self.args.data, self.args.styles)).with_suffix('.npz')
+            file =  (self.data_path / self.args.styles).with_suffix('.npz')
             style_data = np.load(file,allow_pickle=True)
             self.Allocations = style_data['Allocations']
             self.log (f'Loaded Allocations from {file}')
 
         if self.needs_likelihoods_file:
-            file = Path(join(self.args.data, self.args.likelihoods)).with_suffix('.npz')
+            file =  (self.data_path / self.args.likelihoods).with_suffix('.npz')
             loaded_data = np.load(file,allow_pickle=True)
             self.class_styles = loaded_data['class_styles']
             self.A = loaded_data['A']
@@ -179,7 +175,7 @@ class EstablishSubsets(Command):
         Extract subsets of MNIST of a specified size, and save to index file
         '''
         indices = create_indices(self.y_train, nimages=self.args.nimages, rng=self.rng)
-        file = Path(join(self.args.data, self.args.out)).with_suffix('.npz')
+        file =  (self.data_path / self.args.out).with_suffix('.npz')
         np.savez(file, indices=indices)
         m,n = indices.shape
         self.log(f'Saved {m} labels for each of {n} classes in {file.resolve()}')
@@ -215,9 +211,9 @@ class EstablishMask(Command):
         n,bins = self.show_pixels(mask,ax=fig.add_subplot(2,3,3))
         fig.suptitle(r'Processed \emph{' + f'{self.args.indices}'
                      ',} '  f'{len(indices) // 10:,d} images per class, {self.args.bins} bins')
-        fig.savefig(join(self.args.figs,self.args.out))
+        fig.savefig((self.figs_path / self.args.out).with_suffix('.png'))
 
-        file = Path(join(self.args.data, self.args.out)).with_suffix('.npz')
+        file =  (self.data_path / self.args.out).with_suffix('.npz')
         np.savez(file, mask=mask,n=n,bins=bins)
 
         self.log(f'Processed {self.args.indices}, {len(indices) // 10:,d} images per class, {self.args.bins} bins, saved mask in {file}')
@@ -380,7 +376,7 @@ class EstablishStyles(Command):
                     N[i+1:,j] += 1
                 max_steps = max(max_steps,steps[-1])
 
-                file = Path(join(self.args.data, self.args.out)).with_suffix('.npz')
+                file =  (self.data_path / self.args.out).with_suffix('.npz')
                 np.savez(file,Allocations=Allocations)
                 self.log(f'Class {i_class} contains {len(style_list)} Styles, saved styles in {file}')
             except StylesStoppedBuilding:
@@ -389,7 +385,7 @@ class EstablishStyles(Command):
         try:
             self.plot_styles_versus_exemplars(max_steps,N, fig=fig)
             fig.tight_layout(pad=2,h_pad=2,w_pad=2)
-            fig.savefig(Path(join(self.args.figs, self.args.out)).with_suffix('.png'))
+            fig.savefig((self.figs_path / self.args.out).with_suffix('.png'))
         except ValueError:
             return
 
@@ -398,7 +394,7 @@ class EstablishStyles(Command):
         Create array of Allocations, either by reading from a file or from scratch.
         '''
         if self.args.restart:
-            file = Path(join(self.args.data, self.args.styles)).with_suffix('.npz')
+            file =  (self.data_path / self.args.styles).with_suffix('.npz')
             style_data = np.load(file,allow_pickle=True)
             self.log (f'Loaded Allocations from {file}')
             self.verify_ok_to_write(file)
@@ -454,12 +450,12 @@ class CalculateLikelihoods(Command):
         '''
         For each pixel, determine the probability of belonging to each digit and style
         '''
-        file = Path(join(self.args.data, self.args.out)).with_suffix('.npz')
+        file =  (self.data_path / self.args.out).with_suffix('.npz')
         class_styles,index_style_start = self.create_class_styles()
         np.savez(file,
                  A=self.create_likelihoods(index_style_start,class_styles),
                  class_styles=class_styles)
-        self.log (f'Saved Likelihoods and class/styles from {join(self.args.data, self.args.styles)} in {file}')
+        self.log (f'Saved Likelihoods and class/styles from {(self.data_path / self.args.styles).with_suffix('.npz')} in {file}')
 
     def create_class_styles(self):
         '''
@@ -540,7 +536,7 @@ class RecognizeDigits(Command):
 
         fig.suptitle(f'{N} images, accuracy={accuracy}')
         fig.tight_layout(pad=2,h_pad=2,w_pad=2)
-        fig.savefig(Path(join(self.args.figs, self.args.out)).with_suffix('.png'))
+        fig.savefig((self.figs_path / self.args.out).with_suffix('.png'))
 
     def predict(self,img,nclasses=10):
         '''

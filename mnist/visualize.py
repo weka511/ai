@@ -19,7 +19,6 @@
     Visualise MNIST data
 '''
 from argparse import ArgumentParser
-from os.path import join
 from pathlib import Path
 from time import time
 import numpy as np
@@ -70,7 +69,7 @@ class HistEq(Command):
 
         fig.suptitle('Histogram Equalization of MNIST data')
         fig.tight_layout(pad=3,h_pad=3,w_pad=3)
-        fig.savefig(Path(join(self.args.figs, self.args.out)).with_suffix('.png'))
+        fig.savefig((self.figs_path / self.args.out).with_suffix('.png'))
 
 class EDA(Command):
     '''
@@ -94,7 +93,7 @@ class EDA(Command):
                       else rf'Mask preserving {int(100*self.mask.sum()/(self.args.size*self.args.size))}\% of pixels'))
 
         fig.tight_layout(pad=2,h_pad=2,w_pad=2)
-        fig.savefig(Path(join(self.args.figs, self.args.out)).with_suffix('.png'))
+        fig.savefig((self.figs_path / self.args.out).with_suffix('.png'))
 
     def generate_images(self,classes=list(range(10)),m=20,size=28):
         '''
@@ -150,7 +149,7 @@ class EDA_MI(Command):
         EDA_MI.annotate(MI_within_classes.T,ax=ax2)
 
         fig.tight_layout(pad=2,h_pad=2,w_pad=2)
-        fig.savefig(Path(join(self.args.figs, self.args.out)).with_suffix('.png'))
+        fig.savefig((self.figs_path / self.args.out).with_suffix('.png'))
 
     def create_exemplars(self):
         '''
@@ -212,7 +211,7 @@ class Cluster(Command):
         ax.set_ylabel('Frequency')
         ax.set_title(f'Mutual Information within classes based on {npairs} pairs, {self.mask_text}')
         ax.legend(title='Digit classes')
-        fig.savefig(Path(join(self.args.figs, self.args.out)).with_suffix('.png'))
+        fig.savefig((self.figs_path / self.args.out).with_suffix('.png'))
 
     def create_frequencies(self,i_class,bins=[],npairs=128,m=1000,rng=None):
         '''
@@ -255,7 +254,7 @@ class StyleFrequency(Command):
         ax.set_ylabel('Occurences')
         ax.set_title('Frequency')
         fig.tight_layout(pad=2,h_pad=2,w_pad=2)
-        fig.savefig(Path(join(self.args.figs, self.args.out)).with_suffix('.png'))
+        fig.savefig((self.figs_path / self.args.out).with_suffix('.png'))
 
     def count_styles(self):
         return max([self.Allocations[i_class].shape[0] for i_class in self.args.classes])
@@ -287,7 +286,7 @@ class DisplayStyles(Command):
                     ax.imshow(img,cmap=self.args.cmap)
                     ax.axis('off')
             fig.tight_layout(pad=2,h_pad=2,w_pad=2)
-            fig.savefig(Path(join(self.args.figs, self.args.out+str(i_class))).with_suffix('.png'))
+            fig.savefig((self.figs_path / (self.args.out + str(i_class))).with_suffix('.png'))
 
 
 def parse_args(names):

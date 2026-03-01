@@ -19,7 +19,6 @@
     This module contains functions to read and sample MNIST data.
 '''
 
-from os.path import join
 from pathlib import Path
 import struct
 from array import array
@@ -56,11 +55,17 @@ class MnistDataloader(object):
             data    Path to MNIST data
             report  Function used to report progress
         '''
+        def construct(part,data_path = Path(data).resolve()):
+            '''
+            Construct the path to one file_name of dataset
+            '''
+            return data_path / part / part
+
         return MnistDataloader(
-            training_images_filepath = join(data, 'train-images-idx3-ubyte/train-images-idx3-ubyte'),
-            training_labels_filepath = join(data, 'train-labels-idx1-ubyte/train-labels-idx1-ubyte'),
-            test_images_filepath = join(data, 't10k-images-idx3-ubyte/t10k-images-idx3-ubyte'),
-            test_labels_filepath = join(data, 't10k-labels-idx1-ubyte/t10k-labels-idx1-ubyte'),
+            training_images_filepath = construct('train-images-idx3-ubyte'),
+            training_labels_filepath = construct('train-labels-idx1-ubyte'),
+            test_images_filepath = construct('t10k-images-idx3-ubyte'),
+            test_labels_filepath = construct('t10k-labels-idx1-ubyte'),
             report = report)
 
     def __init__(self, training_images_filepath, training_labels_filepath,
@@ -152,7 +157,8 @@ def create_mask(mask_file=None,data='../data',size=28,report=print):
     if mask_file == None:
         report ('No mask specified')
         return np.ones((size,size)),'no mask',[],[]
-    mask_path = Path(join(data, mask_file)).with_suffix('.npz')
+    data_path = Path(data).resolve()
+    mask_path = (data_path / mask_file).with_suffix('.npz')
     mask_data = np.load(mask_path)
     product = mask_data['mask']
     bins = mask_data['bins']
@@ -248,7 +254,7 @@ class TestSequence(TestCase):
     '''
     def setUp(self):
         mnist_dataloader = MnistDataloader.create()
-        (self.x_train,self.y_train),_ = mnist_dataloader.load_data(verbose=False)
+        (self.x_train,self.y_train),_ = mnist_dataloader.load_data()
 
     def test_labels_match(self):
         '''
