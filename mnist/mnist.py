@@ -24,8 +24,6 @@ import struct
 from array import array
 from unittest import TestCase,main
 import numpy as np
-from scipy.stats import entropy
-from skimage.transform import resize
 
 class MnistException(Exception):
     '''
@@ -140,31 +138,6 @@ class MnistDataloader(object):
         self.report (f'labels from {self.test_labels_filepath}')
         return (x_train, y_train), (x_test, y_test)
 
-def create_mask(mask_file=None,data='../data',size=28,report=print):
-    '''
-    Create a mask by reading from a file, if a name is provided.
-    If there is no mask file, return all ones.
-
-    Parameters:
-        mask_file   File name
-        data        Location for storing data files
-        size        Mask will be size x size pixels
-
-    Returns:
-        An array containing the actual mask
-        Text showing mask file name
-    '''
-    if mask_file == None:
-        report ('No mask specified')
-        return np.ones((size,size)),'no mask',[],[]
-    data_path = Path(data).resolve()
-    mask_path = (data_path / mask_file).with_suffix('.npz')
-    mask_data = np.load(mask_path)
-    product = mask_data['mask']
-    bins = mask_data['bins']
-    n = mask_data['n']
-    report (f'Loaded mask from {mask_path}')
-    return product,f'Mask = {mask_file}',n,bins
 
 def columnize(x):
     '''
@@ -209,44 +182,6 @@ def create_indices(y, nclasses=10, nimages=1000, rng=np.random.default_rng()):
 
     raise RuntimeError(f'Failed to find {nimages} labels in {nclasses} classes')
 
-def create_entropies(images,selector,bins=20,m=28):
-    '''
-    Used to determine which pixels have the most information
-
-    Parameters:
-        images     Raw images from NIST
-        selector   Indices of images that need to be included
-        bins       Number of bins
-        m          We will standardize images to be mxm
-    '''
-    n = len(selector)
-    def create_1d_images():
-        '''
-        Standardize images to be mxm, equalize, then convert to 1d
-        '''
-        m0,n0 = images[0].shape
-        product = np.zeros((n, m*m))
-        for i in selector:
-            if m == m0 and m == n0:
-                standard_image = images[i]
-            else:
-                standard_image = resize(np.array(images[i]),(m,m))
-            # img = equalize_hist(standard_image) Issue #61
-            product[i] = np.reshape(standard_image,-1) # Issue #61
-        return product
-
-    def create_entropies_from_1d_images(images1d):
-        '''
-        Calculate probability density for each pixel, then calculate entropy
-        '''
-        product = np.zeros((m*m))
-        for i in range((m*m)):
-            hist,edges = np.histogram(images1d[:,i],bins=bins,density=True)
-            pdf = hist/np.sum(hist)
-            product[i] = entropy(pdf)
-        return product
-
-    return create_entropies_from_1d_images(create_1d_images())
 
 class TestSequence(TestCase):
     '''
