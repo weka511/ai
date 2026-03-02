@@ -30,7 +30,8 @@ from matplotlib.ticker import MaxNLocator
 import numpy as np
 from skimage.exposure import equalize_hist
 from skimage.transform import resize
-from mnist import MnistDataloader, create_mask, columnize,create_indices,create_entropies,MnistException
+from mnist import MnistDataloader, columnize,create_indices,MnistException
+from mask import Mask
 from style import StyleList,StylesStoppedBuilding
 from shared.utils import Logger,user_has_requested_stop,create_xkcd_colours
 
@@ -111,10 +112,11 @@ class Command(ABC):
         Read a mask from a file, if one is provided, and apply to training data
         If there is no mask file, set mask to all ones.
         '''
-        self.mask, self.mask_text,self.n,self.bins = create_mask(mask_file=self.args.mask,
-                                                                 data=self.args.data,
-                                                                 size=self.args.size,
-                                                                 report = lambda x:self.log(x))
+        self.mask, self.mask_text,self.bins = Mask.create(mask_file=self.args.mask,
+                                                          data=self.args.data,
+                                                          size=self.args.size,
+                                                          report = lambda x:self.log(x))
+        self.log('Bins: ' +str(self.bins),level=Logger.DEBUG)
         self.mask_original_shape = self.mask.shape # Save so we can recover original mask later
         self.mask = self.mask.reshape(-1)
         self.x = np.multiply(self.x, self.mask)
@@ -201,48 +203,32 @@ class EstablishMask(Command):
         '''
         x_train = np.array(self.x_train)
         indices = self.indices.reshape(-1)
-        entropies = create_entropies(x_train[indices],
-                                     list(range(len(indices))),
-                                     bins=self.args.bins,
-                                     m=self.args.size)
+        entropies = Mask.create_entropies(x_train[indices],
+                                          list(range(len(indices))),
+                                          bins=self.args.bins,
+                                          m=self.args.size)
         mu = np.mean(entropies)
         sigma = np.std(entropies)
         min_entropy = np.min(entropies)
         img = np.reshape(entropies,(self.args.size,self.args.size))
-        mask = self.cull(entropies,-self.args.fraction,mu,sigma,clip=True).reshape(self.args.size,self.args.size)
+        mask = Mask.cull(entropies,-self.args.fraction,mu,sigma,clip=True).reshape(self.args.size,self.args.size)
 
         fig = figure(figsize=(12, 12))
         self.show_image(img,ax=fig.add_subplot(2,3,1),fig=fig,cmap=self.args.cmap)
         self.show_culled(img,-self.args.fraction,mu,sigma,min_entropy,ax = fig.add_subplot(2,3,2),cmap=self.args.cmap)
         self.show_mask(mask,cmap=self.args.cmap,ax = fig.add_subplot(2,3,4),size=self.args.size)
         self.show_histogram(img,mu,sigma,threshold=self.args.fraction,ax=fig.add_subplot(2,3,5))
-        n,bins = self.show_pixels(mask,ax=fig.add_subplot(2,3,3))
+        bins = self.show_pixels(mask,ax=fig.add_subplot(2,3,3),bins=self.args.bins)
         fig.suptitle(r'Processed \emph{' + f'{self.args.indices}'
                      ',} '  f'{len(indices) // 10:,d} images per class, {self.args.bins} bins')
         fig.savefig((self.figs_path / self.args.out).with_suffix('.png'))
 
         file =  (self.data_path / self.args.out).with_suffix('.npz')
-        np.savez(file, mask=mask,n=n,bins=bins)
+        np.savez(file, mask=mask,bins=bins)
 
         self.log(f'Processed {self.args.indices}, {len(indices) // 10:,d} images per class, {self.args.bins} bins, saved mask in {file}')
 
-    def cull(self,img,n,mu,sigma,min_entropy=0,clip=False):
-        '''
-        Cull data for display
 
-        Parameters:
-            img          An array of entropies, with one entry for each pixel
-            n            Threshold for culling: number of standard deviations below mean
-            mu           Mean entropy
-            sigma        Standard deviation for entropy
-            min_entropy  Minimum entropy over all pixels
-            clip         Set to true to set pixels to 1 if they survive culling
-        '''
-        product = np.copy(img)
-        product[product < mu + n*sigma] = min_entropy
-        if clip:
-            product[product >= mu + n*sigma] = 1
-        return product
 
     def show_image(self,entropies,ax=None,fig=None,cmap='Blues'):
         '''
@@ -269,7 +255,7 @@ class EstablishMask(Command):
             min_entropy  Minimum entropy over all pixels
             ax           Axis for displaying data
         '''
-        ax.imshow(self.cull(entropies,n,mu,sigma,min_entropy),cmap=cmap)
+        ax.imshow(Mask.cull(entropies,n,mu,sigma,min_entropy),cmap=cmap)
         ax.set_title(rf'Culled pixels with $H<\mu-${abs(n)}$\sigma$' if n != 0 else r'Culled all below $\mu$')
 
     def show_mask(self,mask,cmap='Blues',ax=None,size=28):
@@ -308,7 +294,6 @@ class EstablishMask(Command):
             bins    Number of bins to histogram
 
         Returns:
-            n          Counts in each bin
             bin_edges  The edges of the bins that were actually used
         '''
         def generate_images():
@@ -344,12 +329,12 @@ class EstablishMask(Command):
 
         pixels,masked_out = collect_pixels()
         ax.hist(pixels + masked_out,bins=bins,color='xkcd:blue',alpha=1.0,label='All')
-        n,bin_edges,_ = ax.hist(pixels,bins=bins,facecolor='xkcd:red',alpha=1.0,label='Included in mask',hatch='/', edgecolor='k')
+        _,bin_edges,_ = ax.hist(pixels,bins=bins,facecolor='xkcd:red',alpha=1.0,label='Included in mask',hatch='/', edgecolor='k')
         ax.legend()
         ax.set_xlabel('Intensity')
         ax.set_ylabel('Frequency')
         ax.set_title('Intensity of pixels')
-        return n,bin_edges
+        return bin_edges
 
 class EstablishStyles(Command):
     '''
@@ -632,6 +617,15 @@ def get_subplot_shape(N):
         n += 1
     return m,n
 
+def get_bins(bins):
+    try:
+        return int(bins)
+    except ValueError:
+        if bins in ['auto','fd','doane','scott','stone','rice','sturges','sqrt']:
+            return bins
+        else:
+            raise
+
 def parse_args(names):
     parser = ArgumentParser(__doc__)
     parser.add_argument('command',choices=names,help='The command to be executed')
@@ -644,7 +638,6 @@ def parse_args(names):
     parser.add_argument('--mask', default=None, help='Name of mask file (omit for no mask)')
     parser.add_argument('--size', default=28, type=int, help='Number of row/cols in each image: shape will be will be mxm')
     parser.add_argument('--classes', default=list(range(10)), type=int, nargs='+', help='List of digit classes')
-    parser.add_argument('--bins', default=12, type=int, help='Number of bins for histograms')
     parser.add_argument('--seed', default=None, type=int, help='For initializing random number generator')
     parser.add_argument('--cmap',default='Blues',help='Colour map')
     parser.add_argument('--logs', default='./logs', help='Location for storing log files')
@@ -653,6 +646,7 @@ def parse_args(names):
     group_establish_mask = parser.add_argument_group('Options for Establish mask')
     group_establish_mask.add_argument('--fraction', default=0.75, type=float,
                         help='Include pixel if entropy exceeds mean - fraction*sd')
+    parser.add_argument('--bins', default=12, type=get_bins, help='Number of bins for histograms')
 
     group_establish_styles = parser.add_argument_group('Options for establish-styles')
     group_establish_styles.add_argument('--threshold', default=0.1, type=float,
