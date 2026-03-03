@@ -33,8 +33,7 @@ from skimage.transform import resize
 from mnist import MnistDataloader, MnistException
 from mask import Mask
 from style import StyleList,StylesStoppedBuilding
-from shared.utils import Logger,user_has_requested_stop,create_xkcd_colours
-
+from shared.utils import Logger,user_has_requested_stop,create_xkcd_colours,get_bins
 
 class Command(ABC):
     '''
@@ -574,15 +573,6 @@ def get_subplot_shape(N):
     while m*n < N:
         n += 1
     return m,n
-
-def get_bins(bins):
-    try:
-        return int(bins)
-    except ValueError:
-        if bins in ['auto','fd','doane','scott','stone','rice','sturges','sqrt']:
-            return bins
-        else:
-            raise
 
 def parse_args(names):
     parser = ArgumentParser(__doc__)
