@@ -133,6 +133,9 @@ class Mask:
     def __getitem__(self,i):
         return self.pixels1d[i]
 
+    def get_ratio(self):
+        return self.pixels1d.sum()/len(self.pixels1d)
+
 class FatMask(Mask):
     '''
     Used when we first create a mask to hold additional attributes

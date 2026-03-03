@@ -33,7 +33,7 @@ from shared.utils import Logger,create_xkcd_colours
 
 class HistEq(Command):
     '''
-        Visualise histogram equalization of MNIST data
+    Visualise histogram equalization of MNIST data
     '''
     def __init__(self):
         super().__init__(' Visualise histogram equalization of MNIST data','histeq',
@@ -41,6 +41,9 @@ class HistEq(Command):
                          needs_index_file=False)
 
     def _execute(self):
+        '''
+        Visualise histogram equalization of MNIST data
+        '''
         fig = figure(figsize=(8, 12))
         for i in range(self.args.m):
             k = self.rng.choice(len(self.x_train))
@@ -89,8 +92,7 @@ class EDA(Command):
             ax.imshow(img, cmap=self.args.cmap)
             ax.axis('off')
 
-        fig.suptitle(('No mask' if self.args.mask == None
-                      else rf'Mask preserving {int(100*self.mask.sum()/(self.args.size*self.args.size))}\% of pixels'))
+        fig.suptitle(rf'Mask preserving {int(100*self.mask.get_ratio())}\% of pixels')
 
         fig.tight_layout(pad=2,h_pad=2,w_pad=2)
         fig.savefig((self.figs_path / self.args.out).with_suffix('.png'))
@@ -209,7 +211,7 @@ class Cluster(Command):
 
         ax.set_xlabel('Mutual Information')
         ax.set_ylabel('Frequency')
-        ax.set_title(f'Mutual Information within classes based on {npairs} pairs, {self.mask_text}')
+        ax.set_title(f'Mutual Information within classes based on {npairs} pairs')
         ax.legend(title='Digit classes')
         fig.savefig((self.figs_path / self.args.out).with_suffix('.png'))
 
@@ -339,24 +341,4 @@ if __name__ == '__main__':
         EDA_MI()
     ])
 
-    args = parse_args(Command.get_names())
-    command = Command.commands[args.command]
-    with Logger(Path(__file__).stem,path=args.logs) as logger:
-        command.set_args(args)
-        command.set_logger(logger)
-        try:
-            command.execute()
-        except FileNotFoundError as e:
-            logger.log(f'Error: {e.filename} not found.')
-            exit (1)
-        except MnistException as e:
-            self.log('MnistException {e}')
-            exit(1)
-
-        elapsed = time() - start
-        minutes = int(elapsed/60)
-        seconds = elapsed - 60*minutes
-        logger.log (f'Elapsed Time {minutes} m {seconds:.2f} s')
-
-        if args.show:
-            show()
+    Command.execute_one(parse_args(Command.get_names()))
