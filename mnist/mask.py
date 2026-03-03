@@ -130,6 +130,8 @@ class Mask:
     def apply(self,x):
         return np.multiply(x, self.pixels1d)
 
+    def __getitem__(self,i):
+        return self.pixels1d[i]
 
 class FatMask(Mask):
     '''
