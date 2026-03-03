@@ -9,8 +9,9 @@ The inspiration comes from the following papers by Friston et al:
 File|Description
 -------------------------------------|-----------------------------------------------------------------------------------------
 build.sh|Shell script to build files in pipeline
+mask.py|Mask out pixels that carry little information
 mnist.py|Functions for accessing MNIST data
 pipeline.py|Program for creating files needed for each step in analysis pipeline
-shared|Folder containing utilities, such as logger and check for stopped
+shared|Folder containing utilities, such as logger and check_for_stopped
 style.py|Classes to manange character styles
 visualize.py|Visualise MNIST data
