@@ -483,7 +483,7 @@ class RecognizeDigits(Command):
 
         N,accuracy,mismatches = self.get_accuracy(self.x_test,self.y_test)
         self.log (f'{N} images, accuracy={accuracy}')
-        self.plot_mismatches(N,accuracy,mismatches)
+        self.plot_mismatches(min(N,args.max_images),accuracy,mismatches)
 
     def plot_mismatches(self,N,accuracy,mismatches):
         '''
@@ -616,7 +616,8 @@ def parse_args(names):
 
     group_recognize = parser.add_argument_group('Options for recognize')
     group_recognize.add_argument('--likelihoods', default='A.npz', help='Location where A matrices files have been saved')
-    group_recognize.add_argument('--N', default=None,type=int, help='Maximum number of images')
+    group_recognize.add_argument('--N', default=None,type=int, help='Number of images for calculating accuracy')
+    group_recognize.add_argument('--max_images', default=100,type=int, help='Maximum number of images')
 
     return parser.parse_args()
 
@@ -638,19 +639,21 @@ if __name__ == '__main__':
         command = Command.commands[args.command]
         command.set_args(args)
         command.set_logger(logger)
+        code = 0
         try:
             command.execute()
         except FileNotFoundError as e:
             command.log(f'Error: {e.filename} not found.',level=Logger.ERROR)
-            exit (1)
+            code = 1
         except MnistException as e:
             command.log('MnistException {e}',level=Logger.ERROR)
-            exit(1)
+            code = 1
+        finally:
+            elapsed = time() - start
+            minutes = int(elapsed / 60)
+            seconds = elapsed - 60 * minutes
+            logger.log(f'Elapsed Time {minutes} m {seconds:.2f} s')
+            if code > 0: exit(code)
 
-        elapsed = time() - start
-        minutes = int(elapsed / 60)
-        seconds = elapsed - 60 * minutes
-        logger.log(f'Elapsed Time {minutes} m {seconds:.2f} s')
-
-        if args.show:
-            show()
+            if args.show:
+                show()
