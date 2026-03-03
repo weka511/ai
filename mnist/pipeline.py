@@ -30,7 +30,7 @@ from matplotlib.ticker import MaxNLocator
 import numpy as np
 from skimage.exposure import equalize_hist
 from skimage.transform import resize
-from mnist import MnistDataloader, columnize,create_indices,MnistException
+from mnist import MnistDataloader, MnistException
 from mask import Mask
 from style import StyleList,StylesStoppedBuilding
 from shared.utils import Logger,user_has_requested_stop,create_xkcd_colours
@@ -105,7 +105,7 @@ class Command(ABC):
         '''
         dataloader = MnistDataloader.create(data=self.args.data,report = lambda x:self.log(x))
         (self.x_train, self.y_train), (self.x_test, self.y_test), = dataloader.load_data()
-        self.x = columnize(self.x_train)
+        self.x = MnistDataloader.columnize(self.x_train)
 
     def load_and_apply_mask(self):
         '''
@@ -184,7 +184,7 @@ class EstablishSubsets(Command):
         '''
         Extract subsets of MNIST of a specified size, and save to index file
         '''
-        indices = create_indices(self.y_train, nimages=self.args.nimages, rng=self.rng)
+        indices = MnistDataloader.create_indices(self.y_train, nimages=self.args.nimages, rng=self.rng)
         file =  (self.data_path / self.args.out).with_suffix('.npz')
         np.savez(file, indices=indices)
         m,n = indices.shape
@@ -201,88 +201,50 @@ class EstablishMask(Command):
         '''
         Determine which pixels are most relevant to classifying images
         '''
-        x_train = np.array(self.x_train)
         indices = self.indices.reshape(-1)
-        entropies = Mask.create_entropies(x_train[indices],
-                                          list(range(len(indices))),
-                                          bins=self.args.bins,
-                                          m=self.args.size)
-        mu = np.mean(entropies)
-        sigma = np.std(entropies)
-        min_entropy = np.min(entropies)
-        img = np.reshape(entropies,(self.args.size,self.args.size))
-        mask = Mask.cull(entropies,-self.args.fraction,mu,sigma,clip=True).reshape(self.args.size,self.args.size)
+        mask = Mask.build(np.array(self.x_train),indices,bins=self.args.bins,m=self.args.size,fraction=self.args.fraction)
+        bins = self._plot(mask,indices)
+        file =  (self.data_path / self.args.out).with_suffix('.npz')
+        mask.save(file, bins=bins)
 
+        self.log(f'Processed {self.args.indices}, {len(indices) // 10:,d} images per class, {self.args.bins} bins, saved mask in {file}')
+
+    def _plot(self,mask,indices):
         fig = figure(figsize=(12, 12))
-        self.show_image(img,ax=fig.add_subplot(2,3,1),fig=fig,cmap=self.args.cmap)
-        self.show_culled(img,-self.args.fraction,mu,sigma,min_entropy,ax = fig.add_subplot(2,3,2),cmap=self.args.cmap)
-        self.show_mask(mask,cmap=self.args.cmap,ax = fig.add_subplot(2,3,4),size=self.args.size)
-        self.show_histogram(img,mu,sigma,threshold=self.args.fraction,ax=fig.add_subplot(2,3,5))
-        bins = self.show_pixels(mask,ax=fig.add_subplot(2,3,3),bins=self.args.bins)
+
+        ax1 = fig.add_subplot(2,3,1)
+        mappable = ax1.imshow(mask.img,cmap=self.args.cmap)
+        fig.colorbar(mappable,label='Entropy')
+        ax1.set_title('All pixels')
+
+        ax2 = fig.add_subplot(2,3,2)
+        ax2.imshow(mask.img*mask.pixels,cmap=self.args.cmap)
+        ax2.set_title('Culled pixels')
+
+        bins = self.show_pixels(mask.pixels,ax=fig.add_subplot(2,3,3),bins=self.args.bins)
+
+        ax4 = fig.add_subplot(2,3,4)
+        ax4.imshow(mask.pixels,cmap=self.args.cmap)
+        ax4.set_title(rf'Mask preserving {int(100*mask.pixels.sum()/(self.args.size*self.args.size))}\% of pixels')
+
+        ax5 = fig.add_subplot(2,3,5)
+        ax5.hist(mask.entropies,bins=args.bins,density=True,color='xkcd:blue',label='Histogram')
+        ax5.set_xlabel('H')
+        ax5.set_ylabel('Frequency')
+        ax5.set_title('Entropy of pixels')
+        if self.args.fraction == 0:
+            ax5.axvline(mask.mu,c='xkcd:red',ls='-',label=r'$\mu=$' f'{mask.mu:.3f} (threshold)')
+        else:
+            ax5.axvline(mask.mu,c='xkcd:red',ls='-',label=r'$\mu=$' f'{mask.mu:.3f}')
+            ax5.axvline(mask.threshold,c='xkcd:red',ls=':',label=f'Threshold={mask.threshold:.3f}')
+
+        ax5.legend()
+
         fig.suptitle(r'Processed \emph{' + f'{self.args.indices}'
                      ',} '  f'{len(indices) // 10:,d} images per class, {self.args.bins} bins')
         fig.savefig((self.figs_path / self.args.out).with_suffix('.png'))
 
-        file =  (self.data_path / self.args.out).with_suffix('.npz')
-        np.savez(file, mask=mask,bins=bins)
-
-        self.log(f'Processed {self.args.indices}, {len(indices) // 10:,d} images per class, {self.args.bins} bins, saved mask in {file}')
-
-
-
-    def show_image(self,entropies,ax=None,fig=None,cmap='Blues'):
-        '''
-        Show the distribution of entropies over images
-
-        Parameters:
-            entropies  An array of entropies, with one entry for each pixel
-            ax         Axis for displaying data
-            fig        Figure to be displayed
-        '''
-        fig.colorbar(
-            ax.imshow(entropies,cmap=cmap),label='Entropy')
-        ax.set_title('All pixels')
-
-    def show_culled(self,entropies,n,mu,sigma,min_entropy,ax=None,cmap='Blues'):
-        '''
-        Cull data and display
-
-        Parameters:
-            entropies    An array of entropies, with one entry for each pixel
-            n            Threshold for culling: number of standard deviations below mean
-            mu           Mean entropy
-            sigma        Standard deviation for entropy
-            min_entropy  Minimum entropy over all pixels
-            ax           Axis for displaying data
-        '''
-        ax.imshow(Mask.cull(entropies,n,mu,sigma,min_entropy),cmap=cmap)
-        ax.set_title(rf'Culled pixels with $H<\mu-${abs(n)}$\sigma$' if n != 0 else r'Culled all below $\mu$')
-
-    def show_mask(self,mask,cmap='Blues',ax=None,size=28):
-        '''
-        Show which pixels are included or excluded by mask
-        '''
-        ax.imshow(mask,cmap=cmap)
-        ax.set_title(rf'Mask preserving {int(100*mask.sum()/(size**2))}\% of pixels')
-
-    def show_histogram(self,entropies,mu,sigma,threshold=0.5,ax=None):
-        '''
-        Show histogram of entropies.
-
-        Parameters:
-            entropies  An array of entropies, with one entry for each pixel
-            mu         Mean entropy
-            sigma      Standard deviation for entropy
-            ax         Axis for displaying data
-            threshold  Thrshold for culling: we represent this by a verticl line
-        '''
-        ax.hist(entropies.reshape(-1),bins='fd',density=True,color='xkcd:blue',label='Histogram')
-        ax.set_xlabel('H')
-        ax.set_ylabel('Frequency')
-        ax.set_title('Entropy of pixels')
-        ax.axvline(mu,c='xkcd:red',ls='-',label=r'$\mu$')
-        ax.axvline(mu-threshold*sigma,c='xkcd:red',ls=':',label=r'$\mu' f'{-threshold}' r'\sigma$')
-        ax.legend()
+        return bins
 
     def show_pixels(self,mask,ax=None,bins=10):
         '''
@@ -644,9 +606,9 @@ def parse_args(names):
     parser.add_argument('--styles', default=None, help='Location where styles have been stored')
 
     group_establish_mask = parser.add_argument_group('Options for Establish mask')
-    group_establish_mask.add_argument('--fraction', default=0.75, type=float,
+    group_establish_mask.add_argument('--fraction', default=0.0, type=float,
                         help='Include pixel if entropy exceeds mean - fraction*sd')
-    parser.add_argument('--bins', default=12, type=get_bins, help='Number of bins for histograms')
+    parser.add_argument('--bins', default='doane', type=get_bins, help='Number of bins for histograms')
 
     group_establish_styles = parser.add_argument_group('Options for establish-styles')
     group_establish_styles.add_argument('--threshold', default=0.1, type=float,

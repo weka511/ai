@@ -25,7 +25,7 @@ from array import array
 from unittest import TestCase,main
 import numpy as np
 
-class MnistException(Exception):
+class MnistException(RuntimeError):
     '''
     Allows MnistDataloader to raise exceptions
     '''
@@ -138,49 +138,50 @@ class MnistDataloader(object):
         self.report (f'labels from {self.test_labels_filepath}')
         return (x_train, y_train), (x_test, y_test)
 
+    @staticmethod
+    def columnize(x):
+        '''
+        Convert list of images into an array of column vectors, one column per image
 
-def columnize(x):
-    '''
-    Convert list of images into an array of column vectors, one column per image
+        Parameters:
+             x        List of images
+        '''
+        x1 = np.array(x)
+        _,n_rows,n_cols=x1.shape
+        assert n_rows == n_cols
+        x_img_no_last = np.transpose(x1,[1,2,0])
+        x_columnized_img_no_last = np.reshape(x_img_no_last, (n_rows*n_cols, -1))
+        return np.transpose(x_columnized_img_no_last,[1,0])
 
-    Parameters:
-         x        List of images
-    '''
-    x1 = np.array(x)
-    _,n_rows,n_cols=x1.shape
-    assert n_rows == n_cols
-    x_img_no_last = np.transpose(x1,[1,2,0])
-    x_columnized_img_no_last = np.reshape(x_img_no_last, (n_rows*n_cols, -1))
-    return np.transpose(x_columnized_img_no_last,[1,0])
+    @staticmethod
+    def create_indices(y, nclasses=10, nimages=1000, rng=np.random.default_rng()):
+        '''
+        Create list of indices for data  ensuring that there are
+        precisely nimages images from each class.
 
-def create_indices(y, nclasses=10, nimages=1000, rng=np.random.default_rng()):
-    '''
-    Create list of indices for data  ensuring that there are
-    precisely nimages images from each class.
+        Parameters:
+            y          Vector of labels
+            rng        Random number generator
+            nclasses   Number of classes
+            nimages    Number of images per class
 
-    Parameters:
-        y          Vector of labels
-        rng        Random number generator
-        nclasses   Number of classes
-        nimages    Number of images per class
+        Returns:
+            An array with one column per digit class, one
+            row for sequence within class
+        '''
+        product = np.zeros((nimages, nclasses), dtype=int)
+        class_counts = np.zeros((nclasses), dtype=int)
+        for k in rng.permutation(len(y)):
+            image_class = y[k]
+            i = class_counts[image_class]
+            if i < nimages:
+                product[i, image_class] = k
+                class_counts[image_class] += 1
+            else:
+                if np.min(class_counts) == nimages:
+                    return product
 
-    Returns:
-        An array with one column per digit class, one
-        row for sequence within class
-    '''
-    product = np.zeros((nimages, nclasses), dtype=int)
-    class_counts = np.zeros((nclasses), dtype=int)
-    for k in rng.permutation(len(y)):
-        image_class = y[k]
-        i = class_counts[image_class]
-        if i < nimages:
-            product[i, image_class] = k
-            class_counts[image_class] += 1
-        else:
-            if np.min(class_counts) == nimages:
-                return product
-
-    raise RuntimeError(f'Failed to find {nimages} labels in {nclasses} classes')
+        raise MnistException(f'Failed to find {nimages} labels in {nclasses} classes')
 
 
 class TestSequence(TestCase):

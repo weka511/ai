@@ -98,20 +98,44 @@ class Mask:
         return create_entropies_from_1d_images(create_1d_images())
 
     @staticmethod
-    def cull(img,n,mu,sigma,min_entropy=0,clip=False):
+    def cull(entropies,threshold=0.5):
         '''
         Cull data for display
 
         Parameters:
-            img          An array of entropies, with one entry for each pixel
-            n            Threshold for culling: number of standard deviations below mean
-            mu           Mean entropy
-            sigma        Standard deviation for entropy
-            min_entropy  Minimum entropy over all pixels
-            clip         Set to true to set pixels to 1 if they survive culling
+            entropies    An array of entropies, with one entry for each pixel
+            threshold    Threshold for culling
         '''
-        product = np.copy(img)
-        product[product < mu + n*sigma] = min_entropy
-        if clip:
-            product[product >= mu + n*sigma] = 1
+        product = np.zeros_like(entropies,dtype=int)
+        product[entropies > threshold] = 1
         return product
+
+    @staticmethod
+    def build(x_train,indices,bins='doane',m=28,fraction=0.5):
+        entropies = Mask.create_entropies(x_train[indices],list(range(len(indices))),bins=bins,m=m)
+        mu = np.mean(entropies)
+        sigma = np.std(entropies)
+        img = np.reshape(entropies,(m,m))
+        threshold = mu - fraction*sigma
+        pixels = Mask.cull(entropies,threshold=threshold).reshape(m,m)
+        return FatMask(pixels,img,entropies,mu,threshold)
+
+    def __init__(self,pixels):
+        self.pixels = pixels.copy()
+        self.pixels1d = pixels.reshape(-1)
+
+    def save(self,file,bins):
+        np.savez(file, mask=self.pixels,bins=bins)
+
+class FatMask(Mask):
+    '''
+    Used when we first create a mask to hold additional attributes
+    that are not needed by later stages in pipeline
+    '''
+    def __init__(self,pixels,img,entropies,mu,threshold):
+        super().__init__(pixels)
+        self.img = img
+        self.entropies = entropies
+        self.mu = mu
+        self.threshold = threshold
+
