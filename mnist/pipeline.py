@@ -496,10 +496,9 @@ class RecognizeDigits(Command):
         '''
         fig = figure(figsize=(8,8))
         m,n = get_subplot_shape(len(mismatches))
-        mask = self.mask.reshape(self.mask_original_shape)
         for k,(img,y,prediction) in enumerate(mismatches):
             ax = fig.add_subplot(m,n,k+1)
-            ax.imshow(mask,cmap='Reds')
+            ax.imshow(self.mask.pixels,cmap='Reds')
             ax.imshow(img,cmap=self.args.cmap,alpha=0.5)
             ax.axis('off')
             ax.set_title(f'{prediction} ({y})')
