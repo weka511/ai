@@ -56,6 +56,35 @@ class Command(ABC):
         '''
         return [name for name in Command.commands.keys()]
 
+    @staticmethod
+    def execute_one(args):
+        '''
+        Execute one command as selected by user
+        '''
+        start = time()
+        with Logger(Path(__file__).stem,path=args.logs) as logger:
+            command = Command.commands[args.command]
+            command.set_args(args)
+            command.set_logger(logger)
+            code = 0
+            try:
+                command.execute()
+            except FileNotFoundError as e:
+                command.log(f'Error: {e.filename} not found.',level=Logger.ERROR)
+                code = 1
+            except MnistException as e:
+                command.log('MnistException {e}',level=Logger.ERROR)
+                code = 1
+            finally:
+                elapsed = time() - start
+                minutes = int(elapsed / 60)
+                seconds = elapsed - 60 * minutes
+                logger.log(f'Elapsed Time {minutes} m {seconds:.2f} s')
+                if code > 0: exit(code)
+
+                if args.show:
+                    show()
+
     def __init__(self,description,name,
                  needs_output_file=False,
                  needs_index_file=True,
@@ -616,7 +645,7 @@ if __name__ == '__main__':
                   'serif': ['Palatino'],
                   'size': 8})
     rc('text', usetex=True)
-    start = time()
+
     Command.build([
         EstablishSubsets(),
         EstablishMask(),
@@ -624,26 +653,5 @@ if __name__ == '__main__':
         EstablishLikelihoods(),
         RecognizeDigits()
     ])
-    args = parse_args(Command.get_names())
-    with Logger(Path(__file__).stem,path=args.logs) as logger:
-        command = Command.commands[args.command]
-        command.set_args(args)
-        command.set_logger(logger)
-        code = 0
-        try:
-            command.execute()
-        except FileNotFoundError as e:
-            command.log(f'Error: {e.filename} not found.',level=Logger.ERROR)
-            code = 1
-        except MnistException as e:
-            command.log('MnistException {e}',level=Logger.ERROR)
-            code = 1
-        finally:
-            elapsed = time() - start
-            minutes = int(elapsed / 60)
-            seconds = elapsed - 60 * minutes
-            logger.log(f'Elapsed Time {minutes} m {seconds:.2f} s')
-            if code > 0: exit(code)
 
-            if args.show:
-                show()
+    Command.execute_one(parse_args(Command.get_names()))
