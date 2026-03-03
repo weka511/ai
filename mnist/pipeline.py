@@ -117,10 +117,7 @@ class Command(ABC):
                                                           size=self.args.size,
                                                           report = lambda x:self.log(x))
         self.log('Bins: ' +str(self.bins),level=Logger.DEBUG)
-        self.mask_original_shape = self.mask.shape # Save so we can recover original mask later
-        self.mask = self.mask.reshape(-1)
-        self.x = np.multiply(self.x, self.mask)
-
+        self.x = self.mask.apply(self.x)
 
     def load_supplementary_files(self):
         '''

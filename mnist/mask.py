@@ -48,11 +48,11 @@ class Mask:
         '''
         if mask_file == None:
             report ('No mask specified')
-            return np.ones((size,size)),'no mask',[]
+            return Mask(np.ones((size,size))),'no mask',[]
         data_path = Path(data).resolve()
         mask_path = (data_path / mask_file).with_suffix('.npz')
         mask_data = np.load(mask_path)
-        product = mask_data['mask']
+        product = Mask(mask_data['mask'])
         bins = mask_data['bins']
         report (f'Loaded mask from {mask_path}')
         return product,f'Mask = {mask_file}',bins
@@ -126,6 +126,10 @@ class Mask:
 
     def save(self,file,bins):
         np.savez(file, mask=self.pixels,bins=bins)
+
+    def apply(self,x):
+        return np.multiply(x, self.pixels1d)
+
 
 class FatMask(Mask):
     '''
