@@ -389,7 +389,7 @@ class EstablishStyles(Stage2):
                 style_list,steps = StyleList.build(self.x, self.indices,
                                                    i_class=i_class,
                                                    nimages=min(n_examples,self.args.nimages),
-                                                   threshold=self.args.threshold)
+                                                   threshold=self.args.threshold,mask=self.mask)
 
                 Allocations[i_class] = style_list.create_allocations()
                 self.plot_lengths(style_list,i_class, ax = fig.add_subplot(3, 4, 1+j)  )

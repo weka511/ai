@@ -59,12 +59,21 @@ class StyleList(object):
     This class manages the collection of all Styles for one digit class
     '''
     @staticmethod
-    def build(x,indices,i_class=0,nimages=10,threshold=0.1):
+    def build(x,indices,i_class=0,nimages=10,threshold=0.1,mask=None):
         '''
         Construct list of styles. Add each new image to an existing style if it is
         close enough, otherwise create a new style
+
+        Parameters:
+            x
+            indices
+            i_class
+            nimages
+            threshold
+            mask
         '''
         x_class = x[indices[:,i_class],:]   # All vectors in this digit-class
+        x_class = mask.shorten(x_class)
         product = StyleList(x_class)
         steps = []
         for j in range(nimages):
