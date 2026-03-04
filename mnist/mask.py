@@ -134,7 +134,7 @@ class Mask:
         Parameters:
             pixels
         '''
-        self.pixels = pixels.copy()
+        self.pixels = pixels.astype(int)
         self.pixels1d = pixels.reshape(-1)
 
     def save(self,file,bins):
@@ -157,9 +157,18 @@ class Mask:
 
     def get_ratio(self):
         '''
-        Calculate the freaction of pixels that mask preserves
+        Calculate the fraction of pixels that mask preserves
         '''
         return self.pixels1d.sum()/len(self.pixels1d)
+
+    def shorten(self,x):
+        '''
+        Shorten each image in a collection by removing pixels that would be masked out
+
+        Parameters:
+            x       A collection of images
+        '''
+        return x[:,self.pixels1d > 0]
 
 class FatMask(Mask):
     '''
