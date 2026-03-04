@@ -59,7 +59,11 @@ class Command(ABC):
     @staticmethod
     def execute_one(args):
         '''
-        Execute one command as selected by user
+        Execute one command as selected by user. This encapsulates
+        code that is shared with visualize.py
+
+        Parameters:
+            args      Comand line arguments
         '''
         start = time()
         with Logger(Path(__file__).stem,path=args.logs) as logger:
@@ -82,8 +86,8 @@ class Command(ABC):
                 logger.log(f'Elapsed Time {minutes} m {seconds:.2f} s')
                 if code > 0: exit(code)
 
-                if args.show:
-                    show()
+            if args.show:
+                show()
 
     def __init__(self,description,name,
                  needs_output_file=False,
