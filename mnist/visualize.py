@@ -324,13 +324,10 @@ def parse_args(names):
     return parser.parse_args()
 
 if __name__ == '__main__':
-
     rc('font', **{'family': 'serif',
                   'serif': ['Palatino'],
                   'size': 8})
     rc('text', usetex=True)
-
-    start = time()
 
     Command.build([
         HistEq(),
