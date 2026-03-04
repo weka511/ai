@@ -24,7 +24,7 @@ if [ $# -gt 0 ];  then
 	if [ $# -gt 1 ];  then
 		./pipeline.py recognize-digits --indices subsets$1 --mask mask$1 --styles styles$1 --likelihoods likelihoods$1 -o results$1 --N $2
 	  else
-		./pipeline.py recognize-digits --indices subsets$1 --mask mask$1 --styles styles$1 --likelihoods likelihoods$1 -o results$1
+		./pipeline.py recognize-digits --indices subsets$1 --mask mask$1 --styles styles$1 --likelihoods likelihoods$1 -o results$1 --N 100
 	fi
   else
     echo "No arguments supplied"
