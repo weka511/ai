@@ -110,16 +110,19 @@ class Mask:
         return product
 
     @staticmethod
-    def build(x_train,indices,bins='doane',m=28,fraction=0.5):
+    def build(x_train,indices,bins='doane',m=28,fraction=0.0):
         '''
         Construct mask from a collection of images
 
         Parameters:
-            x_train
-            indices
-            bins
-            m
-            fraction
+            x_train    Images from mnist
+            indices    Identifies which imges are part of collection
+            bins       Used by histogram
+            m          Images are mxm
+            fraction   Used to decide which pixels should be ignored - number of sigmas below mean
+
+        Returns:
+            Newly created FatMask to hold extra data
         '''
         entropies = Mask.create_entropies(x_train[indices],list(range(len(indices))),bins=bins,m=m)
         mu = np.mean(entropies)
