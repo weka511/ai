@@ -511,7 +511,7 @@ class RecognizeDigits(Command):
 
         N,accuracy,mismatches = self.get_accuracy(self.x_test,self.y_test)
         self.log (f'{N} images, accuracy={accuracy}')
-        self.plot_mismatches(min(N,args.max_images),accuracy,mismatches)
+        self.plot_mismatches(min(N,self.args.max_images),accuracy,mismatches)
 
     def plot_mismatches(self,N,accuracy,mismatches):
         '''
@@ -523,8 +523,9 @@ class RecognizeDigits(Command):
             mismatches  Array of indices of mismatched predictions
         '''
         fig = figure(figsize=(8,8))
-        m,n = get_subplot_shape(len(mismatches))
+        m,n = get_subplot_shape(len(mismatches) if len(mismatches) < N else N)
         for k,(img,y,prediction) in enumerate(mismatches):
+            if k >= N: break
             ax = fig.add_subplot(m,n,k+1)
             ax.imshow(self.mask.pixels,cmap='Reds')
             ax.imshow(img,cmap=self.args.cmap,alpha=0.5)
