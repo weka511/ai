@@ -91,16 +91,10 @@ class Command(ABC):
 
     def __init__(self,description,name,
                  needs_output_file=False,
-                 needs_index_file=True,
-                 needs_style_file=False,
-                 needs_likelihoods_file=False,
                  n=10):
         self.description = description
         self.name = name
         self.needs_output_file = needs_output_file
-        self.needs_index_file = needs_index_file
-        self.needs_style_file = needs_style_file
-        self.needs_likelihoods_file = needs_likelihoods_file
         self.colours = create_xkcd_colours(n)
 
     def get_description(self):
@@ -126,7 +120,6 @@ class Command(ABC):
         self.figs_path = Path(self.args.figs).resolve()
 
         self.load_mnist_data()
-        self.load_and_apply_mask()
         self.load_supplementary_files()
 
         self._execute()   # Perform actual command
@@ -139,40 +132,11 @@ class Command(ABC):
         (self.x_train, self.y_train), (self.x_test, self.y_test), = dataloader.load_data()
         self.x = MnistDataloader.columnize(self.x_train)
 
-    def load_and_apply_mask(self):
-        '''
-        Read a mask from a file, if one is provided, and apply to training data
-        If there is no mask file, set mask to all ones.
-        '''
-        self.mask, self.mask_text,self.bins = Mask.create(mask_file=self.args.mask,
-                                                          data=self.args.data,
-                                                          size=self.args.size,
-                                                          report = lambda x:self.log(x))
-        self.log('Bins: ' +str(self.bins),level=Logger.DEBUG)
-        self.x = self.mask.apply(self.x)
-
     def load_supplementary_files(self):
         '''
         Load additional file needed by some commands
         '''
-        if self.needs_index_file:
-            file =  (self.data_path / self.args.indices).with_suffix('.npz')
-            index_data = np.load(file)
-            self.indices = index_data['indices']
-            self.log (f'Loaded indices from {file}')
-
-        if self.needs_style_file:
-            file =  (self.data_path / self.args.styles).with_suffix('.npz')
-            style_data = np.load(file,allow_pickle=True)
-            self.Allocations = style_data['Allocations']
-            self.log (f'Loaded Allocations from {file}')
-
-        if self.needs_likelihoods_file:
-            file =  (self.data_path / self.args.likelihoods).with_suffix('.npz')
-            loaded_data = np.load(file,allow_pickle=True)
-            self.class_styles = loaded_data['class_styles']
-            self.A = loaded_data['A']
-            self.log (f'Loaded Likelihoods from {file}')
+        pass
 
     @abstractmethod
     def _execute(self):
@@ -200,14 +164,61 @@ class Command(ABC):
         equalized_images = equalize_hist(imgs) if equalize else imgs
         return np.digitize(equalized_images,self.bins)
 
+class Stage1(Command):
+    '''
+    This is the parent class for commands that depend on an index file
+    '''
+    def load_supplementary_files(self):
+        super().load_supplementary_files()
+        file =  (self.data_path / self.args.indices).with_suffix('.npz')
+        index_data = np.load(file)
+        self.indices = index_data['indices']
+        self.log (f'Loaded indices from {file}')
+
+class Stage2(Stage1):
+    '''
+    This is the parent class for commands that depend on an index file and a mask
+    '''
+    def load_supplementary_files(self):
+        super().load_supplementary_files()
+        self.mask, self.mask_text,self.bins = Mask.create(mask_file=self.args.mask,
+                                                          data=self.args.data,
+                                                          size=self.args.size,
+                                                          report = lambda x:self.log(x))
+        self.log('Bins: ' +str(self.bins),level=Logger.DEBUG)
+        self.x = self.mask.apply(self.x)
+
+
+class Stage3(Stage2):
+    '''
+    This is the parent class for commands that depend on an index file and a style file
+    '''
+    def load_supplementary_files(self):
+        super().load_supplementary_files()
+        file =  (self.data_path / self.args.styles).with_suffix('.npz')
+        style_data = np.load(file,allow_pickle=True)
+        self.Allocations = style_data['Allocations']
+        self.log (f'Loaded Allocations from {file}')
+
+class Stage4(Stage3):
+    '''
+    This is the parent class for commands that depend on an index file, style file, and a likelihoods file
+    '''
+    def load_supplementary_files(self):
+        super().load_supplementary_files()
+        file =  (self.data_path / self.args.likelihoods).with_suffix('.npz')
+        loaded_data = np.load(file,allow_pickle=True)
+        self.class_styles = loaded_data['class_styles']
+        self.A = loaded_data['A']
+        self.log (f'Loaded Likelihoods from {file}')
+
 class EstablishSubsets(Command):
     '''
     Extract subsets of MNIST to facilitate replication
     '''
     def __init__(self):
         super().__init__('Establish Subsets','establish-subsets',
-                         needs_output_file=True,
-                         needs_index_file=False)
+                         needs_output_file=True)
 
     def _execute(self):
         '''
@@ -219,7 +230,7 @@ class EstablishSubsets(Command):
         m,n = indices.shape
         self.log(f'Saved {m} labels for each of {n} classes in {file.resolve()}')
 
-class EstablishMask(Command):
+class EstablishMask(Stage1):
     '''
     Determine which pixels are most relevant to classifying images
     '''
@@ -257,7 +268,7 @@ class EstablishMask(Command):
         ax4.set_title(rf'Mask preserving {int(100*mask.pixels.sum()/(self.args.size*self.args.size))}\% of pixels')
 
         ax5 = fig.add_subplot(2,3,5)
-        ax5.hist(mask.entropies,bins=args.bins,density=True,color='xkcd:blue',label='Histogram')
+        ax5.hist(mask.entropies,bins=self.args.bins,density=True,color='xkcd:blue',label='Histogram')
         ax5.set_xlabel('H')
         ax5.set_ylabel('Frequency')
         ax5.set_title('Entropy of pixels')
@@ -327,7 +338,7 @@ class EstablishMask(Command):
         ax.set_title('Intensity of pixels')
         return bin_edges
 
-class EstablishStyles(Command):
+class EstablishStyles(Stage2):
     '''
     Display representatives of all styles created by establish_styles.py
     '''
@@ -426,14 +437,13 @@ class EstablishStyles(Command):
         ax2.axis('off')
 
 
-class EstablishLikelihoods(Command):
+class EstablishLikelihoods(Stage3):
     '''
     Calculate the Likelihood matrices and save text
     '''
     def __init__(self):
         super().__init__('Calculate the Likelihood matrices','establish-likelihoods',
-                         needs_output_file=True,
-                         needs_style_file=True)
+                         needs_output_file=True)
 
     def _execute(self):
         '''
@@ -499,13 +509,13 @@ class EstablishLikelihoods(Command):
 
         return A / Evidence
 
-class RecognizeDigits(Command):
+class RecognizeDigits(Stage4):
     '''
     Use A matrices to recognize class
     '''
     def __init__(self):
         super().__init__('Use likelihood matrices to recognize class','recognize-digits',
-                         needs_likelihoods_file=True,needs_output_file=True)
+                         needs_output_file=True)
 
     def _execute(self):
         '''

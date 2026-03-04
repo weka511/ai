@@ -28,17 +28,16 @@ from skimage.exposure import equalize_hist
 from skimage.transform import resize
 from sklearn.feature_selection import mutual_info_classif
 from mnist import MnistDataloader,MnistException
-from pipeline import Command
+from pipeline import Command,Stage1,Stage3
 from shared.utils import Logger,create_xkcd_colours
 
-class HistEq(Command):
+class HistEq(Stage1):
     '''
     Visualise histogram equalization of MNIST data
     '''
     def __init__(self):
         super().__init__(' Visualise histogram equalization of MNIST data','histeq',
-                         needs_output_file=True,
-                         needs_index_file=False)
+                         needs_output_file=True)
 
     def _execute(self):
         '''
@@ -74,7 +73,7 @@ class HistEq(Command):
         fig.tight_layout(pad=3,h_pad=3,w_pad=3)
         fig.savefig((self.figs_path / self.args.out).with_suffix('.png'))
 
-class EDA(Command):
+class EDA(Stage1):
     '''
         Exploratory Data Analysis for MNIST: plot some raw data, with or without masking
     '''
@@ -113,7 +112,7 @@ class EDA(Command):
                 k += 1
                 yield k,resize(x[self.indices[j,i]],(size,size))
 
-class EDA_MI(Command):
+class EDA_MI(Stage1):
     '''
     Exploratory Data Analysis for MNIST: determine variability of
     mutual information within and between classes
@@ -186,7 +185,7 @@ class EDA_MI(Command):
             for j in range(n):
                 ax.text(j, i, f'{MI[i,j]:.2e}',ha='center', va='center', color=color)
 
-class Cluster(Command):
+class Cluster(Stage1):
     '''
     Plot mutual information between classes
     '''
@@ -234,13 +233,12 @@ class Cluster(Command):
 
         return np.histogram(create_mutual_info(),bins,density=True)[0]
 
-class StyleFrequency(Command):
+class StyleFrequency(Stage3):
     '''
     Display Frequency of Images in each Style
     '''
     def __init__(self):
         super().__init__('Display Frequency of Images in each Style','style-frequency',
-                         needs_style_file=True,
                          needs_output_file=True)
 
     def _execute(self):
@@ -261,13 +259,12 @@ class StyleFrequency(Command):
     def count_styles(self):
         return max([self.Allocations[i_class].shape[0] for i_class in self.args.classes])
 
-class DisplayStyles(Command):
+class DisplayStyles(Stage3):
     '''
     Display representatives of all styles created by EstablishStyles
     '''
     def __init__(self):
         super().__init__('Display Styles','display-styles',
-                         needs_style_file=True,
                          needs_output_file=True)
 
     def _execute(self):
