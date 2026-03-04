@@ -68,25 +68,24 @@ class Mask:
             bins       Number of bins
             m          We will standardize images to be mxm
         '''
-        n = len(selector)
         def create_1d_images():
             '''
-            Standardize images to be mxm, equalize, then convert to 1d
+            Standardize images to be mxm and convert to 1d
             '''
             m0,n0 = images[0].shape
-            product = np.zeros((n, m*m))
+            product = np.zeros((len(selector), m*m))
             for i in selector:
-                if m == m0 and m == n0:
-                    standard_image = images[i]
-                else:
-                    standard_image = resize(np.array(images[i]),(m,m))
-                # img = equalize_hist(standard_image) Issue #61
-                product[i] = np.reshape(standard_image,-1) # Issue #61
+                product[i] = np.reshape(images[i]
+                                            if (m == m0 and m == n0)
+                                            else resize(np.array(images[i]),(m,m)),-1)
             return product
 
         def create_entropies_from_1d_images(images1d):
             '''
             Calculate probability density for each pixel, then calculate entropy
+
+            Parameters:
+                images1d    Images, each converted to 1d
             '''
             product = np.zeros((m*m))
             for i in range((m*m)):
@@ -112,6 +111,16 @@ class Mask:
 
     @staticmethod
     def build(x_train,indices,bins='doane',m=28,fraction=0.5):
+        '''
+        Construct mask from a collection of images
+
+        Parameters:
+            x_train
+            indices
+            bins
+            m
+            fraction
+        '''
         entropies = Mask.create_entropies(x_train[indices],list(range(len(indices))),bins=bins,m=m)
         mu = np.mean(entropies)
         sigma = np.std(entropies)
@@ -121,19 +130,35 @@ class Mask:
         return FatMask(pixels,img,entropies,mu,threshold)
 
     def __init__(self,pixels):
+        '''
+        Parameters:
+            pixels
+        '''
         self.pixels = pixels.copy()
         self.pixels1d = pixels.reshape(-1)
 
     def save(self,file,bins):
+        '''
+        Save data needed to recreate mask
+        '''
         np.savez(file, mask=self.pixels,bins=bins)
 
     def apply(self,x):
+        '''
+        Apply mask to a collection of pixels
+        '''
         return np.multiply(x, self.pixels1d)
 
     def __getitem__(self,i):
+        '''
+        Allow access to 1 dimensional pixels
+        '''
         return self.pixels1d[i]
 
     def get_ratio(self):
+        '''
+        Calculate the freaction of pixels that mask preserves
+        '''
         return self.pixels1d.sum()/len(self.pixels1d)
 
 class FatMask(Mask):

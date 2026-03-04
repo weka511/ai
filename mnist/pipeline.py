@@ -16,7 +16,7 @@
 # along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.
 
 '''
-    This program schedules commands to create files in the pipeline.
+    This program creates the files that make up the pipeline.
 '''
 from abc import ABC,abstractmethod
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
@@ -35,16 +35,24 @@ from mask import Mask
 from style import StyleList,StylesStoppedBuilding
 from shared.utils import Logger,user_has_requested_stop,create_xkcd_colours,get_bins
 
+class CommandException(RuntimeError):
+    '''
+    Allows Command to raise exceptions
+    '''
+    def __init__(self,message):
+        super().__init__(message)
+
 class Command(ABC):
     '''
-    Parent class for procesing requests
+    Parent class for procesing requests. Each command exports a string that can
+    be used by the user to execute the functionality of the command.
     '''
     commands = {}
 
     @staticmethod
     def build(command_list):
         '''
-        Load a list of commands that are available for execution
+        Load a list of commands that will be available for execution
         '''
         for command in command_list:
             Command.commands[command.name] = command
@@ -59,8 +67,8 @@ class Command(ABC):
     @staticmethod
     def execute_one(args):
         '''
-        Execute one command as selected by user. This encapsulates
-        code that is shared with visualize.py
+        Execute one command that has been selected by user. This
+        encapsulates code that is shared with visualize.py
 
         Parameters:
             args      Comand line arguments
@@ -77,7 +85,10 @@ class Command(ABC):
                 command.log(f'Error: {e.filename} not found.',level=Logger.ERROR)
                 code = 1
             except MnistException as e:
-                command.log('MnistException {e}',level=Logger.ERROR)
+                command.log('Mnist Exception {e}',level=Logger.ERROR)
+                code = 1
+            except CommandException as e:
+                command.log('Command Exception {e}',level=Logger.ERROR)
                 code = 1
             finally:
                 elapsed = time() - start
@@ -90,17 +101,29 @@ class Command(ABC):
                 show()
 
     def __init__(self,description,name,
-                 needs_output_file=False,
-                 n=10):
+                 needs_output_file=False,n=10):
+        '''
+        Parameters:
+            description        Used for documntation only
+            name               Name used to schedule command
+            needs_output_file  Indicates that the user needs to provide an output file
+            n                  NUmber of colours that will be needed, one for each digit class
+        '''
         self.description = description
         self.name = name
         self.needs_output_file = needs_output_file
         self.colours = create_xkcd_colours(n)
 
     def get_description(self):
+        '''
+        Used for documntation only
+        '''
         return self.description
 
     def set_args(self,args):
+        '''
+        Store command line arguments
+        '''
         self.args = args
         self.rng = np.random.default_rng(args.seed)
 
@@ -113,8 +136,7 @@ class Command(ABC):
         self.log (f'{self.get_description()} {strftime("%a, %d %b %Y %H:%M:%S +0000", localtime())}')
 
         if self.needs_output_file and self.args.out == None:
-            self.log ('Output file must be specified')
-            exit(1)
+            raise CommandException ('Output file must be specified')
 
         self.data_path = Path(self.args.data).resolve()
         self.figs_path = Path(self.args.figs).resolve()
@@ -191,7 +213,7 @@ class Stage2(Stage1):
 
 class Stage3(Stage2):
     '''
-    This is the parent class for commands that depend on an index file and a style file
+    This is the parent class for commands that depend on an index file, a mask,  and a style file
     '''
     def load_supplementary_files(self):
         super().load_supplementary_files()
@@ -202,7 +224,8 @@ class Stage3(Stage2):
 
 class Stage4(Stage3):
     '''
-    This is the parent class for commands that depend on an index file, style file, and a likelihoods file
+    This is the parent class for commands that depend on an
+    index file, mask, style file, and a likelihoods file
     '''
     def load_supplementary_files(self):
         super().load_supplementary_files()
@@ -244,12 +267,15 @@ class EstablishMask(Stage1):
         indices = self.indices.reshape(-1)
         mask = Mask.build(np.array(self.x_train),indices,bins=self.args.bins,m=self.args.size,fraction=self.args.fraction)
         bins = self._plot(mask,indices)
-        file =  (self.data_path / self.args.out).with_suffix('.npz')
+        file = (self.data_path / self.args.out).with_suffix('.npz')
         mask.save(file, bins=bins)
 
         self.log(f'Processed {self.args.indices}, {len(indices) // 10:,d} images per class, {self.args.bins} bins, saved mask in {file}')
 
     def _plot(self,mask,indices):
+        '''
+        Plot the mask and the histogram,
+        '''
         fig = figure(figsize=(12, 12))
 
         ax1 = fig.add_subplot(2,3,1)
@@ -449,7 +475,7 @@ class EstablishLikelihoods(Stage3):
         '''
         For each pixel, determine the probability of belonging to each digit and style
         '''
-        file =  (self.data_path / self.args.out).with_suffix('.npz')
+        file = (self.data_path / self.args.out).with_suffix('.npz')
         class_styles,starting_positions = self.build_class_style_mapping()
         np.savez(file,
                  A=self.create_likelihoods(starting_positions,class_styles),
