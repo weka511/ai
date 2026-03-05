@@ -88,7 +88,7 @@ class Command(ABC):
                 command.log('Mnist Exception {e}',level=Logger.ERROR)
                 code = 1
             except CommandException as e:
-                command.log('Command Exception {e}',level=Logger.ERROR)
+                command.log(f'Command Exception {e}',level=Logger.ERROR)
                 code = 1
             finally:
                 elapsed = time() - start
@@ -220,6 +220,7 @@ class Stage3(Stage2):
         file =  (self.data_path / self.args.styles).with_suffix('.npz')
         style_data = np.load(file,allow_pickle=True)
         self.Allocations = style_data['Allocations']
+        self.threshold = style_data['threshold']
         self.log (f'Loaded Allocations from {file}')
 
 class Stage4(Stage3):
@@ -398,13 +399,14 @@ class EstablishStyles(Stage2):
                 max_steps = max(max_steps,steps[-1])
 
                 file =  (self.data_path / self.args.out).with_suffix('.npz')
-                np.savez(file,Allocations=Allocations)
+                np.savez(file,Allocations=Allocations,threshold=self.args.threshold)
                 self.log(f'Class {i_class} contains {len(style_list)} Styles, saved styles in {file}')
             except StylesStoppedBuilding:
                 self.log(f'Stopped while processing {i_class}')
                 break
         try:
             self.plot_styles_versus_exemplars(max_steps,N, fig=fig)
+            fig.suptitle(f'threshold={self.args.threshold}')
             fig.tight_layout(pad=2,h_pad=2,w_pad=2)
             fig.savefig((self.figs_path / self.args.out).with_suffix('.png'))
         except ValueError:
@@ -550,7 +552,7 @@ class RecognizeDigits(Stage4):
         self.logA = np.log(self.A)
 
         N,accuracy,mismatches = self.get_accuracy(self.x_test,self.y_test)
-        self.log (f'{N} images, accuracy={accuracy}')
+        self.log (f'{N} images, threshold ={self.threshold}, accuracy={accuracy}')
         self.plot_mismatches(min(N,self.args.max_images),accuracy,mismatches)
 
     def plot_mismatches(self,N,accuracy,mismatches):
@@ -572,7 +574,7 @@ class RecognizeDigits(Stage4):
             ax.axis('off')
             ax.set_title(f'{prediction} ({y})')
 
-        fig.suptitle(f'{N} images, accuracy={int(100*accuracy)}\\%')
+        fig.suptitle(f'{N} images,  threshold ={self.threshold}, accuracy={int(100*accuracy)}\\%')
         fig.tight_layout(pad=2,h_pad=2,w_pad=2)
         fig.savefig((self.figs_path / self.args.out).with_suffix('.png'))
 
