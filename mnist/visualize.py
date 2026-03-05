@@ -28,7 +28,7 @@ from skimage.exposure import equalize_hist
 from skimage.transform import resize
 from sklearn.feature_selection import mutual_info_classif
 from mnist import MnistDataloader,MnistException
-from pipeline import Command,Stage1,Stage3
+from pipeline import Command,Stage1,Stage2,Stage3
 from shared.utils import Logger,create_xkcd_colours
 
 class HistEq(Stage1):
@@ -185,7 +185,24 @@ class EDA_MI(Stage1):
             for j in range(n):
                 ax.text(j, i, f'{MI[i,j]:.2e}',ha='center', va='center', color=color)
 
-class Cluster(Stage1):
+class MI_Matrix(Stage2):
+    def __init__(self):
+        super().__init__('MI_Matrix','build-mi-matrix',
+                         needs_output_file=True)
+    def _execute(self):
+        m,n = self.indices.shape
+        for i_class in self.args.classes:
+            self.log (f'Class {i_class}')
+            x_class = self.x[self.indices[:,i_class],:]
+            x_class = self.mask.shorten(x_class)
+            MI = np.zeros((m,m))
+            for j in range(m):
+                y = x_class[j,:]
+                X = x_class.T
+                MI[j,j:] = mutual_info_classif(X[:,j:],y)
+                MI[j:,j ] = MI[j,j:]
+
+class Cluster(Stage2):
     '''
     Plot mutual information between classes
     '''
@@ -206,7 +223,8 @@ class Cluster(Stage1):
         for i_class in self.args.classes:
             self.log (f'Class {i_class}')
             ax.plot(0.5*(bins[:-1] + bins[1:]),
-                    self.create_frequencies(i_class,bins,npairs=npairs,m=m,rng=self.rng),label=str(i_class),c=self.colours[i_class])
+                    self.create_frequencies(i_class,bins,
+                                            npairs=npairs,m=m,rng=self.rng),label=str(i_class),c=self.colours[i_class])
 
         ax.set_xlabel('Mutual Information')
         ax.set_ylabel('Frequency')
@@ -227,6 +245,7 @@ class Cluster(Stage1):
             for i in range(npairs):
                 K = rng.choice(m,size=2)
                 x_class = self.x[self.indices[K,i_class],:]
+                x_class = self.mask.shorten(x_class)
                 mi = mutual_info_classif(x_class.T,x_class[0,:])
                 product[i] = mi[-1]
             return product
@@ -332,7 +351,8 @@ if __name__ == '__main__':
         DisplayStyles(),
         StyleFrequency(),
         EDA(),
-        EDA_MI()
+        EDA_MI(),
+        MI_Matrix()
     ])
 
     Command.execute_one(parse_args(Command.get_names()))
