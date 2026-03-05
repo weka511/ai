@@ -186,11 +186,21 @@ class EDA_MI(Stage1):
                 ax.text(j, i, f'{MI[i,j]:.2e}',ha='center', va='center', color=color)
 
 class MI_Matrix(Stage2):
+    '''
+    Build a matrix of mutual information for each class (image x image)
+    '''
     def __init__(self):
-        super().__init__('MI_Matrix','build-mi-matrix',
+        super().__init__('Build MI_Matrices','build-mi-matrix',
                          needs_output_file=True)
+
     def _execute(self):
+        '''
+        Build a matrix of mutual information for each class (image x image)
+        '''
+        fig = figure(figsize=(8, 8))
+        bins = np.linspace(0,1,num=self.args.bins+1)
         m,n = self.indices.shape
+        ax = fig.add_subplot(1,1,1)
         for i_class in self.args.classes:
             self.log (f'Class {i_class}')
             x_class = self.x[self.indices[:,i_class],:]
@@ -201,6 +211,13 @@ class MI_Matrix(Stage2):
                 X = x_class.T
                 MI[j,j:] = mutual_info_classif(X[:,j:],y)
                 MI[j:,j ] = MI[j,j:]
+            frequency = np.histogram(MI.reshape(-1),bins,density=True)[0]
+            ax.plot(0.5*(bins[:-1] + bins[1:]),frequency,label=str(i_class),c=self.colours[i_class])
+        ax.set_xlabel('Mutual Information')
+        ax.set_ylabel('Frequency')
+        ax.set_title(f'Mutual Information within classes')
+        ax.legend(title='Digit classes')
+        fig.savefig((self.figs_path / self.args.out).with_suffix('.png'))
 
 class Cluster(Stage2):
     '''
