@@ -16,10 +16,14 @@
 # along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.
 
 set -euxo pipefail
+if [[ -z "$THRESHOLD" ]]; then
+    echo "Variable is either unset or empty."
+	THRESHOLD=0.3
+fi
 if [ $# -gt 0 ];  then
 	./pipeline.py establish-subsets --nimages $1 -o subsets$1 
 	./pipeline.py establish-mask --indices subsets$1 -o mask$1
-	./pipeline.py establish-styles --indices subsets$1 --mask mask$1 --o styles$1
+	./pipeline.py establish-styles --indices subsets$1 --mask mask$1 --o styles$1 --threshold $THRESHOLD
 	./pipeline.py establish-likelihoods --indices subsets$1 --mask mask$1 --styles styles$1 -o likelihoods$1
 	if [ $# -gt 1 ];  then
 		./pipeline.py recognize-digits --indices subsets$1 --mask mask$1 --styles styles$1 --likelihoods likelihoods$1 -o results$1 --N $2
