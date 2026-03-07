@@ -54,8 +54,7 @@ class Gibbs(Stage2):
     '''
 
     def __init__(self):
-        super().__init__('Testbed for Gibbs sampling','gibbs',
-                         needs_output_file=False)
+        super().__init__('Testbed for Gibbs sampling','gibbs')
 
     def _execute(self):
         pass

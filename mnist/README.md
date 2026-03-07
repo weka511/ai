@@ -9,7 +9,7 @@ The inspiration comes from the following papers by Friston et al:
 File|Description
 -------------------------------------|-----------------------------------------------------------------------------------------
 build.sh|Shell script to build files in pipeline
-gibbs1.py|Testbed for Gibbs sampling
+gibbs1.py|Testbed for Gibbs sampling: see Blei and Frazier, [Distance Dependent Chinese Restaurant Processes](https://www.jmlr.org/papers/volume12/blei11a/blei11a.pdf)
 mask.py|Mask out pixels that carry little information
 mnist.py|Functions for accessing MNIST data
 pipeline.py|Program for creating files needed for each step in analysis pipeline
