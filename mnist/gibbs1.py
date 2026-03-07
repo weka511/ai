@@ -52,12 +52,26 @@ class Gibbs(Stage2):
     '''
         Testbed for Gibbs sampling
     '''
-
     def __init__(self):
         super().__init__('Testbed for Gibbs sampling','gibbs')
 
     def _execute(self):
-        pass
+        for i in self.args.classes:
+            self.log(f'Class {i}')
+            self.gibbs(self.mask.shorten(self.x[self.indices[:,i],:]))
+
+    def gibbs(self,x):
+        links = self.build_initial_links(x)
+        z=0
+
+    def build_initial_links(self,x):
+        m,n = x.shape
+        candidates = self.rng.permutation(m)
+        product = [(int(candidates[0]),int(candidates[0]))]
+        for i in range(1,m):
+            link_to = self.rng.choice((i+1) if i < (m - 1) else i)
+            product.append((int(candidates[i]),int(candidates[link_to])))
+        return product
 
 if __name__ == '__main__':
     rc('font', **{'family': 'serif',
