@@ -46,6 +46,7 @@ def parse_args(names):
     parser.add_argument('-o','--out',nargs='?')
     parser.add_argument('--logs', default='./logs', help='Location for storing log files')
     parser.add_argument('--size', default=28, type=int, help='Number of row/cols in each image: shape will be will be mxm')
+    parser.add_argument('--N', default=100, type=int, help='Number of itetaions for Gibbs sampler')
     return parser.parse_args()
 
 class Gibbs(Stage2):
@@ -58,11 +59,19 @@ class Gibbs(Stage2):
     def _execute(self):
         for i in self.args.classes:
             self.log(f'Class {i}')
-            self.gibbs(self.mask.shorten(self.x[self.indices[:,i],:]))
+            self.gibbs(self.mask.shorten(self.x[self.indices[:,i],:]),N=self.args.N)
 
-    def gibbs(self,x):
-        links = self.build_initial_links(x)
-
+    def gibbs(self,x,N=100):
+        m,_ = x.shape
+        self.links = self.build_initial_links(x)
+        self.lookup_table = self.create_lookup_table(x,self.links)
+        for i in range(N):
+            j = self.rng.choice(m)
+            k = (j + self.rng.choice(m)) % m
+            if self.can_break_and_make(j,k):
+                pos = self.break_link(j)
+                if j != k:
+                    self.make_link(j,k)
 
     def build_initial_links(self,x):
         m,_ = x.shape
@@ -89,7 +98,33 @@ class Gibbs(Stage2):
             if links[i,0] != links[i,1]:
                 assert(links[i,1] in destinations)
             destinations.append(links[i,0])
-        z=0
+
+    def create_lookup_table(self,x,links):
+        '''
+        Create an auxilary table which tells us where element `i' lives
+        on first columns of links
+        '''
+        m,_ = x.shape
+        product = np.zeros((m),dtype=int)
+        for i in range(m):
+            product[links[i,0]] = i
+        return product
+
+    def can_break_and_make(self,j,k):
+        print (f'Break {j} and link to {k}')
+        i = self.lookup_table[j]
+        if self.links[i,1] == j:
+            return False
+        return True
+
+    def break_link(self,j):
+        i = self.lookup_table[j]
+        assert self.links[i,0] == j
+        self.links[i,1] = j
+        return i
+
+    def make_link(self,j,k):
+        pass
 
 if __name__ == '__main__':
     rc('font', **{'family': 'serif',
