@@ -62,16 +62,34 @@ class Gibbs(Stage2):
 
     def gibbs(self,x):
         links = self.build_initial_links(x)
-        z=0
+
 
     def build_initial_links(self,x):
-        m,n = x.shape
-        candidates = self.rng.permutation(m)
-        product = [(int(candidates[0]),int(candidates[0]))]
+        m,_ = x.shape
+        product = np.zeros((m,2),dtype=int)
+        product[:,0] = self.rng.permutation(m)
+        product[0,1] = product[0,0]
         for i in range(1,m):
-            link_to = self.rng.choice((i+1) if i < (m - 1) else i)
-            product.append((int(candidates[i]),int(candidates[link_to])))
+            index_next_customer = self.rng.choice(min(i,m-1))
+            product[i,1] = product[index_next_customer,0]
+
+        self.verify_postcondition(product)
         return product
+
+    def verify_postcondition(self,links):
+        '''
+        Ensure that every item has a link to itself, or to a node that has previously been linked to.
+        '''
+        m,_ = links.shape
+        start = np.sort(links[:,0])
+        for i in range(m):
+            assert i == start[i]
+        destinations = []
+        for i in range(m):
+            if links[i,0] != links[i,1]:
+                assert(links[i,1] in destinations)
+            destinations.append(links[i,0])
+        z=0
 
 if __name__ == '__main__':
     rc('font', **{'family': 'serif',
