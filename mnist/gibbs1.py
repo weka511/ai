@@ -32,48 +32,69 @@ from mnist import MnistDataloader,MnistException
 from pipeline import Command,Stage2
 from shared.utils import Logger,create_xkcd_colours
 
-def parse_args(names):
-    parser = ArgumentParser(__doc__)
-    parser.add_argument('command',choices=names,help='The command to be executed')
-    parser.add_argument('--show', default=False, action='store_true', help='Controls whether plot will be displayed')
-    parser.add_argument('--figs', default='./figs', help='Location for storing plot files')
-    parser.add_argument('--data', default='./data', help='Location for storing data files')
-    parser.add_argument('--cmap',default='Blues',help='Colour map')
-    parser.add_argument('--seed', default=None, type=int, help='For initializing random number generator')
-    parser.add_argument('--mask', default=None, help='Name of mask file (omit for no mask)')
-    parser.add_argument('--indices', default=None, help='Location where index files have been saved')
-    parser.add_argument('--classes', default=list(range(10)), type=int, nargs='+', help='List of digit classes')
-    parser.add_argument('-o','--out',nargs='?')
-    parser.add_argument('--logs', default='./logs', help='Location for storing log files')
-    parser.add_argument('--size', default=28, type=int, help='Number of row/cols in each image: shape will be will be mxm')
-    parser.add_argument('--N', default=100, type=int, help='Number of itetaions for Gibbs sampler')
-    return parser.parse_args()
-
 class Gibbs(Stage2):
     '''
-        Testbed for Gibbs sampling
+    Testbed for Gibbs sampling
     '''
     def __init__(self):
         super().__init__('Testbed for Gibbs sampling','gibbs')
 
     def _execute(self):
+        m,_ = self.indices.shape
         for i in self.args.classes:
             self.log(f'Class {i}')
-            self.gibbs(self.mask.shorten(self.x[self.indices[:,i],:]),N=self.args.N)
+            x = self.mask.shorten(self.x[self.indices[:,i],:])
+            P = self.create_probabilities(x,m)
+            self.gibbs(x,N=self.args.N,P=P)
 
-    def gibbs(self,x,N=100):
+    def create_probabilities(self,x,m,f=np.exp):
+        '''
+        Create a matrix of unnormalized "probabilities", P[i,j] is
+        derived form the mutual informations between i and j.
+        '''
+        product = np.zeros((m,m))
+        for j in range(m):
+            y = x[j,:]
+            X = x.T
+            product[j,j:] = mutual_info_classif(X[:,j:],y)
+            product[j:,j ] = product[j,j:]
+        return f(product)
+
+    def gibbs(self,x,N=100,P=np.ones((12,12))):
+        '''
+        Perform Gibbs sampling
+
+        Parameters:
+            x
+            N
+            P
+        '''
         m,_ = x.shape
         self.links = self.build_initial_links(x)
         self.lookup_table = self.create_lookup_table(x,self.links)
         for i in range(N):
-            j = self.rng.choice(m)
-            k = (j + self.rng.choice(m)) % m
+            tower1 = self.create_tower(P,self.links)
+            sample1 = self.rng.uniform(high=tower1[-1])
+            for j in range(len(tower1)):
+                if sample1 <= tower1[j]: break
+            assert j < len(tower1)
+            predecessors = self.create_predecessors(j,self.links)
+            potential_links = self.create_potential_links(m,j,predecessors)
+            tower2 = self.create_tower(P,potential_links,f = lambda P:P)
+            sample2 = self.rng.uniform(high=tower2[-1])
+            for k in range(len(tower2)):
+                if sample2 <= tower2[k]: break
+            assert k < len(tower2)
+
             if self.can_break_and_make(j,k):
                 pos = self.break_link(j)
                 if j != k:
                     self.make_link(j,k)
 
     def build_initial_links(self,x):
+        '''
+        Create random links for the start of the gibbs MCMC
+        '''
         m,_ = x.shape
         product = np.zeros((m,2),dtype=int)
         product[:,0] = self.rng.permutation(m)
@@ -110,6 +131,45 @@ class Gibbs(Stage2):
             product[links[i,0]] = i
         return product
 
+    def create_tower(self,P,links,f=lambda P:1/P):
+        '''
+        Build an array of cumulative probabilities for tower sampling
+        '''
+        m,_ = links.shape
+        product = np.zeros((m))
+        for i in range(m):
+            j = links[i,0]
+            k = links[i,1]
+            product[i] = f(P[j,k]) + (0 if i == 0 else product[i-1])
+        return product
+
+    def  create_predecessors(self,j,links):
+        links_sorted = np.sort(links)
+        m,_ = links.shape
+        Product = []
+        j1 = j
+        found = True
+        while found:
+            found = False
+            for i in range(m):
+                if links[i,1] == j1:
+                    found = True
+                    j1 = links[i,0]
+                    Product.append(j1)
+                    break
+        return Product
+
+    def create_potential_links(self,m,j,predecessors):
+        product = np.zeros((m,2),dtype=int)
+        i1 = 0
+        for i in range(m):
+            if i != j and i not in predecessors:
+                product[i1,0] = j
+                product[i1,1] = i
+                i1 += 1
+            n = i
+        return product[0:n,:]
+
     def can_break_and_make(self,j,k):
         print (f'Break {j} and link to {k}')
         i = self.lookup_table[j]
@@ -124,7 +184,26 @@ class Gibbs(Stage2):
         return i
 
     def make_link(self,j,k):
-        pass
+        i = self.lookup_table[j]
+        assert self.links[i,0] == j
+        self.links[i,1] = k
+
+def parse_args(names):
+    parser = ArgumentParser(__doc__)
+    parser.add_argument('command',choices=names,help='The command to be executed')
+    parser.add_argument('--show', default=False, action='store_true', help='Controls whether plot will be displayed')
+    parser.add_argument('--figs', default='./figs', help='Location for storing plot files')
+    parser.add_argument('--data', default='./data', help='Location for storing data files')
+    parser.add_argument('--cmap',default='Blues',help='Colour map')
+    parser.add_argument('--seed', default=None, type=int, help='For initializing random number generator')
+    parser.add_argument('--mask', default=None, help='Name of mask file (omit for no mask)')
+    parser.add_argument('--indices', default=None, help='Location where index files have been saved')
+    parser.add_argument('--classes', default=list(range(10)), type=int, nargs='+', help='List of digit classes')
+    parser.add_argument('-o','--out',nargs='?')
+    parser.add_argument('--logs', default='./logs', help='Location for storing log files')
+    parser.add_argument('--size', default=28, type=int, help='Number of row/cols in each image: shape will be will be mxm')
+    parser.add_argument('--N', default=100, type=int, help='Number of itetaions for Gibbs sampler')
+    return parser.parse_args()
 
 if __name__ == '__main__':
     rc('font', **{'family': 'serif',
