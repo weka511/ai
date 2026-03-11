@@ -50,7 +50,7 @@ class Gibbs(Stage2):
     def create_probabilities(self,x,m,f=np.exp):
         '''
         Create a matrix of unnormalized "probabilities", P[i,j] is
-        derived form the mutual informations between i and j.
+        derived from the mutual informations between i and j.
         '''
         product = np.zeros((m,m))
         for j in range(m):
@@ -65,14 +65,15 @@ class Gibbs(Stage2):
         Perform Gibbs sampling
 
         Parameters:
-            x
-            N
-            P
+            x       Training data for the current digit class, masked
+            N       Number of iterations
+            P       Probability mask created by create_probabilities
         '''
         m,_ = x.shape
-        self.links = self.build_initial_links(x)
-        self.lookup_table = self.create_lookup_table(x,self.links)
+        self.links = self.build_initial_links(x,m)
+        self.lookup_table = self.create_lookup_table(x,self.links,m)
         for i in range(N):
+            if i%5 == 0: self.log(f'Iteration {i}')
             tower1 = self.create_tower(P,self.links)
             sample1 = self.rng.uniform(high=tower1[-1])
             for j in range(len(tower1)):
@@ -91,41 +92,45 @@ class Gibbs(Stage2):
                 if j != k:
                     self.make_link(j,k)
 
-    def build_initial_links(self,x):
+    def build_initial_links(self,x,m):
         '''
         Create random links for the start of the gibbs MCMC
+        
+        Parameters:
+            x       Training data for the current digit class, masked
+            m       Number of training examples
+            
+        Returns: An m x 2 matrix of indices, each linking to itself, or
+                 to an index that has already linked to something, e.g.
+                [[21 21]
+                 [24 24]
+                 [10 10]
+                 [16 10]
+                 [ 5 16]
+                 [12 21]
+                 [28 16]
+                 [15 16]
+                 [11 15]
+                 [ 8 21]
+                 [ 1 21]
+                 [23 28]
+                 [19 12]
+                 etc
         '''
-        m,_ = x.shape
         product = np.zeros((m,2),dtype=int)
         product[:,0] = self.rng.permutation(m)
         product[0,1] = product[0,0]
         for i in range(1,m):
-            index_next_customer = self.rng.choice(min(i,m-1))
-            product[i,1] = product[index_next_customer,0]
+            product[i,1] = self.rng.choice(product[0:i+1,0])
 
-        self.verify_postcondition(product)
         return product
 
-    def verify_postcondition(self,links):
-        '''
-        Ensure that every item has a link to itself, or to a node that has previously been linked to.
-        '''
-        m,_ = links.shape
-        start = np.sort(links[:,0])
-        for i in range(m):
-            assert i == start[i]
-        destinations = []
-        for i in range(m):
-            if links[i,0] != links[i,1]:
-                assert(links[i,1] in destinations)
-            destinations.append(links[i,0])
-
-    def create_lookup_table(self,x,links):
+  
+    def create_lookup_table(self,x,links,m):
         '''
         Create an auxilary table which tells us where element `i' lives
         on first columns of links
         '''
-        m,_ = x.shape
         product = np.zeros((m),dtype=int)
         for i in range(m):
             product[links[i,0]] = i
