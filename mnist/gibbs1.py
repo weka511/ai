@@ -32,6 +32,7 @@ from mnist import MnistDataloader,MnistException
 from pipeline import Command,Stage2
 from shared.utils import Logger,create_xkcd_colours
 
+
 class Gibbs(Stage2):
     '''
     Testbed for Gibbs sampling
@@ -49,16 +50,17 @@ class Gibbs(Stage2):
 
     def create_probabilities(self,x,m,f=np.exp):
         '''
-        Create a matrix of unnormalized "probabilities", P[i,j] is
+        Create a matrix of probabilities, P[i,j] is
         derived from the mutual informations between i and j.
         '''
-        product = np.zeros((m,m))
+        MI = np.zeros((m,m))
         for j in range(m):
             y = x[j,:]
             X = x.T
-            product[j,j:] = mutual_info_classif(X[:,j:],y)
-            product[j:,j ] = product[j,j:]
-        return f(product)
+            MI[j,j:] = mutual_info_classif(X[:,j:],y)
+            MI[j:,j ] = MI[j,j:]
+        Unnormalized = f(MI)
+        return Unnormalized/Unnormalized.sum(axis=1)[:,None]
 
     def gibbs(self,x,N=100,P=np.ones((12,12))):
         '''
@@ -73,19 +75,13 @@ class Gibbs(Stage2):
         self.links = self.build_initial_links(x,m)
         self.lookup_table = self.create_lookup_table(x,self.links,m)
         for i in range(N):
-            if i%5 == 0: self.log(f'Iteration {i}')
-            tower1 = self.create_tower(P,self.links)
-            sample1 = self.rng.uniform(high=tower1[-1])
-            for j in range(len(tower1)):
-                if sample1 <= tower1[j]: break
-            assert j < len(tower1)
+            if i%5 == 0: self.log(f'Iteration {i+1}')
+            tower1 = Tower(P,self.links,m)
+            j = tower1.sample()
             predecessors = self.create_predecessors(j,self.links)
             potential_links = self.create_potential_links(m,j,predecessors)
-            tower2 = self.create_tower(P,potential_links,f = lambda P:P)
-            sample2 = self.rng.uniform(high=tower2[-1])
-            for k in range(len(tower2)):
-                if sample2 <= tower2[k]: break
-            assert k < len(tower2)
+            tower2 = Tower(P,potential_links,m,f = lambda P:P)
+            k = tower2.sample()
 
             if self.can_break_and_make(j,k):
                 pos = self.break_link(j)
@@ -117,13 +113,13 @@ class Gibbs(Stage2):
                  [19 12]
                  etc
         '''
-        product = np.zeros((m,2),dtype=int)
-        product[:,0] = self.rng.permutation(m)
-        product[0,1] = product[0,0]
+        Product = np.zeros((m,2),dtype=int)
+        Product[:,0] = self.rng.permutation(m)
+        Product[0,1] = Product[0,0]
         for i in range(1,m):
-            product[i,1] = self.rng.choice(product[0:i+1,0])
+            Product[i,1] = self.rng.choice(Product[0:i+1,0])
 
-        return product
+        return Product
 
   
     def create_lookup_table(self,x,links,m):
@@ -134,18 +130,6 @@ class Gibbs(Stage2):
         product = np.zeros((m),dtype=int)
         for i in range(m):
             product[links[i,0]] = i
-        return product
-
-    def create_tower(self,P,links,f=lambda P:1/P):
-        '''
-        Build an array of cumulative probabilities for tower sampling
-        '''
-        m,_ = links.shape
-        product = np.zeros((m))
-        for i in range(m):
-            j = links[i,0]
-            k = links[i,1]
-            product[i] = f(P[j,k]) + (0 if i == 0 else product[i-1])
         return product
 
     def  create_predecessors(self,j,links):
@@ -192,6 +176,30 @@ class Gibbs(Stage2):
         i = self.lookup_table[j]
         assert self.links[i,0] == j
         self.links[i,1] = k
+
+class Tower:
+    '''
+    This class performs tower sampling, as described in
+    Werner Krauth: Statistical Mechanics: Algorithms and Computations ISBN: 9780198515364.
+    '''
+    def __init__(self,P,links,m0,f=lambda P:1/P,rng=np.random.default_rng()):
+        '''
+        Build an array of cumulative probabilities for tower sampling
+        '''
+        m,_ = links.shape
+        self.probabilities = np.zeros((m))
+        self.rng = rng
+
+        for i in range(m):
+            j = links[i,0]
+            k = links[i,1]
+            self.probabilities[i] = f(P[j,k]) + (0 if i == 0 else self.probabilities[i-1])
+        self.probabilities /= self.probabilities[-1]
+            
+    def sample(self):
+        sample1 = self.rng.uniform(high=self.probabilities[-1])
+        return np.searchsorted(self.probabilities,sample1)
+  
 
 def parse_args(names):
     parser = ArgumentParser(__doc__)
