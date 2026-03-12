@@ -87,18 +87,16 @@ class Gibbs(Stage2):
         self.lookup_table = self.create_lookup_table(X,self.links,m)
         for i in range(N):
             if i%5 == 0: self.log(f'Iteration {i+1}')
-            tower1 = Tower(P,self.links)
-            break_from,break_to = tower1.sample()
+            break_from,break_to = Tower(P,self.links).sample()
             self.log(f'Break link from {break_from} to {break_to}')
-            predecessors = self.create_predecessors(break_to,self.links)
-            potential_links = self.create_potential_links(m,j,predecessors)
-            tower2 = Tower(P,potential_links,f = lambda P:P)
-            k = tower2.sample()
+            ancestors = self.create_ancestors(break_to,self.links)
+            potential_links = self.create_potential_links(m,break_from,ancestors)
+            link_to = Tower(P,potential_links,f = lambda P:P).sample()
 
-            if self.can_break_and_make(j,k):
-                pos = self.break_link(j)
-                if j != k:
-                    self.make_link(j,k)
+            if self.can_break_and_make(break_from,link_to):
+                pos = self.break_link(break_from)
+                if break_from != k:
+                    self.make_link(break_from,k)
 
     def build_initial_links(self,x,m):
         '''
@@ -144,37 +142,52 @@ class Gibbs(Stage2):
             product[links[i,0]] = i
         return product
 
-    def  create_predecessors(self,break_to,links):
-        def bfs(link_to,Product):
+    def  create_ancestors(self,node,links):
+        '''
+        Find all ancestors, i.e. things that link to a specific node directly or indirectly.
+        
+        Parameters:
+            node
+            links
+        '''
+        def dfs(link_to,Product):
             '''
-            Breadth-first search
+            The depth-first search does all the heavy lifting.
             '''
-            predecessors = links[links[:,1] == link_to,0]
-            if len(predecessors) > 0:
-                for p in predecessors:
+            ancestors = links[links[:,1] == link_to,0]
+            if len(ancestors) > 0:
+                for p in ancestors:
                     if p != link_to:
                         Product.append(p)
-                        bfs(p,Product)
-        print (links)
+                        dfs(p,Product)
         Product = []
-        bfs(break_to,Product)
+        dfs(node,Product)
         return Product
 
-    def create_potential_links(self,m,j,predecessors):
-        product = np.zeros((m,2),dtype=int)
+    def create_potential_links(self,m,node,cannot_link_to):
+        '''
+        Create a collection of nodes we coukd potentially link to
+        
+        Parameters:
+            m
+            node
+            cannot_link_to
+        '''
+        Product = np.zeros((m,2),dtype=int)
         i1 = 0
         for i in range(m):
-            if i != j and i not in predecessors:
-                product[i1,0] = j
-                product[i1,1] = i
+            if i not in cannot_link_to:
+                Product[i1,0] = node
+                Product[i1,1] = i
                 i1 += 1
-            n = i
-        return product[0:n,:]
+   
+        return Product[0:i1,:]
 
     def can_break_and_make(self,j,k):
         print (f'Break {j} and link to {k}')
         i = self.lookup_table[j]
         if self.links[i,1] == j:
+            print ('Failed to link')
             return False
         return True
 
