@@ -35,12 +35,15 @@ from shared.utils import Logger,create_xkcd_colours
 
 class Gibbs(Stage2):
     '''
-    Testbed for Gibbs sampling
+    Testbed for Gibbs sampling.
     '''
     def __init__(self):
         super().__init__('Testbed for Gibbs sampling','gibbs')
 
     def _execute(self):
+        '''
+        Perform gibbs sampling on specified classes
+        '''
         m,_ = self.indices.shape
         for i in self.args.classes:
             self.log(f'Class {i}')
@@ -52,6 +55,14 @@ class Gibbs(Stage2):
         '''
         Create a matrix of probabilities, P[i,j] is
         derived from the mutual informations between i and j.
+        
+        Parameters:
+            x      A matrix, each row being one masked image
+            m      Number of rows in x
+            f
+            
+        Returns:
+            A array of probabilities
         '''
         MI = np.zeros((m,m))
         for j in range(m):
@@ -62,25 +73,26 @@ class Gibbs(Stage2):
         Unnormalized = f(MI)
         return Unnormalized/Unnormalized.sum(axis=1)[:,None]
 
-    def gibbs(self,x,N=100,P=np.ones((12,12))):
+    def gibbs(self,X,N=100,P=np.ones((12,12))):
         '''
         Perform Gibbs sampling
 
         Parameters:
-            x       Training data for the current digit class, masked
+            X       A matrix, each row being one masked image
             N       Number of iterations
             P       Probability mask created by create_probabilities
         '''
-        m,_ = x.shape
-        self.links = self.build_initial_links(x,m)
-        self.lookup_table = self.create_lookup_table(x,self.links,m)
+        m,_ = X.shape
+        self.links = self.build_initial_links(X,m)
+        self.lookup_table = self.create_lookup_table(X,self.links,m)
         for i in range(N):
             if i%5 == 0: self.log(f'Iteration {i+1}')
-            tower1 = Tower(P,self.links,m)
-            j = tower1.sample()
-            predecessors = self.create_predecessors(j,self.links)
+            tower1 = Tower(P,self.links)
+            break_from,break_to = tower1.sample()
+            self.log(f'Break link from {break_from} to {break_to}')
+            predecessors = self.create_predecessors(break_to,self.links)
             potential_links = self.create_potential_links(m,j,predecessors)
-            tower2 = Tower(P,potential_links,m,f = lambda P:P)
+            tower2 = Tower(P,potential_links,f = lambda P:P)
             k = tower2.sample()
 
             if self.can_break_and_make(j,k):
@@ -132,20 +144,20 @@ class Gibbs(Stage2):
             product[links[i,0]] = i
         return product
 
-    def  create_predecessors(self,j,links):
-        links_sorted = np.sort(links)
-        m,_ = links.shape
+    def  create_predecessors(self,break_to,links):
+        def bfs(link_to,Product):
+            '''
+            Breadth-first search
+            '''
+            predecessors = links[links[:,1] == link_to,0]
+            if len(predecessors) > 0:
+                for p in predecessors:
+                    if p != link_to:
+                        Product.append(p)
+                        bfs(p,Product)
+        print (links)
         Product = []
-        j1 = j
-        found = True
-        while found:
-            found = False
-            for i in range(m):
-                if links[i,1] == j1:
-                    found = True
-                    j1 = links[i,0]
-                    Product.append(j1)
-                    break
+        bfs(break_to,Product)
         return Product
 
     def create_potential_links(self,m,j,predecessors):
@@ -182,14 +194,20 @@ class Tower:
     This class performs tower sampling, as described in
     Werner Krauth: Statistical Mechanics: Algorithms and Computations ISBN: 9780198515364.
     '''
-    def __init__(self,P,links,m0,f=lambda P:1/P,rng=np.random.default_rng()):
+    def __init__(self,P,links,f=lambda P:1/P,rng=np.random.default_rng()):
         '''
         Build an array of cumulative probabilities for tower sampling
+        
+        Parameters:
+            P
+            links
+            f
+            rng
         '''
         m,_ = links.shape
+        self.links = links
         self.probabilities = np.zeros((m))
         self.rng = rng
-
         for i in range(m):
             j = links[i,0]
             k = links[i,1]
@@ -197,8 +215,12 @@ class Tower:
         self.probabilities /= self.probabilities[-1]
             
     def sample(self):
+        '''
+        Draw one sample
+        '''
         sample1 = self.rng.uniform(high=self.probabilities[-1])
-        return np.searchsorted(self.probabilities,sample1)
+        i = np.searchsorted(self.probabilities,sample1)
+        return self.links[i,0], self.links[i,1]
   
 
 def parse_args(names):
