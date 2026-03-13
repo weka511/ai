@@ -87,16 +87,13 @@ class Gibbs(Stage2):
         self.lookup_table = self.create_lookup_table(X,self.links,m)
         for i in range(N):
             if i%5 == 0: self.log(f'Iteration {i+1}')
-            break_from,break_to = Tower(P,self.links).sample()
+            break_from,break_to,index = Tower(P,self.links).sample()
             self.log(f'Break link from {break_from} to {break_to}')
             ancestors = self.create_ancestors(break_to,self.links)
             potential_links = self.create_potential_links(m,break_from,ancestors)
-            link_to = Tower(P,potential_links,f = lambda P:P).sample()
-
-            if self.can_break_and_make(break_from,link_to):
-                pos = self.break_link(break_from)
-                if break_from != k:
-                    self.make_link(break_from,k)
+            _,link_to,_ = Tower(P,potential_links,f = lambda P:P).sample()
+            self.log(f'Make link from {break_from} to {link_to}')
+            self.links[index,1] = link_to
 
     def build_initial_links(self,x,m):
         '''
@@ -160,7 +157,7 @@ class Gibbs(Stage2):
                     if p != link_to:
                         Product.append(p)
                         dfs(p,Product)
-        Product = []
+        Product = [node]
         dfs(node,Product)
         return Product
 
@@ -183,24 +180,7 @@ class Gibbs(Stage2):
    
         return Product[0:i1,:]
 
-    def can_break_and_make(self,j,k):
-        print (f'Break {j} and link to {k}')
-        i = self.lookup_table[j]
-        if self.links[i,1] == j:
-            print ('Failed to link')
-            return False
-        return True
-
-    def break_link(self,j):
-        i = self.lookup_table[j]
-        assert self.links[i,0] == j
-        self.links[i,1] = j
-        return i
-
-    def make_link(self,j,k):
-        i = self.lookup_table[j]
-        assert self.links[i,0] == j
-        self.links[i,1] = k
+ 
 
 class Tower:
     '''
@@ -230,10 +210,15 @@ class Tower:
     def sample(self):
         '''
         Draw one sample
+        
+        Returns:
+            from
+            to
+            index
         '''
         sample1 = self.rng.uniform(high=self.probabilities[-1])
         i = np.searchsorted(self.probabilities,sample1)
-        return self.links[i,0], self.links[i,1]
+        return self.links[i,0], self.links[i,1],i
   
 
 def parse_args(names):
