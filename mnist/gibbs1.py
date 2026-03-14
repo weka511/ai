@@ -90,7 +90,13 @@ class Gibbs(Stage2):
             break_from,break_to,index = Tower(P,self.links).sample()
             self.log(f'Break link from {break_from} to {break_to}')
             ancestors = self.create_ancestors(break_to,self.links)
-            potential_links = self.create_potential_links(m,break_from,ancestors)
+            potential_links,n = self.create_potential_links(m,break_from,ancestors)
+            while n == 0:
+                print (f'n=0 for {break_to}--retrying')
+                break_from,break_to,index = Tower(P,self.links).sample()
+                self.log(f'Break link from {break_from} to {break_to}')
+                ancestors = self.create_ancestors(break_to,self.links)
+                potential_links,n = self.create_potential_links(m,break_from,ancestors)                
             _,link_to,_ = Tower(P,potential_links,f = lambda P:P).sample()
             self.log(f'Make link from {break_from} to {link_to}')
             self.links[index,1] = link_to
@@ -161,24 +167,28 @@ class Gibbs(Stage2):
         dfs(node,Product)
         return Product
 
-    def create_potential_links(self,m,node,cannot_link_to):
+    def create_potential_links(self,m,node,forbidden):
         '''
-        Create a collection of nodes we coukd potentially link to
+        Create a collection of nodes we could potentially link to
         
         Parameters:
-            m
-            node
-            cannot_link_to
+            m          Number of nodes
+            node       The current node that we want to lonk
+            forbidden  Nodes that we not allowed to link to, as they would introduce cycles
+            
+        Returns:
+            The collection of allowable links
+            The number of allowable links
         '''
         Product = np.zeros((m,2),dtype=int)
-        i1 = 0
-        for i in range(m):
-            if i not in cannot_link_to:
-                Product[i1,0] = node
-                Product[i1,1] = i
-                i1 += 1
+        n = 0
+        for n in range(m):
+            if n not in forbidden:
+                Product[n,0] = node
+                Product[n,1] = n
+                n += 1
    
-        return Product[0:i1,:]
+        return Product[0:n,:],n
 
  
 
