@@ -258,9 +258,4 @@ if __name__ == '__main__':
         Gibbs()
     ])
 
-    try:
-        command = parse_args(Command.get_names())
-        Command.execute_one(command)
-    except RuntimeError as e:
-        log(e)
-        exit(1)
+    Command.execute_one(parse_args(Command.get_names()))
