@@ -157,14 +157,17 @@ class Gibbs(Stage2):
             '''
             The depth-first search does all the heavy lifting.
             '''
-            ancestors = links[links[:,1] == link_to,0]
-            if len(ancestors) > 0:
-                for p in ancestors:
-                    if p != link_to:
-                        Product.append(p)
-                        dfs(p,Product)
+            for ancestor in links[links[:,1] == link_to,0]:
+                if ancestor != link_to:
+                    Product.append(ancestor)
+                    dfs(ancestor,Product)   
+                    
         Product = [node]
-        dfs(node,Product)
+        try:
+            dfs(node,Product)
+        except RecursionError:
+            print (links)
+
         return Product
 
     def create_potential_links(self,m,node,forbidden):
@@ -195,7 +198,7 @@ class Gibbs(Stage2):
 class Tower:
     '''
     This class performs tower sampling, as described in
-    Werner Krauth: Statistical Mechanics: Algorithms and Computations ISBN: 9780198515364.
+    Statistical Mechanics: Algorithms and Computations, Werner Krauth, ISBN: 9780198515364.
     '''
     def __init__(self,P,links,f=lambda P:1/P,rng=np.random.default_rng()):
         '''
