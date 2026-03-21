@@ -16,10 +16,11 @@
 # along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.
 
 '''
-    Allow digit classes to be linged togther to support Gibbs sampling
+    Allow digit classes to be linked togther to support Gibbs sampling
 '''
 
 from unittest import TestCase, main
+import numpy as np
 
 class Node:
     NOT_LINKED = 1
@@ -28,8 +29,20 @@ class Node:
         self.seq = seq
         self.link_to = Node.NOT_LINKED
         self.links_from = []
+        
+    def __str__(self):
+        return f'{self.seq}->{self.link_to}'    
 
 class NodeSet:
+    
+    @staticmethod
+    def build(n,rng=np.random.default_rng()):
+        Product = NodeSet(n)
+        for i in range(n):
+            Product.link(i,rng.choice(i+1))
+
+        return Product
+    
     def __init__(self,n):
         self.nodes = []
         for i in range(n):
@@ -56,6 +69,10 @@ class NodeSet:
             result.append(i)
             result += self.dfs(i)
         return result
+    
+    def nodes(self):
+        for node in self.nodes:
+            yield node
             
 class TestNode(TestCase):
     def setUp(self):
@@ -87,6 +104,11 @@ class TestNode(TestCase):
         
     def test_bfs(self):
         self.assertEqual(set([6,7,8,9]), set(self.network.dfs(3)))
+        
+    def test_build(self):
+        nodeset = NodeSet.build(41)
+        for node in nodeset:
+            self.assertLessEqual(node.link_to,node.seq)
         
 if __name__ == '__main__':
     main()
