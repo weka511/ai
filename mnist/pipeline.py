@@ -90,6 +90,9 @@ class Command(ABC):
             except CommandException as e:
                 command.log(f'Command Exception {e}',level=Logger.ERROR)
                 code = 1
+            except RuntimeError as e:
+                command.log(f'RuntimeError {e}',level=Logger.ERROR)
+                code = 1                
             finally:
                 elapsed = time() - start
                 minutes = int(elapsed / 60)
