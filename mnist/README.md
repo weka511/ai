@@ -12,6 +12,7 @@ build.sh|Shell script to build files in pipeline
 gibbs1.py|Testbed for Gibbs sampling: see Blei and Frazier, [Distance Dependent Chinese Restaurant Processes](https://www.jmlr.org/papers/volume12/blei11a/blei11a.pdf)
 mask.py|Mask out pixels that carry little information
 mnist.py|Functions for accessing MNIST data
+node.py|Allow digit classes to be linged togther to support Gibbs sampling
 pipeline.py|Program for creating files needed for each step in analysis pipeline
 shared|Folder containing utilities, such as logger and check_for_stopped
 style.py|Classes to manange character styles
