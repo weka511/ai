@@ -63,7 +63,7 @@ class Gibbs(Stage2):
                 ax = fig.add_subplot(m,n,n*j+k+1)
                 ax.imshow(x0[run[k],:].reshape(28,28), cmap=self.args.cmap)
                 ax.axis('off')
-        fig.suptitle('Gibbs Sampling {iclass}')
+        fig.suptitle(f'Gibbs Sampling: Class={iclass} has {m} styles')
         fig.tight_layout(pad=3,h_pad=3,w_pad=3)
         fig.savefig((self.figs_path / (self.args.out+str(iclass))).with_suffix('.png'))           
                            
