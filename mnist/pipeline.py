@@ -30,8 +30,10 @@ from matplotlib.ticker import MaxNLocator
 import numpy as np
 from skimage.exposure import equalize_hist
 from skimage.transform import resize
+from sklearn.feature_selection import mutual_info_classif
 from mnist import MnistDataloader, MnistException
 from mask import Mask
+from node import Node, NodeSet,Tower
 from style import StyleList,StylesStoppedBuilding
 from shared.utils import Logger,user_has_requested_stop,create_xkcd_colours,get_bins
 
@@ -467,6 +469,83 @@ class EstablishStyles(Stage2):
         ax2.legend(handles, labels, loc='center left', frameon=False,title='Classes')
         ax2.axis('off')
 
+class Gibbs(Stage2):
+    '''
+    Testbed for Gibbs sampling.
+    '''
+    def __init__(self):
+        super().__init__('Testbed for Gibbs sampling','gibbs')
+
+    def _execute(self):
+        '''
+        Perform gibbs sampling on specified classes
+        '''
+        m,_ = self.indices.shape
+        for i in self.args.classes:
+            self.log(f'Class {i}')
+            x0 = self.x[self.indices[:,i],:]
+            x = self.mask.shorten(self.x[self.indices[:,i],:])
+            P = self.create_probabilities(x,m)
+            self.gibbs(x,N=self.args.M,P=P)
+            self.display(list(self.links.generate_runs()),x0,i)
+            
+    def display(self,runs,x0,iclass):
+        fig = figure(figsize=(12,12))
+        m = len(runs)
+        n = self.args.nimages
+        for j in range(m):
+            run = runs[j]
+            for k in range(min(len(run),n)):
+                ax = fig.add_subplot(m,n,n*j+k+1)
+                ax.imshow(x0[run[k],:].reshape(28,28), cmap=self.args.cmap)
+                ax.axis('off')
+        fig.suptitle(f'Gibbs Sampling: Class={iclass} has {m} styles')
+        fig.tight_layout(pad=3,h_pad=3,w_pad=3)
+        fig.savefig((self.figs_path / (self.args.out+str(iclass))).with_suffix('.png'))           
+                           
+
+    def create_probabilities(self,x,m,f=np.exp):
+        '''
+        Create a matrix of probabilities, P[i,j] is
+        derived from the mutual informations between i and j.
+        
+        Parameters:
+            x      A matrix, each row being one masked image
+            m      Number of rows in x
+            f
+            
+        Returns:
+            A array of probabilities
+        '''
+        MI = np.zeros((m,m))
+        for j in range(m):
+            y = x[j,:]
+            X = x.T
+            MI[j,j:] = mutual_info_classif(X[:,j:],y)
+            MI[j:,j ] = MI[j,j:]
+        Unnormalized = f(MI)
+        return Unnormalized/Unnormalized.sum(axis=1)[:,None]
+
+    def gibbs(self,X,N=100,P=np.ones((12,12))):
+        '''
+        Perform Gibbs sampling
+
+        Parameters:
+            X       A matrix, each row being one masked image
+            N       Number of iterations
+            P       Probability mask created by create_probabilities
+        '''
+        m,_ = X.shape
+        self.links = NodeSet.build(m,rng=self.rng)
+        for i in range(N):
+            if i%5 == 0: self.log(f'Iteration {i+1}')
+            break_from,break_to,index = Tower(P,self.links).sample()
+            self.log(f'Break link from {break_from} to {break_to}',level=Logger.DEBUG)
+            potential_links = self.links.candidate_links(break_from)               
+            _,link_to,_ = Tower(P,potential_links,f = lambda P:P).sample()
+            self.log(f'Make link from {break_from} to {link_to}',level=Logger.DEBUG)
+            self.links.break_link(break_from,break_to)
+            self.links.link(break_from,link_to)
 
 class EstablishLikelihoods(Stage3):
     '''
@@ -684,6 +763,9 @@ def parse_args(names):
     group_recognize.add_argument('--N', default=None,type=int, help='Number of images for calculating accuracy')
     group_recognize.add_argument('--max_images', default=100,type=int, help='Maximum number of images')
 
+    group_gibbs = parser.add_argument_group('Options for Gibbs sampling')
+    group_gibbs.add_argument('--M', default=100, type=int, help='Number of iterations for Gibbs sampler')
+    
     return parser.parse_args()
 
 if __name__ == '__main__':
@@ -695,6 +777,7 @@ if __name__ == '__main__':
     Command.build([
         EstablishSubsets(),
         EstablishMask(),
+        Gibbs(),
         EstablishStyles(),
         EstablishLikelihoods(),
         RecognizeDigits()
