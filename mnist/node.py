@@ -62,7 +62,11 @@ class NodeSet:
     def break_link(self,index_from,index_to):
         self.nodes[index_from].link_to = Node.NOT_LINKED
         self.nodes[index_to].links_from.remove(index_from)
-        
+            
+    def candidate_links(self,index):
+        forbidden = self.dfs(index)
+        return [node for node in self.nodes if node.seq not in forbidden]
+ 
     def dfs(self,index):
         result = []
         nodes_from = self.nodes[index].links_from.copy()
@@ -71,11 +75,18 @@ class NodeSet:
         for i in nodes_from:
             result.append(i)
             result += self.dfs(i)
-        return result
-            
-    def candidate_links(self,index):
-        forbidden = self.dfs(index)
-        return [node for node in self.nodes if node.seq not in forbidden]
+        return result         
+    
+    def generate_runs(self):
+        def dfs(index):
+            Product = [index]
+            for i in self.nodes[index].links_from:
+                if i != index:
+                    Product += dfs(i)
+            return Product
+        Starts = [i for i in range(len(self.nodes)) if self.nodes[i].link_to == i ]
+        for start in Starts:
+            yield dfs(start)
 
 class Tower:
     '''
@@ -119,7 +130,7 @@ class TestNode(TestCase):
     def setUp(self):
         self.network = NodeSet(10)
         self.assertEqual(10,len(self.network))
-        self.network.link(0,1)  
+        self.network.link(0,0)  
         self.network.link(1,0)
         self.network.link(2,1)        
         self.network.link(3,0)
@@ -150,6 +161,10 @@ class TestNode(TestCase):
         nodeset = NodeSet.build(41)
         for node in nodeset:
             self.assertLessEqual(node.link_to,node.seq)
+            
+    def test_generate(self):
+        for run in self.network.generate_runs():
+            print (run)
 
         
 if __name__ == '__main__':

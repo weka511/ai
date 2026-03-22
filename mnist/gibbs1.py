@@ -47,9 +47,26 @@ class Gibbs(Stage2):
         m,_ = self.indices.shape
         for i in self.args.classes:
             self.log(f'Class {i}')
+            x0 = self.x[self.indices[:,i],:]
             x = self.mask.shorten(self.x[self.indices[:,i],:])
             P = self.create_probabilities(x,m)
             self.gibbs(x,N=self.args.N,P=P)
+            self.display(list(self.links.generate_runs()),x0,i)
+            
+    def display(self,runs,x0,iclass):
+        fig = figure(figsize=(12,12))
+        m = len(runs)
+        n = self.args.nimages
+        for j in range(m):
+            run = runs[j]
+            for k in range(min(len(run),n)):
+                ax = fig.add_subplot(m,n,n*j+k+1)
+                ax.imshow(x0[run[k],:].reshape(28,28), cmap=self.args.cmap)
+                ax.axis('off')
+        fig.suptitle('Gibbs Sampling {iclass}')
+        fig.tight_layout(pad=3,h_pad=3,w_pad=3)
+        fig.savefig((self.figs_path / (self.args.out+str(iclass))).with_suffix('.png'))           
+                           
 
     def create_probabilities(self,x,m,f=np.exp):
         '''
@@ -87,12 +104,13 @@ class Gibbs(Stage2):
         for i in range(N):
             if i%5 == 0: self.log(f'Iteration {i+1}')
             break_from,break_to,index = Tower(P,self.links).sample()
-            self.log(f'Break link from {break_from} to {break_to}')
+            self.log(f'Break link from {break_from} to {break_to}',level=Logger.DEBUG)
             potential_links = self.links.candidate_links(break_from)               
             _,link_to,_ = Tower(P,potential_links,f = lambda P:P).sample()
-            self.log(f'Make link from {break_from} to {link_to}')
+            self.log(f'Make link from {break_from} to {link_to}',level=Logger.DEBUG)
             self.links.break_link(break_from,break_to)
             self.links.link(break_from,link_to)
+
 
 def parse_args(names):
     parser = ArgumentParser(__doc__)
@@ -108,7 +126,8 @@ def parse_args(names):
     parser.add_argument('-o','--out',nargs='?')
     parser.add_argument('--logs', default='./logs', help='Location for storing log files')
     parser.add_argument('--size', default=28, type=int, help='Number of row/cols in each image: shape will be will be mxm')
-    parser.add_argument('--N', default=100, type=int, help='Number of itetaions for Gibbs sampler')
+    parser.add_argument('--N', default=100, type=int, help='Number of iterations for Gibbs sampler')
+    parser.add_argument('--nimages', default=11, type=int, help='Maximum number of images for each class')
     return parser.parse_args()
 
 if __name__ == '__main__':
