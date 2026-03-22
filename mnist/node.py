@@ -31,7 +31,7 @@ class Node:
         self.links_from = []
         
     def __str__(self):
-        return f'{self.seq}->{self.link_to}'    
+        return f'{self.seq}->{self.link_to}: {self.links_from}'    
 
 class NodeSet:
     
@@ -65,14 +65,55 @@ class NodeSet:
         
     def dfs(self,index):
         result = []
-        for i in self.nodes[index].links_from:
+        nodes_from = self.nodes[index].links_from.copy()
+        if index in nodes_from:
+            nodes_from.remove(index)
+        for i in nodes_from:
             result.append(i)
             result += self.dfs(i)
         return result
-    
-    def nodes(self):
-        for node in self.nodes:
-            yield node
+            
+    def candidate_links(self,index):
+        forbidden = self.dfs(index)
+        return [node for node in self.nodes if node.seq not in forbidden]
+
+class Tower:
+    '''
+    This class performs tower sampling, as described in
+    Statistical Mechanics: Algorithms and Computations, Werner Krauth, ISBN: 9780198515364.
+    '''
+    def __init__(self,P,nodeset,f=lambda P:1/P,rng=np.random.default_rng()):
+        '''
+        Build an array of cumulative probabilities for tower sampling
+        
+        Parameters:
+            P
+            nodeset
+            f
+            rng
+        '''
+        m = len(nodeset)
+        self.nodeset = nodeset
+        self.probabilities = np.zeros((m))
+        self.rng = rng
+        for i,node in enumerate(nodeset):
+            j = node.seq
+            k = node.link_to
+            self.probabilities[i] = f(P[j,k]) + (0 if i == 0 else self.probabilities[i-1])
+        self.probabilities /= self.probabilities[-1]
+            
+    def sample(self):
+        '''
+        Draw one sample
+        
+        Returns:
+            from
+            to
+            index
+        '''
+        sample1 = self.rng.uniform(high=self.probabilities[-1])
+        i = np.searchsorted(self.probabilities,sample1)
+        return self.nodeset[i].seq, self.nodeset[i].link_to,i
             
 class TestNode(TestCase):
     def setUp(self):
@@ -109,6 +150,7 @@ class TestNode(TestCase):
         nodeset = NodeSet.build(41)
         for node in nodeset:
             self.assertLessEqual(node.link_to,node.seq)
+
         
 if __name__ == '__main__':
     main()

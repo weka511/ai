@@ -29,9 +29,9 @@ from skimage.exposure import equalize_hist
 from skimage.transform import resize
 from sklearn.feature_selection import mutual_info_classif
 from mnist import MnistDataloader,MnistException
+from node import Node, NodeSet,Tower
 from pipeline import Command,Stage2
 from shared.utils import Logger,create_xkcd_colours
-
 
 class Gibbs(Stage2):
     '''
@@ -83,156 +83,16 @@ class Gibbs(Stage2):
             P       Probability mask created by create_probabilities
         '''
         m,_ = X.shape
-        self.links = self.build_initial_links(X,m)
-        self.lookup_table = self.create_lookup_table(X,self.links,m)
+        self.links = NodeSet.build(m,rng=self.rng)
         for i in range(N):
             if i%5 == 0: self.log(f'Iteration {i+1}')
             break_from,break_to,index = Tower(P,self.links).sample()
             self.log(f'Break link from {break_from} to {break_to}')
-            ancestors = self.create_ancestors(break_to,self.links)
-            potential_links,n = self.create_potential_links(m,break_from,ancestors)
-            while n == 0:
-                print (f'n=0 for {break_to}--retrying')
-                break_from,break_to,index = Tower(P,self.links).sample()
-                self.log(f'Break link from {break_from} to {break_to}')
-                ancestors = self.create_ancestors(break_to,self.links)
-                potential_links,n = self.create_potential_links(m,break_from,ancestors)                
+            potential_links = self.links.candidate_links(break_from)               
             _,link_to,_ = Tower(P,potential_links,f = lambda P:P).sample()
             self.log(f'Make link from {break_from} to {link_to}')
-            self.links[index,1] = link_to
-
-    def build_initial_links(self,x,m):
-        '''
-        Create random links for the start of the gibbs MCMC
-        
-        Parameters:
-            x       Training data for the current digit class, masked
-            m       Number of training examples
-            
-        Returns: An m x 2 matrix of indices, each linking to itself, or
-                 to an index that has already linked to something, e.g.
-                [[21 21]
-                 [24 24]
-                 [10 10]
-                 [16 10]
-                 [ 5 16]
-                 [12 21]
-                 [28 16]
-                 [15 16]
-                 [11 15]
-                 [ 8 21]
-                 [ 1 21]
-                 [23 28]
-                 [19 12]
-                 etc
-        '''
-        Product = np.zeros((m,2),dtype=int)
-        Product[:,0] = self.rng.permutation(m)
-        Product[0,1] = Product[0,0]
-        for i in range(1,m):
-            Product[i,1] = self.rng.choice(Product[0:i+1,0])
-
-        return Product
-
-  
-    def create_lookup_table(self,x,links,m):
-        '''
-        Create an auxilary table which tells us where element `i' lives
-        on first columns of links
-        '''
-        product = np.zeros((m),dtype=int)
-        for i in range(m):
-            product[links[i,0]] = i
-        return product
-
-    def  create_ancestors(self,node,links):
-        '''
-        Find all ancestors, i.e. things that link to a specific node directly or indirectly.
-        
-        Parameters:
-            node
-            links
-        '''
-        def dfs(link_to,Product):
-            '''
-            The depth-first search does all the heavy lifting.
-            '''
-            for ancestor in links[links[:,1] == link_to,0]:
-                if ancestor != link_to:
-                    Product.append(ancestor)
-                    dfs(ancestor,Product)   
-                    
-        Product = [node]
-        try:
-            dfs(node,Product)
-        except RecursionError:
-            print (links)
-
-        return Product
-
-    def create_potential_links(self,m,node,forbidden):
-        '''
-        Create a collection of nodes we could potentially link to
-        
-        Parameters:
-            m          Number of nodes
-            node       The current node that we want to lonk
-            forbidden  Nodes that we not allowed to link to, as they would introduce cycles
-            
-        Returns:
-            The collection of allowable links
-            The number of allowable links
-        '''
-        Product = np.zeros((m,2),dtype=int)
-        n = 0
-        for n in range(m):
-            if n not in forbidden:
-                Product[n,0] = node
-                Product[n,1] = n
-                n += 1
-   
-        return Product[0:n,:],n
-
- 
-
-class Tower:
-    '''
-    This class performs tower sampling, as described in
-    Statistical Mechanics: Algorithms and Computations, Werner Krauth, ISBN: 9780198515364.
-    '''
-    def __init__(self,P,links,f=lambda P:1/P,rng=np.random.default_rng()):
-        '''
-        Build an array of cumulative probabilities for tower sampling
-        
-        Parameters:
-            P
-            links
-            f
-            rng
-        '''
-        m,_ = links.shape
-        self.links = links
-        self.probabilities = np.zeros((m))
-        self.rng = rng
-        for i in range(m):
-            j = links[i,0]
-            k = links[i,1]
-            self.probabilities[i] = f(P[j,k]) + (0 if i == 0 else self.probabilities[i-1])
-        self.probabilities /= self.probabilities[-1]
-            
-    def sample(self):
-        '''
-        Draw one sample
-        
-        Returns:
-            from
-            to
-            index
-        '''
-        sample1 = self.rng.uniform(high=self.probabilities[-1])
-        i = np.searchsorted(self.probabilities,sample1)
-        return self.links[i,0], self.links[i,1],i
-  
+            self.links.break_link(break_from,break_to)
+            self.links.link(break_from,link_to)
 
 def parse_args(names):
     parser = ArgumentParser(__doc__)
