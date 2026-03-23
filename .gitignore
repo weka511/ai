@@ -343,3 +343,4 @@ selforg*.png
 figs/
 *.npy
 *.npz
+logs/
