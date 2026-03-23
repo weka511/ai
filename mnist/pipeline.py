@@ -474,7 +474,8 @@ class Gibbs(Stage2):
     Establish styles using Gibbs sampling.
     '''
     def __init__(self):
-        super().__init__('Establish styles using Gibbs sampling','gibbs')
+        super().__init__('Establish styles using Gibbs sampling','gibbs',
+                         needs_output_file=True)
 
     def _execute(self):
         '''
@@ -485,10 +486,21 @@ class Gibbs(Stage2):
             self.log(f'Sampling class {iclass}')
             x = self.mask.shorten(self.x[self.indices[:,iclass],:])
             P = self.create_probabilities(x,m)
+            fig = figure(layout='constrained',figsize=(16, 8))
+            subfigs = fig.subfigures(1, 2, wspace=0.07)
+            ax,img = self.display_probabilities(P,fig = subfigs[0])
+            fig.colorbar(img,ax=ax)
             self.gibbs(x,N=self.args.M,P=P)
-            self.display(list(self.links.generate_runs()),
-                         images=self.x[self.indices[:,iclass],:],
-                         iclass=iclass) 
+            self.display_styles(list(self.links.generate_runs()),
+                                images=self.x[self.indices[:,iclass],:],
+                                iclass=iclass,
+                                fig=subfigs[1])
+
+            fig.suptitle(f'Probabilites: Class={iclass}')
+            #fig.tight_layout(pad=3,h_pad=3,w_pad=3)
+            fig.savefig((self.figs_path / (self.args.out+str(iclass))).with_suffix('.png'))    
+            
+
                            
     def create_probabilities(self,x,m,f=np.exp):
         '''
@@ -498,7 +510,7 @@ class Gibbs(Stage2):
         Parameters:
             x      A matrix, each row being one masked image
             m      Number of rows in x
-            f
+            f      Function to be applied to each antry in matrix
             
         Returns:
             A array of probabilities
@@ -509,7 +521,7 @@ class Gibbs(Stage2):
             X = x.T
             MI[j,j:] = mutual_info_classif(X[:,j:],y)
             MI[j:,j] = MI[j,j:]
-        Unnormalized = f(MI)
+        Unnormalized = MI + 1.0e-9 #f(MI)
         return Unnormalized/Unnormalized.sum(axis=1)[:,None]
 
     def gibbs(self,X,N=100,P=np.ones((12,12))):
@@ -533,7 +545,16 @@ class Gibbs(Stage2):
             self.links.break_link(break_from,break_to)
             self.links.link(break_from,link_to)
             
-    def display(self,runs,images=np.zeros((29,284)),iclass=None):
+    def display_probabilities(self,P,fig = None):
+        '''
+        Show the probabilities as a heat map
+        '''
+        ax = fig.add_subplot(1,1,1)
+        img = ax.imshow(P, cmap=self.args.cmap, interpolation='nearest')
+        ax.set_title('Mutual Information between classes')  
+        return ax,img    
+            
+    def display_styles(self,runs,images=np.zeros((29,284)),iclass=None,fig = None):
         '''
         Display a selection of images, one for each run
         
@@ -543,7 +564,6 @@ class Gibbs(Stage2):
             images  Images read from trianing data
             iclass  Digit class
         '''
-        fig = figure(figsize=(12,12))
         m = len(runs)
         n = self.args.nimages
         for j in range(m):
@@ -553,8 +573,8 @@ class Gibbs(Stage2):
                 ax.imshow(images[run[k],:].reshape(28,28), cmap=self.args.cmap)
                 ax.axis('off')
         fig.suptitle(f'Gibbs Sampling: Class={iclass} has {m} styles')
-        fig.tight_layout(pad=3,h_pad=3,w_pad=3)
-        fig.savefig((self.figs_path / (self.args.out+str(iclass))).with_suffix('.png'))     
+        #fig.tight_layout(pad=3,h_pad=3,w_pad=3)
+        #fig.savefig((self.figs_path / (self.args.out+str(iclass))).with_suffix('.png'))     
 
 class EstablishLikelihoods(Stage3):
     '''
@@ -736,7 +756,7 @@ def get_subplot_shape(N):
     while m*n < N:
         n += 1
     return m,n
-
+         
 def parse_args(names):
     parser = ArgumentParser(__doc__)
     parser.add_argument('command',choices=names,help='The command to be executed')
