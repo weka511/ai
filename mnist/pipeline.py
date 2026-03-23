@@ -508,7 +508,7 @@ class Gibbs(Stage2):
             y = x[j,:]
             X = x.T
             MI[j,j:] = mutual_info_classif(X[:,j:],y)
-            MI[j:,j ] = MI[j,j:]
+            MI[j:,j] = MI[j,j:]
         Unnormalized = f(MI)
         return Unnormalized/Unnormalized.sum(axis=1)[:,None]
 
