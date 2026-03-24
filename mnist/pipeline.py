@@ -482,26 +482,30 @@ class Gibbs(Stage2):
         Perform gibbs sampling on specified classes
         '''
         m,_ = self.indices.shape
+        Allocations = np.empty((10),dtype=np.ndarray)
         for iclass in self.args.classes:
             self.log(f'Sampling class {iclass}')
             x = self.mask.shorten(self.x[self.indices[:,iclass],:])
             P = self.create_probabilities(x,m)
-            fig = figure(layout='constrained',figsize=(16, 8))
-            subfigs = fig.subfigures(1, 2, wspace=0.07)
-            ax,img = self.display_probabilities(P,fig = subfigs[0])
-            fig.colorbar(img,ax=ax)
             self.gibbs(x,N=self.args.M,P=P)
-            self.display_styles(list(self.links.generate_runs()),
-                                images=self.x[self.indices[:,iclass],:],
-                                iclass=iclass,
-                                fig=subfigs[1])
-
-            fig.suptitle(f'Probabilites: Class={iclass}')
-            #fig.tight_layout(pad=3,h_pad=3,w_pad=3)
-            fig.savefig((self.figs_path / (self.args.out+str(iclass))).with_suffix('.png'))    
-            
-
-                           
+            runs = list(self.links.generate_runs())
+            Allocations[iclass] = self.create_allocations(runs=runs) 
+            if self.args.display:
+                fig = figure(layout='constrained',figsize=(16, 8))
+                subfigs = fig.subfigures(1, 2, wspace=0.07)
+                ax,img = self.display_probabilities(P,fig = subfigs[0])
+                fig.colorbar(img,ax=ax)            
+                self.display_styles(runs=runs,
+                                    images=self.x[self.indices[:,iclass],:],
+                                    iclass=iclass,
+                                    fig=subfigs[1])
+    
+                fig.suptitle(f'Class={iclass}, Number of iterations={self.args.M}')
+                fig.savefig((self.figs_path / (self.args.out+str(iclass))).with_suffix('.png'))
+                
+        file =  (self.data_path / self.args.out).with_suffix('.npz')
+        np.savez(file,Allocations=Allocations,threshold=self.args.threshold)        
+                                       
     def create_probabilities(self,x,m,f=np.exp):
         '''
         Create a matrix of probabilities, P[i,j] is
@@ -548,6 +552,10 @@ class Gibbs(Stage2):
     def display_probabilities(self,P,fig = None):
         '''
         Show the probabilities as a heat map
+        
+        Parameters:
+            P      Matrox containing proababilties
+            fig    Subfigure used for display
         '''
         ax = fig.add_subplot(1,1,1)
         img = ax.imshow(P, cmap=self.args.cmap, interpolation='nearest')
@@ -563,6 +571,7 @@ class Gibbs(Stage2):
                     each consisting of a list of image indice
             images  Images read from trianing data
             iclass  Digit class
+            fig     Subfigure used for display
         '''
         m = len(runs)
         n = self.args.nimages
@@ -573,8 +582,25 @@ class Gibbs(Stage2):
                 ax.imshow(images[run[k],:].reshape(28,28), cmap=self.args.cmap)
                 ax.axis('off')
         fig.suptitle(f'Gibbs Sampling: Class={iclass} has {m} styles')
-        #fig.tight_layout(pad=3,h_pad=3,w_pad=3)
-        #fig.savefig((self.figs_path / (self.args.out+str(iclass))).with_suffix('.png'))     
+        
+    def create_allocations(self,runs):
+        '''
+        Create a matrix showing which images are allocated to each style
+
+        Returns:
+            A matrix with one row for each style (within current class), and sufficient columns to
+            represent all images in the most numerous style in the class. Each element contains the
+            index of one images from the style, or -1 if there are insufficient images to fill
+            the row.
+        '''
+        m = len(runs)
+        n = max(len(style) for style in runs)
+        Product = -1 * np.ones((m,n),dtype=int)
+        for i,style in enumerate(runs):
+            for j,index in enumerate(style):
+                Product[i,j] = index
+
+        return Product    
 
 class EstablishLikelihoods(Stage3):
     '''
@@ -795,6 +821,7 @@ def parse_args(names):
     group_gibbs = parser.add_argument_group('Options for Gibbs sampling')
     group_gibbs.add_argument('--M', default=100, type=int, help='Number of iterations')
     group_gibbs.add_argument('--freq', default=10, type=int, help='Indicated progress iterations')
+    group_gibbs.add_argument('--display', default=False, action='store_true', help='Controls whether Gibbs will create plots')
     
     return parser.parse_args()
 
