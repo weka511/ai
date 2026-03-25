@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Copyright (C) 2025 Simon Crase  simon@greenweaves.nz
+# Copyright (C) 2025-2026 Simon Crase  simon@greenweaves.nz
 
 # This is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
