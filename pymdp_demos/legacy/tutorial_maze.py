@@ -22,10 +22,10 @@
 from argparse import ArgumentParser
 from pathlib import Path
 import numpy as np
-from pymdp.maths import softmax, spm_log_single as log_stable
-from pymdp.agent import Agent
-from pymdp.utils import plot_beliefs, plot_likelihood
-from pymdp.envs import TMazeEnv
+from pymdp.legacy.maths import softmax, spm_log_single as log_stable
+from pymdp.legacy.agent import Agent
+from pymdp.legacy.utils import plot_beliefs, plot_likelihood
+from pymdp.legacy.envs import TMazeEnv
 from ai import AxisIterator
 from tutorial_common import plot_likelihood, plot_grid, plot_beliefs, plot_point_on_grid
 
