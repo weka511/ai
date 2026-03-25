@@ -26,8 +26,8 @@ from os.path import join
 from pathlib import Path
 from itertools import product
 import numpy as np
-from pymdp import utils
-from pymdp.maths import softmax, spm_log_single as log_stable
+from pymdp.legacy import utils
+from pymdp.legacy.maths import softmax, spm_log_single as log_stable
 from pymdp.control import construct_policies
 from ai import AxisIterator
 from tutorial_common import plot_likelihood, plot_grid, plot_beliefs, plot_point_on_grid
