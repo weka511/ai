@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Copyright (C) 2025 Simon Crase  simon@greenweaves.nz
+# Copyright (C) 2025-2026 Simon Crase  simon@greenweaves.nz
 
 # This is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -25,9 +25,9 @@ from argparse import ArgumentParser
 from os.path import join
 from pathlib import Path
 import numpy as np
-from pymdp import utils
-from pymdp.maths import softmax
-from pymdp.agent import Agent
+from pymdp.legacy import utils
+from pymdp.legacy.maths import softmax
+from pymdp.legacy.agent import Agent
 from ai import AxisIterator
 from tutorial_common import plot_likelihood, plot_grid, plot_beliefs, plot_point_on_grid
 
