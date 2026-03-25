@@ -490,6 +490,7 @@ class Gibbs(Stage2):
             self.gibbs(x,N=self.args.M,P=P)
             runs = list(self.links.generate_runs())
             Allocations[iclass] = self.create_allocations(runs=runs) 
+            self.log(f'Class={iclass}, Number of styles={len(runs)}')
             if self.args.display:
                 fig = figure(layout='constrained',figsize=(16, 8))
                 subfigs = fig.subfigures(1, 2, wspace=0.07)
