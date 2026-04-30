@@ -344,3 +344,6 @@ figs/
 *.npy
 *.npz
 logs/
+
+# Stuff from MNIST
+*.idx?-ubyte

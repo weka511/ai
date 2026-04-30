@@ -124,15 +124,17 @@ class MnistDataloader(object):
         except FileNotFoundError as e:
             raise MnistException(f'Could not find file {e.filename}')
         
-    def download_data(self,data = './data',report=print):
+    def download_data(self,
+                      handle='hojjatk/mnist-dataset',data = './data',report=print):
         '''
         Used when MNIST data is missing, to download it from kaggle
         
         Parameters:
+        handle           Path to dataset at kaggle
              data        Location where data shiud be stored
              report      Used to report outcome
         '''
-        path = kagglehub.dataset_download('hojjatk/mnist-dataset',output_dir=data)
+        path = kagglehub.dataset_download(handle,output_dir=data)
         report (f'Downloaded MNIST data to path {path}')
         
     def load_data(self):

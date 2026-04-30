@@ -152,7 +152,7 @@ class Command(ABC):
 
     def load_mnist_data(self):
         '''
-        Load training and test data
+        Load training and test data. Download data if it is not present.
         '''
         dataloader = MnistDataloader.create(data=self.args.data,report = lambda x:self.log(x))
         try:
