@@ -20,7 +20,6 @@
 '''
 from abc import ABC,abstractmethod
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
-from textwrap import dedent
 from pathlib import Path
 from time import time, strftime,localtime
 from shutil import copyfile
@@ -87,7 +86,7 @@ class Command(ABC):
                 command.log(f'Error: {e.filename} not found.',level=Logger.ERROR)
                 code = 1
             except MnistException as e:
-                command.log('Mnist Exception {e}',level=Logger.ERROR)
+                command.log(f'Mnist Exception {e}',level=Logger.ERROR)
                 code = 1
             except CommandException as e:
                 command.log(f'Command Exception {e}',level=Logger.ERROR)
@@ -156,7 +155,11 @@ class Command(ABC):
         Load training and test data
         '''
         dataloader = MnistDataloader.create(data=self.args.data,report = lambda x:self.log(x))
-        (self.x_train, self.y_train), (self.x_test, self.y_test), = dataloader.load_data()
+        try:
+            (self.x_train, self.y_train), (self.x_test, self.y_test), = dataloader.load_data()
+        except MnistException:
+            dataloader.download_data(data=self.args.data)
+            (self.x_train, self.y_train), (self.x_test, self.y_test), = dataloader.load_data()
         self.x = MnistDataloader.columnize(self.x_train)
 
     def load_supplementary_files(self):

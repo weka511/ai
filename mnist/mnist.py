@@ -24,6 +24,7 @@ import struct
 from array import array
 from unittest import TestCase,main
 import numpy as np
+import kagglehub
 
 class MnistException(RuntimeError):
     '''
@@ -43,7 +44,7 @@ class MnistDataloader(object):
         training_labels_filepath
         test_images_filepath
         test_labels_filepath
-    '''
+    '''        
     @staticmethod
     def create(data = './data',report=print):
         '''
@@ -122,7 +123,18 @@ class MnistDataloader(object):
             return images, labels
         except FileNotFoundError as e:
             raise MnistException(f'Could not find file {e.filename}')
-
+        
+    def download_data(self,data = './data',report=print):
+        '''
+        Used when MNIST data is missing, to download it from kaggle
+        
+        Parameters:
+             data        Location where data shiud be stored
+             report      Used to report outcome
+        '''
+        path = kagglehub.dataset_download('hojjatk/mnist-dataset',output_dir=data)
+        report (f'Downloaded MNIST data to path {path}')
+        
     def load_data(self):
         '''
         Load training and test data
