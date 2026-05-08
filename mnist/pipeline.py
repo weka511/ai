@@ -47,6 +47,13 @@ class Command(ABC):
     '''
     Parent class for procesing requests. Each command exports a string that can
     be used by the user to execute the functionality of the command.
+    
+    Attributes:
+        description        Used for documntation only
+        name               Name used to schedule command
+        needs_output_file  Indicates that the user needs to provide an output file
+        colours            Each digit class has its own colour
+        log                Logger
     '''
     commands = {}
 
@@ -111,7 +118,7 @@ class Command(ABC):
             description        Used for documntation only
             name               Name used to schedule command
             needs_output_file  Indicates that the user needs to provide an output file
-            n                  NUmber of colours that will be needed, one for each digit class
+            n                  Number of colours that will be needed, one for each digit class
         '''
         self.description = description
         self.name = name
@@ -197,19 +204,46 @@ class Command(ABC):
 class Stage1(Command):
     '''
     This is the parent class for commands that depend on an index file
+    
+    Attributes:
+        description        Used for documntation only
+        name               Name used to schedule command
+        needs_output_file  Indicates that the user needs to provide an output file
+        colours            Each digit class has its own colour
+        indices            Each entry is the index of one image in data
+        nimages            Number of images
+        log                Logger
     '''
     def load_supplementary_files(self):
+        '''
+        Load index files
+        '''
         super().load_supplementary_files()
         file =  (self.data_path / self.args.indices).with_suffix('.npz')
         index_data = np.load(file)
         self.indices = index_data['indices']
-        self.log (f'Loaded indices from {file}')
+        self.nimages = index_data['nimages']
+        self.log (f'Loaded indices from {file} for {self.nimages} images')
 
 class Stage2(Stage1):
     '''
     This is the parent class for commands that depend on an index file and a mask
+    
+    Attributes:
+        description        Used for documntation only
+        name               Name used to schedule command
+        needs_output_file  Indicates that the user needs to provide an output file
+        colours            Each digit class has its own colour
+        indices            Each entry is the index of one image in data
+        nimages            Number of images
+        mask               Mask used to exclude pixels that contribute little information
+        x                  Masked data
+        log                Loggers
     '''
     def load_supplementary_files(self):
+        '''
+        Load index files and mask
+        '''        
         super().load_supplementary_files()
         self.mask, self.mask_text,self.bins = Mask.create(mask_file=self.args.mask,
                                                           data=self.args.data,
@@ -222,8 +256,24 @@ class Stage2(Stage1):
 class Stage3(Stage2):
     '''
     This is the parent class for commands that depend on an index file, a mask,  and a style file
+    
+    Attributes:
+        description        Used for documntation only
+        name               Name used to schedule command
+        needs_output_file  Indicates that the user needs to provide an output file
+        colours            Each digit class has its own colour
+        indices            Each entry is the index of one image in data
+        nimages            Number of images
+        mask               Mask used to exclude pixels that contribute little information
+        x                  Masked data
+        log                Loggers
+        Allocation         Allocation of images to styles
+        Threshold
     '''
     def load_supplementary_files(self):
+        '''
+        Load index files, mask, and styles
+        '''           
         super().load_supplementary_files()
         file =  (self.data_path / self.args.styles).with_suffix('.npz')
         style_data = np.load(file,allow_pickle=True)
@@ -235,8 +285,25 @@ class Stage4(Stage3):
     '''
     This is the parent class for commands that depend on an
     index file, mask, style file, and a likelihoods file
+    
+    Attributes:
+        description        Used for documntation only
+        name               Name used to schedule command
+        needs_output_file  Indicates that the user needs to provide an output file
+        colours            Each digit class has its own colour
+        indices            Each entry is the index of one image in data
+        nimages            Number of images
+        mask               Mask used to exclude pixels that contribute little information
+        x                  Masked data
+        log                Loggers
+        Allocation
+        Threshold
+        A                  Likelihoods
     '''
     def load_supplementary_files(self):
+        '''
+        Load index files, mask, styles, and Likelihoods
+        '''  
         super().load_supplementary_files()
         file =  (self.data_path / self.args.likelihoods).with_suffix('.npz')
         loaded_data = np.load(file,allow_pickle=True)
@@ -247,6 +314,13 @@ class Stage4(Stage3):
 class EstablishSubsets(Command):
     '''
     Extract subsets of MNIST to facilitate replication
+    
+    Attributes:
+        description        Used for documntation only
+        name               Name used to schedule command
+        needs_output_file  Indicates that the user needs to provide an output file
+        colours            Each digit class has its own colour
+        log                Logger
     '''
     def __init__(self):
         super().__init__('Establish Subsets','establish-subsets',
@@ -254,17 +328,28 @@ class EstablishSubsets(Command):
 
     def _execute(self):
         '''
-        Extract subsets of MNIST of a specified size, and save to index file
+        Extract subsets of MNIST of a specified size, and save to index file.
+        We allow the number of classes to default to 10, as this operation
+        is relatively quick.
         '''
         indices = MnistDataloader.create_indices(self.y_train, nimages=self.args.nimages, rng=self.rng)
         file =  (self.data_path / self.args.out).with_suffix('.npz')
-        np.savez(file, indices=indices)
+        np.savez(file, indices=indices, nimages=self.args.nimages)
         m,n = indices.shape
         self.log(f'Saved {m} labels for each of {n} classes in {file.resolve()}')
 
 class EstablishMask(Stage1):
     '''
     Determine which pixels are most relevant to classifying images
+    
+    Attributes:
+        description        Used for documntation only
+        name               Name used to schedule command
+        needs_output_file  Indicates that the user needs to provide an output file
+        colours            Each digit class has its own colour
+        indices            Each entry is the index of one image in data
+        nimages            Number of images
+        log                Logger
     '''
     def __init__(self):
         super().__init__('Establish Mask','establish-mask',needs_output_file=True)
@@ -278,7 +363,6 @@ class EstablishMask(Stage1):
         bins = self._plot(mask,indices)
         file = (self.data_path / self.args.out).with_suffix('.npz')
         mask.save(file, bins=bins)
-
         self.log(f'Processed {self.args.indices}, {len(indices) // 10:,d} images per class, {self.args.bins} bins, saved mask in {file}')
 
     def _plot(self,mask,indices):
