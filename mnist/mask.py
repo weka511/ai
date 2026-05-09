@@ -33,10 +33,8 @@ class Mask:
     Attributes:
         pixels     An array that indicates whether each pixel should be used
         pixels1d   The same array, reduced to 1 dimension
-        entropies  
-        mu
-        threshold
-        img
+        entropies  Entropy of each pixel, claulated over all images
+        threshold  Mask was calculated by dropping each pixel whose entropy was less than threshold
     '''
     @staticmethod
     def create(mask_file=None,data='../data',size=28,report=print):
@@ -60,8 +58,8 @@ class Mask:
         data_path = Path(data).resolve()
         mask_path = (data_path / mask_file).with_suffix('.npz')
         mask_data = np.load(mask_path)
-        product = Mask(mask_data['mask'],mask_data['img'],
-                       entropies=mask_data['entropies'],threshold=mask_data['threshold'],mu=mask_data['mu'])
+        product = Mask(mask_data['mask'],
+                       entropies=mask_data['entropies'],threshold=mask_data['threshold'])
         bins = mask_data['bins']
         report (f'Loaded mask from {mask_path}')
         return product,f'Mask = {mask_file}',bins
@@ -136,34 +134,44 @@ class Mask:
         entropies = Mask.create_entropies(x_train[indices],list(range(len(indices))),bins=bins,m=m)
         mu = np.mean(entropies)
         sigma = np.std(entropies)
-        img = np.reshape(entropies,(m,m))
         threshold = mu - fraction*sigma
         pixels = Mask.cull(entropies,threshold=threshold).reshape(m,m)
-        return Mask(pixels,img,entropies,mu,threshold)
+        return Mask(pixels,entropies,threshold)
 
-    def __init__(self,pixels,img,entropies=[],threshold=0.5,mu=0):
+    def __init__(self,pixels,entropies=[],threshold=0.5):
         '''
         Parameters:
             pixels
         '''
         self.pixels = pixels.astype(int)
+        self.m,self.n = pixels.shape
         self.pixels1d = pixels.reshape(-1)
         self.threshold = threshold
-        self.img = img
         self.entropies = entropies
-        self.mu = mu        
+
+    def get_mu(self):
+        '''
+        Get mean entropy
+        '''
+        return np.mean(self.entropies)
+    
+    def get_img(self):
+        '''
+        Get image of entripies for display
+        '''
+        return np.reshape(self.entropies,(self.m,self.m))
 
     def save(self,file,bins):
         '''
         Save data needed to recreate mask
         '''
         np.savez(file, 
+                 m=self.m,
+                 n=self.n,
                  mask=self.pixels,
                  bins=bins,
                  threshold=self.threshold,
-                 img=self.img,
-                 entropies=self.entropies,
-                 mu=self.mu)
+                 entropies=self.entropies)
 
     def apply(self,x):
         '''
@@ -179,7 +187,7 @@ class Mask:
 
     def get_ratio(self):
         '''
-        Calculate the fraction of pixels that mask preserves
+        Calculate the fraction of pixels that are preserved 
         '''
         return self.pixels1d.sum()/len(self.pixels1d)
 

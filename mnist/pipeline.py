@@ -127,7 +127,7 @@ class Command(ABC):
 
     def get_description(self):
         '''
-        Used for documntation only
+        Used for documentation only
         '''
         return self.description
 
@@ -171,7 +171,7 @@ class Command(ABC):
 
     def load_supplementary_files(self):
         '''
-        Load additional file needed by some commands
+        Load additional files needed by some commands
         '''
         pass
 
@@ -359,7 +359,8 @@ class EstablishMask(Stage1):
         Determine which pixels are most relevant to classifying images
         '''
         indices = self.indices.reshape(-1)
-        mask = Mask.build(np.array(self.x_train),indices,bins=self.args.bins,m=self.args.size,fraction=self.args.fraction)
+        mask = Mask.build(np.array(self.x_train),indices,
+                          bins=self.args.bins,m=self.args.size,fraction=self.args.fraction)
         bins = self._plot(mask,indices)
         file = (self.data_path / self.args.out).with_suffix('.npz')
         mask.save(file, bins=bins)
@@ -372,12 +373,12 @@ class EstablishMask(Stage1):
         fig = figure(figsize=(12, 12))
 
         ax1 = fig.add_subplot(2,3,1)
-        mappable = ax1.imshow(mask.img,cmap=self.args.cmap)
+        mappable = ax1.imshow(mask.get_img(),cmap=self.args.cmap)
         fig.colorbar(mappable,label='Entropy')
         ax1.set_title('All pixels')
 
         ax2 = fig.add_subplot(2,3,2)
-        ax2.imshow(mask.img*mask.pixels,cmap=self.args.cmap)
+        ax2.imshow(mask.get_img()*mask.pixels,cmap=self.args.cmap)
         ax2.set_title('Culled pixels')
 
         bins = self.show_pixels(mask.pixels,ax=fig.add_subplot(2,3,3),bins=self.args.bins)
@@ -392,9 +393,9 @@ class EstablishMask(Stage1):
         ax5.set_ylabel('Frequency')
         ax5.set_title('Entropy of pixels')
         if self.args.fraction == 0:
-            ax5.axvline(mask.mu,c='xkcd:red',ls='-',label=r'$\mu=$' f'{mask.mu:.3f} (threshold)')
+            ax5.axvline(mask.get_mu(),c='xkcd:red',ls='-',label=r'$\mu=$' f'{mask.get_mu():.3f} (threshold)')
         else:
-            ax5.axvline(mask.mu,c='xkcd:red',ls='-',label=r'$\mu=$' f'{mask.mu:.3f}')
+            ax5.axvline(mask.get_mu(),c='xkcd:red',ls='-',label=r'$\mu=$' f'{mask.get_mu():.3f}')
             ax5.axvline(mask.threshold,c='xkcd:red',ls=':',label=f'Threshold={mask.threshold:.3f}')
 
         ax5.legend()
