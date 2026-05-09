@@ -27,8 +27,16 @@ from skimage.transform import resize
 
 class Mask:
     '''
-    This class serves as a container for methods that manipulate an array used to mask
+    This class provides methods to manipulate an array used to mask
     out pixels that carry little information
+    
+    Attributes:
+        pixels     An array that indicates whether each pixel should be used
+        pixels1d   The same array, reduced to 1 dimension
+        entropies  
+        mu
+        threshold
+        img
     '''
     @staticmethod
     def create(mask_file=None,data='../data',size=28,report=print):
@@ -46,13 +54,14 @@ class Mask:
             Text showing mask file name
             The edges of bins that were used to create histogram for mask
         '''
-        if mask_file == None:
+        if mask_file == None:                # TODO check whether this is ever used
             report ('No mask specified')
-            return Mask(np.ones((size,size))),'no mask',[]
+            return Mask(np.ones((size,size)),None),'no mask',[]
         data_path = Path(data).resolve()
         mask_path = (data_path / mask_file).with_suffix('.npz')
         mask_data = np.load(mask_path)
-        product = Mask(mask_data['mask'])
+        product = Mask(mask_data['mask'],mask_data['img'],
+                       entropies=mask_data['entropies'],threshold=mask_data['threshold'],mu=mask_data['mu'])
         bins = mask_data['bins']
         report (f'Loaded mask from {mask_path}')
         return product,f'Mask = {mask_file}',bins
@@ -122,7 +131,7 @@ class Mask:
             fraction   Used to decide which pixels should be ignored - number of sigmas below mean
 
         Returns:
-            Newly created FatMask to hold extra data
+            Newly created Mask
         '''
         entropies = Mask.create_entropies(x_train[indices],list(range(len(indices))),bins=bins,m=m)
         mu = np.mean(entropies)
@@ -130,21 +139,31 @@ class Mask:
         img = np.reshape(entropies,(m,m))
         threshold = mu - fraction*sigma
         pixels = Mask.cull(entropies,threshold=threshold).reshape(m,m)
-        return FatMask(pixels,img,entropies,mu,threshold)
+        return Mask(pixels,img,entropies,mu,threshold)
 
-    def __init__(self,pixels):
+    def __init__(self,pixels,img,entropies=[],threshold=0.5,mu=0):
         '''
         Parameters:
             pixels
         '''
         self.pixels = pixels.astype(int)
         self.pixels1d = pixels.reshape(-1)
+        self.threshold = threshold
+        self.img = img
+        self.entropies = entropies
+        self.mu = mu        
 
     def save(self,file,bins):
         '''
         Save data needed to recreate mask
         '''
-        np.savez(file, mask=self.pixels,bins=bins)
+        np.savez(file, 
+                 mask=self.pixels,
+                 bins=bins,
+                 threshold=self.threshold,
+                 img=self.img,
+                 entropies=self.entropies,
+                 mu=self.mu)
 
     def apply(self,x):
         '''
@@ -172,16 +191,3 @@ class Mask:
             x       A collection of images
         '''
         return x[:,self.pixels1d > 0]
-
-class FatMask(Mask):
-    '''
-    Used when we first create a mask to hold additional attributes
-    that are not needed by later stages in pipeline
-    '''
-    def __init__(self,pixels,img,entropies,mu,threshold):
-        super().__init__(pixels)
-        self.img = img
-        self.entropies = entropies
-        self.mu = mu
-        self.threshold = threshold
-
