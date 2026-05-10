@@ -458,6 +458,40 @@ class EstablishMask(Stage1):
         ax.set_title('Intensity of pixels')
         return bin_edges
 
+class DistanceCalculator:
+    
+    def __init__(self,n):
+        self.n = 7                #FIXME =n
+        
+    def calculate(self,i_class):
+        result = np.zeros((self.n,self.n))
+        for i in range(self.n):
+            result[i,i+1:] = self.get_distances(i)
+        for j in range(self.n):
+            result[j:,j] = result[j,j:]
+        return result
+    
+    def get_distances(self,i):
+        length = self.n - i - 1
+        result = np.ones((length)) * (i + 1)
+        return result
+
+    
+class EstablishDistances(Stage2):
+    '''
+    Display representatives of all styles created by establish_styles.py
+    '''
+    def __init__(self):
+        super().__init__('Establish Distances','establish-distances',needs_output_file=True)
+        
+    def _execute(self):
+        n_examples, n_classes = self.indices.shape
+        distances = np.zeros((self.args.nimages,len(self.args.classes),len(self.args.classes)))
+        calculator = DistanceCalculator(n_examples)
+        distances = np.array(list(map(calculator.calculate,list(range(n_classes)))))
+        z=0
+            
+    
 class EstablishStyles(Stage2):
     '''
     Display representatives of all styles created by establish_styles.py
@@ -914,7 +948,7 @@ def parse_args(names):
     
     return parser.parse_args()
 
-if __name__ == '__main__':
+def main():
     rc('font', **{'family': 'serif',
                   'serif': ['Palatino'],
                   'size': 8})
@@ -923,6 +957,7 @@ if __name__ == '__main__':
     Command.build([
         EstablishSubsets(),
         EstablishMask(),
+        EstablishDistances(),
         Gibbs(),
         EstablishStyles(),
         EstablishLikelihoods(),
@@ -930,3 +965,7 @@ if __name__ == '__main__':
     ])
 
     Command.execute_one(parse_args(Command.get_names()))
+
+    
+if __name__ == '__main__':
+    main()
