@@ -460,7 +460,9 @@ class EstablishMask(Stage1):
         return bin_edges
 
 class DistanceCalculator:
-    
+    '''
+    This class is responsible for calculating mutual information between pairs of images
+    '''
     def __init__(self,n,indices,x,mask):
         self.n = n
         self.indices = indices
@@ -468,20 +470,26 @@ class DistanceCalculator:
         self.mask = mask
   
     def calculate(self,i_class):
-        Xs = self.mask.shorten(self.x[self.indices[:,i_class,],:])
+        '''
+        Calculate mutual information for images on one specific class
+        
+        Parameters:
+            i_class    The class that we are processing
+        '''
+        MaskedImages = self.mask.shorten(self.x[self.indices[:,i_class,],:])
         result = np.zeros((self.n,self.n))
         for i in range(self.n-1):
-            y = Xs[i,:]
-            X = Xs[i:,:].T
+            y = MaskedImages[i,:]
+            X = MaskedImages[i:,:].T
             result[i,i:] = mutual_info_classif(X, y) 
         for j in range(self.n):
             result[j:,j] = result[j,j:]
-        print (f'Completed {i_class}')
+        print (f'Calculate mutual information for class {i_class}')
         return result
     
 class EstablishDistances(Stage2):
     '''
-    Compute mutual information between pairs of images
+    Calculate and save mutual information between pairs of images
     '''
     def __init__(self):
         super().__init__('Establish Distances','establish-distances',needs_output_file=True)
