@@ -23,6 +23,7 @@ from argparse import ArgumentParser, RawDescriptionHelpFormatter
 from pathlib import Path
 from time import time, strftime,localtime
 from shutil import copyfile
+from multiprocessing import cpu_count, Process, Pool
 from matplotlib.pyplot import figure, show
 from matplotlib import rc, cm
 from matplotlib.ticker import MaxNLocator
@@ -460,22 +461,23 @@ class EstablishMask(Stage1):
 
 class DistanceCalculator:
     
-    def __init__(self,n):
-        self.n = 7                #FIXME =n
-        
+    def __init__(self,n,indices,x):
+        self.n = n
+        self.indices = indices
+        self.x = x
+  
     def calculate(self,i_class):
+        Xs = self.x[self.indices[:,i_class,],:]
         result = np.zeros((self.n,self.n))
-        for i in range(self.n):
-            result[i,i+1:] = self.get_distances(i)
+        for i in range(self.n-1):
+            print (f'Row {i}')
+            y = Xs[i,:]
+            X = Xs[i:,:].T
+            result[i,i:] = mutual_info_classif(X, y) 
         for j in range(self.n):
             result[j:,j] = result[j,j:]
+        print (f'Completed {i_class}')
         return result
-    
-    def get_distances(self,i):
-        length = self.n - i - 1
-        result = np.ones((length)) * (i + 1)
-        return result
-
     
 class EstablishDistances(Stage2):
     '''
@@ -487,9 +489,15 @@ class EstablishDistances(Stage2):
     def _execute(self):
         n_examples, n_classes = self.indices.shape
         distances = np.zeros((self.args.nimages,len(self.args.classes),len(self.args.classes)))
-        calculator = DistanceCalculator(n_examples)
-        distances = np.array(list(map(calculator.calculate,list(range(n_classes)))))
-        z=0
+        calculator = DistanceCalculator(n_examples,self.indices,self.x)
+        if self.args.mp:
+            with Pool(processes=cpu_count()-1) as pool:
+                distances = np.array(pool.map(calculator.calculate,list(range(n_classes))))
+        else:
+            distances = np.array(list(map(calculator.calculate,list(range(n_classes)))))
+        file =  (self.data_path / self.args.out).with_suffix('.npz')
+        np.savez(file, distances=distances)
+        self.log(f'Saved mutual information in {file.resolve()}')        
             
     
 class EstablishStyles(Stage2):
@@ -922,7 +930,8 @@ def parse_args(names):
     parser.add_argument('--cmap',default='Blues',help='Colour map')
     parser.add_argument('--logs', default='./logs', help='Location for storing log files')
     parser.add_argument('--styles', default=None, help='Location where styles have been stored')
-
+    parser.add_argument('--mp', default=False, action='store_true', help='Controls whether to use multiprocessing')
+    
     group_establish_mask = parser.add_argument_group('Options for Establish mask')
     group_establish_mask.add_argument('--fraction', default=0.0, type=float,
                         help='Include pixel if entropy exceeds mean - fraction*sd')
