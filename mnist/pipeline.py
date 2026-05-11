@@ -461,16 +461,16 @@ class EstablishMask(Stage1):
 
 class DistanceCalculator:
     
-    def __init__(self,n,indices,x):
+    def __init__(self,n,indices,x,mask):
         self.n = n
         self.indices = indices
         self.x = x
+        self.mask = mask
   
     def calculate(self,i_class):
-        Xs = self.x[self.indices[:,i_class,],:]
+        Xs = self.mask.shorten(self.x[self.indices[:,i_class,],:])
         result = np.zeros((self.n,self.n))
         for i in range(self.n-1):
-            print (f'Row {i}')
             y = Xs[i,:]
             X = Xs[i:,:].T
             result[i,i:] = mutual_info_classif(X, y) 
@@ -481,7 +481,7 @@ class DistanceCalculator:
     
 class EstablishDistances(Stage2):
     '''
-    Display representatives of all styles created by establish_styles.py
+    Compute mutual information between pairs of images
     '''
     def __init__(self):
         super().__init__('Establish Distances','establish-distances',needs_output_file=True)
@@ -489,7 +489,7 @@ class EstablishDistances(Stage2):
     def _execute(self):
         n_examples, n_classes = self.indices.shape
         distances = np.zeros((self.args.nimages,len(self.args.classes),len(self.args.classes)))
-        calculator = DistanceCalculator(n_examples,self.indices,self.x)
+        calculator = DistanceCalculator(n_examples,self.indices,self.x,self.mask)
         if self.args.mp:
             with Pool(processes=cpu_count()-1) as pool:
                 distances = np.array(pool.map(calculator.calculate,list(range(n_classes))))
