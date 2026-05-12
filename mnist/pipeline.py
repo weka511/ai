@@ -506,8 +506,68 @@ class EstablishMI(Stage2):
         file =  (self.data_path / self.args.out).with_suffix('.npz')
         np.savez(file, mi=mi)
         self.log(f'Saved mutual information in {file.resolve()}')        
-            
+
+
     
+class Cluster:
+    def __init__(self,exemplar):
+        self.exemplar = exemplar
+        self.indices = [exemplar]
+        
+    def __len__(self):
+        return len(self.indices)
+    
+    def append(self,index):
+        self.indices.append(index)
+        
+class CRP:
+    def __init__(self,exemplar,alpha=2.0,rng=np.random.default_rng()):
+        self.alpha = alpha
+        self.clusters = [Cluster(exemplar)]
+        self.rng = rng
+        
+    def __len__(self):
+        return len(self.clusters)
+  
+    def get_p(self):
+        p = np.array([len(cluster) for cluster in self.clusters] + [self.alpha])
+        return p/sum(p)
+    
+    def grow(self,index):
+        selected = self.rng.choice(len(self.clusters) + 1, p=self.get_p())
+        if selected < len(self.clusters):
+            self.clusters[selected].append(index)
+        else:
+            self.clusters.append(Cluster(index))          
+        
+        
+class EstablishStylesNew(Stage2):
+    '''
+    Display representatives of all styles created by establish_styles.py
+    '''
+    def __init__(self):
+        super().__init__('Establish Styles New','establish-styles-new',needs_output_file=True)
+
+    def _execute(self):
+        N = 2
+        _, n_classes = self.indices.shape
+        for i in range(n_classes):
+            indices = self.indices[:,i]
+            crp = self.assign(indices)
+            for j in range(N):
+                self.gibbs(crp,indices)
+                          
+    def assign(self,indices):
+        n_examples, = indices.shape
+        self.rng.shuffle(indices)
+        crp = CRP(indices[0],rng=self.rng)
+        for j in range(1,n_examples):
+            crp.grow(indices[j])
+        return crp
+    
+    def gibbs(self,crp,indices):
+        print (len(crp))
+        
 class EstablishStyles(Stage2):
     '''
     Display representatives of all styles created by establish_styles.py
@@ -974,6 +1034,7 @@ def main():
         EstablishSubsets(),
         EstablishMask(),
         EstablishMI(),
+        EstablishStylesNew(),
         Gibbs(),
         EstablishStyles(),
         EstablishLikelihoods(),
