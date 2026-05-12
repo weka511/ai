@@ -459,7 +459,7 @@ class EstablishMask(Stage1):
         ax.set_title('Intensity of pixels')
         return bin_edges
 
-class DistanceCalculator:
+class MI_Calculator:
     '''
     This class is responsible for calculating mutual information between pairs of images
     '''
@@ -487,24 +487,24 @@ class DistanceCalculator:
         print (f'Calculate mutual information for class {i_class}')
         return result
     
-class EstablishDistances(Stage2):
+class EstablishMI(Stage2):
     '''
     Calculate and save mutual information between pairs of images
     '''
     def __init__(self):
-        super().__init__('Establish Distances','establish-distances',needs_output_file=True)
+        super().__init__('Establish Mutual Information','establish-mi',needs_output_file=True)
         
     def _execute(self):
         n_examples, n_classes = self.indices.shape
-        distances = np.zeros((self.args.nimages,len(self.args.classes),len(self.args.classes)))
-        calculator = DistanceCalculator(n_examples,self.indices,self.x,self.mask)
+        mi = np.zeros((self.args.nimages,len(self.args.classes),len(self.args.classes)))
+        calculator = MI_Calculator(n_examples,self.indices,self.x,self.mask)
         if self.args.mp:
             with Pool(processes=cpu_count()-1) as pool:
-                distances = np.array(pool.map(calculator.calculate,list(range(n_classes))))
+                mi = np.array(pool.map(calculator.calculate,list(range(n_classes))))
         else:
-            distances = np.array(list(map(calculator.calculate,list(range(n_classes)))))
+            mi = np.array(list(map(calculator.calculate,list(range(n_classes)))))
         file =  (self.data_path / self.args.out).with_suffix('.npz')
-        np.savez(file, distances=distances)
+        np.savez(file, mi=mi)
         self.log(f'Saved mutual information in {file.resolve()}')        
             
     
@@ -514,7 +514,6 @@ class EstablishStyles(Stage2):
     '''
     def __init__(self):
         super().__init__('Establish Styles','establish-styles',needs_output_file=True)
-
 
     def _execute(self):
         '''
@@ -974,7 +973,7 @@ def main():
     Command.build([
         EstablishSubsets(),
         EstablishMask(),
-        EstablishDistances(),
+        EstablishMI(),
         Gibbs(),
         EstablishStyles(),
         EstablishLikelihoods(),
