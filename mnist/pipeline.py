@@ -610,7 +610,22 @@ class CRPdd:
         cluster.relink(chain)
         for i in chain:
             self.allocations[i] = selected_cluster       
+ 
+class StyleAdapter:
+    def __init__(self,iclass,clusters,indices):
+        self.iclass = iclass
+        self.clusters = clusters
+        self.indices = indices
         
+    def __len__(self):
+        return len(self.clusters)
+    
+    def generate_images(self,i):
+        for j in self.clusters[i].linked:
+            yield self.indices[j]
+        
+    
+    
 class EstablishStylesNew(Stage2):
     '''
     Display representatives of all styles created by establish_styles.py
@@ -627,11 +642,24 @@ class EstablishStylesNew(Stage2):
         self.logger.log(f'Loaded {mi_file}')
         _, n_classes = self.indices.shape
         assert n_classes == n_classes0
+        
+        R = 20
+        C = 20
         for i in range(n_classes):
+            fig = figure(figsize=(8, 8))
             crp = CRPdd(mi[i,:,:],alpha=self.args.alpha,rng=self.rng)
             for j in range(self.args.M*m):
                 crp.gibbs(self.rng.choice(m))
             print (f'Class={i},clusters={len(crp)}')
+            adapter = StyleAdapter(i,crp.clusters,self.indices[:,i])
+            for j in range(len(adapter)):
+                image_generator = adapter.generate_images(j)
+                for k,image_number in enumerate(image_generator):
+                    if j < R and k < C:
+                        ax = fig.add_subplot(R, C, j*C + k + 1)
+                        img = self.x[image_number,:].reshape(self.args.size,self.args.size)
+                        ax.imshow(img,cmap=self.args.cmap)
+                        ax.axis('off')                        
         
 class EstablishStyles(Stage2):
     '''
