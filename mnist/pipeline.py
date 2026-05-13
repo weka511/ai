@@ -510,36 +510,106 @@ class EstablishMI(Stage2):
 
     
 class Cluster:
-    def __init__(self,exemplar):
-        self.exemplar = exemplar
-        self.indices = [exemplar]
+    def __init__(self,exemplar=None,mi=None):
+        if exemplar != None:
+            self.exemplar = exemplar
+            self.linked = [exemplar]
+        else:
+            self.linked = []
+        self.mi = mi
         
     def __len__(self):
-        return len(self.indices)
+        return len(self.linked)
+    
+    def get_distance(self,index):
+        return self.mi[index,self.exemplar]
     
     def append(self,index):
-        self.indices.append(index)
+        self.linked.append(index)
+        if len(self.linked) > 2:
+            self.update_exemplar()
+            
+    def update_exemplar(self):
+        mi_restricted = self.mi[self.linked,:][:,self.linked]
+        minima = self.mi[self.linked,:].min(axis=1)
+        best = np.argmax(minima)
+        self.exemplar = self.linked[best]
         
-class CRP:
-    def __init__(self,exemplar,alpha=2.0,rng=np.random.default_rng()):
+    def break_link(self,element):
+        position = self.linked.index(element)
+        unlinked = self.linked[position:]
+        self.linked = self.linked[0:position]
+        if len(self.linked) > 0:
+            try:
+                unlinked.index(self.exemplar)
+                self.update_exemplar()
+            except ValueError:
+                pass
+        return unlinked
+    
+    def relink(self,links):
+        self.linked = self.linked + links
+        self.update_exemplar()
+        
+        
+class CRPdd:
+    '''
+    Distance dependent Chinese Restaurant Process
+    '''
+    UNASSIGNED = -1
+    
+    def __init__(self,mi,alpha=2.0,rng=np.random.default_rng()):
+        self.mi = mi
         self.alpha = alpha
-        self.clusters = [Cluster(exemplar)]
+        self.clusters = []
         self.rng = rng
+        m,n = mi.shape
+        self.allocations = CRPdd.UNASSIGNED * np.ones((m),dtype=int)
         
     def __len__(self):
         return len(self.clusters)
-  
-    def get_p(self):
-        p = np.array([len(cluster) for cluster in self.clusters] + [self.alpha])
-        return p/sum(p)
     
-    def grow(self,index):
-        selected = self.rng.choice(len(self.clusters) + 1, p=self.get_p())
-        if selected < len(self.clusters):
-            self.clusters[selected].append(index)
+    def gibbs(self,image_index):
+        if self.allocations[image_index] == CRPdd.UNASSIGNED:
+            selected_cluster = self.rng.choice(len(self.clusters) + 1, p=self.get_p(image_index))
+            if selected_cluster == len(self.clusters):
+                # Create new cluster
+                self.clusters.append(Cluster(exemplar=image_index,mi=self.mi))
+            else:
+                # Append to existing cluster
+                self.clusters[selected_cluster].append(image_index)
+            self.allocations[image_index] = selected_cluster
         else:
-            self.clusters.append(Cluster(index))          
+            detached = self.break_link(image_index)
+            selected_cluster = self.rng.choice(len(self.clusters) + 1, p=self.get_p(image_index))
+            self.relink(detached,selected_cluster)
         
+    def get_p(self,image_index):
+        p = np.array([cluster.get_distance(image_index) for cluster in self.clusters] + [self.alpha])
+        return p/sum(p)
+                
+    def break_link(self,image_index):
+        allocated_cluster_number = self.allocations[image_index]
+        cluster = self.clusters[allocated_cluster_number]
+        unlinked = cluster.break_link(image_index)
+        if len(cluster) == 0:
+            del self.clusters[allocated_cluster_number]
+            for i in range(len(self.allocations)):
+                if self.allocations[i] > allocated_cluster_number:
+                    self.allocations[i] -= 1
+        for i in unlinked:
+            self.allocations[i] = CRPdd.UNASSIGNED
+ 
+        return unlinked
+    
+    def relink(self,chain,selected_cluster):
+        if selected_cluster == len(self.clusters):
+            # Create new cluster
+            self.clusters.append(Cluster(mi=self.mi))        
+        cluster = self.clusters[selected_cluster]
+        cluster.relink(chain)
+        for i in chain:
+            self.allocations[i] = selected_cluster       
         
 class EstablishStylesNew(Stage2):
     '''
@@ -549,24 +619,19 @@ class EstablishStylesNew(Stage2):
         super().__init__('Establish Styles New','establish-styles-new',needs_output_file=True)
 
     def _execute(self):
-        N = 2
+        mi_file =  (self.data_path / self.args.mi).with_suffix('.npz')  #DODO move
+        mi_data = np.load(mi_file)
+        mi = mi_data['mi']
+        n_classes0,m,n = mi.shape
+        assert m == n
+        self.logger.log(f'Loaded {mi_file}')
         _, n_classes = self.indices.shape
+        assert n_classes == n_classes0
         for i in range(n_classes):
-            indices = self.indices[:,i]
-            crp = self.assign(indices)
-            for j in range(N):
-                self.gibbs(crp,indices)
-                          
-    def assign(self,indices):
-        n_examples, = indices.shape
-        self.rng.shuffle(indices)
-        crp = CRP(indices[0],rng=self.rng)
-        for j in range(1,n_examples):
-            crp.grow(indices[j])
-        return crp
-    
-    def gibbs(self,crp,indices):
-        print (len(crp))
+            crp = CRPdd(mi[i,:,:],alpha=self.args.alpha,rng=self.rng)
+            for j in range(self.args.M*m):
+                crp.gibbs(self.rng.choice(m))
+            print (f'Class={i},clusters={len(crp)}')
         
 class EstablishStyles(Stage2):
     '''
@@ -1004,6 +1069,9 @@ def parse_args(names):
                         help='Include pixel if entropy exceeds mean - fraction*sd')
     parser.add_argument('--bins', default='doane', type=get_bins, help='Number of bins for histograms')
 
+    parser.add_argument('--mi',default=None,help='Name of Mutual Information file')
+    parser.add_argument('--M',type=int,default=32,help='Number of iterations for Gibbs')
+    parser.add_argument('--alpha',type=float,default=2.0,help='alpha for CRP')
     group_establish_styles = parser.add_argument_group('Options for establish-styles')
     group_establish_styles.add_argument('--threshold', default=0.1, type=float,
                           help='Include image in same style if mutual information exceeds threshold')
@@ -1018,7 +1086,7 @@ def parse_args(names):
     group_recognize.add_argument('--max_images', default=100,type=int, help='Maximum number of images')
 
     group_gibbs = parser.add_argument_group('Options for Gibbs sampling')
-    group_gibbs.add_argument('--M', default=100, type=int, help='Number of iterations')
+    #group_gibbs.add_argument('--M', default=100, type=int, help='Number of iterations')
     group_gibbs.add_argument('--freq', default=10, type=int, help='Indicated progress iterations')
     group_gibbs.add_argument('--display', default=False, action='store_true', help='Controls whether Gibbs will create plots')
     
