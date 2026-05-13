@@ -741,6 +741,7 @@ class EstablishStylesNew(Stage2):
         mi_file =  (self.data_path / self.args.mi).with_suffix('.npz')  #DODO move
         mi_data = np.load(mi_file)
         mi = mi_data['mi']
+        self._plot_mi(mi)
         n_classes0,m,n = mi.shape
         assert m == n
         self.logger.log(f'Loaded {mi_file}')
@@ -754,6 +755,19 @@ class EstablishStylesNew(Stage2):
             
         self._plot(n_classes,adapters)
 
+    def _plot_mi(self,mi,bins=25):
+        fig = figure(figsize=(12,12))
+        fig.suptitle('Mutual Information')
+        m,n,_ = mi.shape
+        for i in range(m):
+            ax = fig.add_subplot(3,4,1+i)
+            M = np.copy(mi[i,:,:])
+            np.fill_diagonal(M,float('nan'))
+            ax.hist(M.ravel(),bins=bins,density=True)
+            ax.set_title(f'Class={i}')
+        fig.tight_layout(pad=2,h_pad=2,w_pad=2)
+        fig.savefig((self.figs_path / self.args.out).with_suffix('.png'))            
+        
     def _gibbs_sample(self,mi,m):
         '''
         Perform Gibbs sampling
