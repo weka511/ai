@@ -546,30 +546,47 @@ class Cluster:
     def update_exemplar(self):
         '''
         Establish which of the linked images best typifies the cluster, 
-        remembering that mi increases as distance decreases.
+        remembering that mi increases as distance decreases. Find the worst score
+        for each image, then select the image with the best worst-score.
         '''
-        # Restrict the mi to the rows and columns that correspond to the linked list
-        mi_restricted = self.mi[self.linked,:][:,self.linked]
-        # Find the worst match for each image
-        minima = mi_restricted.min(axis=1)
-        # Find the "best of the worst"
-        best = np.argmax(minima)
-        self.exemplar = self.linked[best]
+        # Obtain matrix of scores by restricting the mi to the 
+        # rows and columns that correspond to the linked list
+        scores = self.mi[self.linked,:][:,self.linked]
+        worst_scores = scores.min(axis=1)
+        location_best_of_worst = np.argmax(worst_scores)
+        self.exemplar = self.linked[location_best_of_worst]
         
     def break_link(self,element):
-        position = self.linked.index(element)
-        unlinked = self.linked[position:]
-        self.linked = self.linked[0:position]
+        '''
+        Break the link between a point and its cluster. If the element is the 
+        head of a list of points,  all of its successors leave the cluster also.
+        Ensure that examplar is one of the points that remain in the cluster
+        '''
+        self.linked,unlinked_elements = self.split(element)
         if len(self.linked) > 0:
             try:
-                unlinked.index(self.exemplar)
+                unlinked_elements.index(self.exemplar)  # i.e. see if examplar has been unlinked
                 self.update_exemplar()
             except ValueError:
                 pass
-        return unlinked
+        return unlinked_elements
     
-    def relink(self,links):
-        self.linked = self.linked + links
+    def split(self,element):
+        '''
+        Split the members of the Cluster into two parts, the
+        part before elemeent, and those fro element on
+        '''
+        position = self.linked.index(element)
+        return self.linked[0:position],self.linked[position:]    
+    
+    def relink(self,chain):
+        '''
+        Add one of more points to a cluster
+        
+        Parameters:
+            chain      A list of points to be added
+        '''
+        self.linked = self.linked + chain
         self.update_exemplar()
         
         
@@ -606,7 +623,7 @@ class CRPdd:
         One step of Gibbs sampling for CRP
         
         Parameters:
-            image_index    Identified point being processed.
+            image_index    Identifies point being processed.
         '''
         if self.allocations[image_index] == CRPdd.UNASSIGNED:
             # The first time we see an image, we need to assign to
@@ -619,12 +636,14 @@ class CRPdd:
             else:
                 # Append to existing cluster
                 self.clusters[selected_cluster].append(image_index)
+                
             self.allocations[image_index] = selected_cluster
+            
         else:
-            detached,allocated_cluster_number = self.break_link(image_index)
+            detached,allocated_cluster_number = self._break_link(image_index)
             selected_cluster = self.rng.choice(len(self.clusters) + 1, 
                                                p=self.get_probability_per_cluster(image_index))
-            self.relink(detached,selected_cluster)
+            self._relink(detached,selected_cluster)
             if allocated_cluster_number != selected_cluster:
                 self.changed_allocations += 1
              
@@ -636,30 +655,63 @@ class CRPdd:
         p = np.array([cluster.get_distance(image_index) for cluster in self.clusters] + [self.alpha])
         return p/sum(p)
                 
-    def break_link(self,image_index):
-        allocated_cluster_number = self.allocations[image_index]
+    def _break_link(self,point):
+        '''
+        Break the link between a point and its cluster. 
+        '''
+        # First, locate the cluster that contains the point
+        allocated_cluster_number = self.allocations[point]
         cluster = self.clusters[allocated_cluster_number]
-        unlinked = cluster.break_link(image_index)
+        
+        # Detach this point, and any that are associated with it
+        detached_points = cluster.break_link(point)
+        
+        # Have we emptied cluster? If so, we need to remove it from list 
         if len(cluster) == 0:
             del self.clusters[allocated_cluster_number]
-            for i in range(len(self.allocations)):
-                if self.allocations[i] > allocated_cluster_number:
-                    self.allocations[i] -= 1
-        for i in unlinked:
-            self.allocations[i] = CRPdd.UNASSIGNED
- 
-        return unlinked,allocated_cluster_number
+            self._adjust_allocations(allocated_cluster_number,detached_points)
+  
+        return detached_points,allocated_cluster_number
     
-    def relink(self,chain,selected_cluster):
-        if selected_cluster == len(self.clusters):
+    def _adjust_allocations(self,removed_cluster_number,detached_points):
+        '''
+        This method is used to updated slllocation when we have deleted a cluster
+            Unallocated remain unallocated
+            Detached become unallocated
+            
+        Parameters:
+            removed_cluster_number  The index of the cluster that has been removed
+            detached_points         The points that have been detached from cluster
+        '''
+        for i in range(len(self.allocations)):
+            if self.allocations[i] == CRPdd.UNASSIGNED:
+                pass
+            elif i in detached_points:
+                self.allocations[i] = CRPdd.UNASSIGNED
+            elif self.allocations[i] > removed_cluster_number:
+                self.allocations[i] -= 1    
+    
+    def _relink(self,chain,cluster_index):
+        '''
+        Used to link a list of points back into an existing cluster
+        or a newly created one, and to update allocations
+        
+        Parameters:
+            chain           A chain of one or more points to be added
+            cluster_index   Identifies cluster
+        '''
+        if cluster_index == len(self.clusters):
             # Create new cluster
             self.clusters.append(Cluster(mi=self.mi))        
-        cluster = self.clusters[selected_cluster]
+        cluster = self.clusters[cluster_index]
         cluster.relink(chain)
         for i in chain:
-            self.allocations[i] = selected_cluster       
+            self.allocations[i] = cluster_index       
  
 class StyleAdapter:
+    '''
+    Used to prepare clusters for plotting
+    '''
     def __init__(self,iclass,clusters,indices):
         self.iclass = iclass
         self.clusters = clusters
@@ -673,7 +725,9 @@ class StyleAdapter:
             yield self.indices[j]
         
     
-    
+# TODO review code
+# TODO add f(MI)    
+
 class EstablishStylesNew(Stage2):
     '''
     Display representatives of all styles created by establish_styles.py
@@ -682,8 +736,7 @@ class EstablishStylesNew(Stage2):
         super().__init__('Establish Styles New','establish-styles-new',needs_output_file=True)
         self.R = 25
         self.C = 40        
-# TODO review code
-# TODO add f(MI)
+
     def _execute(self):
         mi_file =  (self.data_path / self.args.mi).with_suffix('.npz')  #DODO move
         mi_data = np.load(mi_file)
@@ -696,12 +749,19 @@ class EstablishStylesNew(Stage2):
         
         adapters = []
         for i in range(n_classes):
-            crp = self.gibbs_step(mi[i,:,:],m)
+            crp = self._gibbs_sample(mi[i,:,:],m)
             adapters.append(StyleAdapter(i,crp.clusters,self.indices[:,i]))
             
-        self.plot(n_classes,adapters)
+        self._plot(n_classes,adapters)
 
-    def gibbs_step(self,mi,m):
+    def _gibbs_sample(self,mi,m):
+        '''
+        Perform Gibbs sampling
+        
+        Parameters:
+            mi
+            m
+        '''
         crp = CRPdd(mi,alpha=self.args.alpha,rng=self.rng)
 
         for j in range(self.args.M*m):
@@ -712,7 +772,7 @@ class EstablishStylesNew(Stage2):
   
         return crp
     
-    def plot(self,n_classes,adapters):    
+    def _plot(self,n_classes,adapters):    
         for i in range(n_classes):  
             fig = figure(figsize=(12, 12))
             fig.suptitle(f'Class={i}')
