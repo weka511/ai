@@ -510,28 +510,49 @@ class EstablishMI(Stage2):
 
     
 class Cluster:
+    '''
+    This class represesents a collection of related images
+    
+    Attributes:
+        exemplar  One image chosen as the typical member of this cluster
+        linked    All items in this class. An item is a pointer into the array of distances
+    '''
     def __init__(self,exemplar=None,mi=None):
-        if exemplar != None:
-            self.exemplar = exemplar
-            self.linked = [exemplar]
-        else:
-            self.linked = []
+        self.exemplar = exemplar
+        self.linked = [exemplar] if exemplar != None else []
         self.mi = mi
         
     def __len__(self):
+        '''
+        Number of images in Clsuster
+        '''
         return len(self.linked)
     
     def get_distance(self,index):
+        '''
+        Determine distance of an image from exemplar
+        '''
         return self.mi[index,self.exemplar]
     
     def append(self,index):
+        '''
+        Attach a new image to cluster; if there are 3 or more points in cluster,
+        determine which is most typical.
+        '''
         self.linked.append(index)
         if len(self.linked) > 2:
             self.update_exemplar()
             
     def update_exemplar(self):
+        '''
+        Establish which of the linked images best typifies the cluster, 
+        remembering that mi increases as distance decreases.
+        '''
+        # Restrict the mi to the rows and columns that correspond to the linked list
         mi_restricted = self.mi[self.linked,:][:,self.linked]
-        minima = self.mi[self.linked,:].min(axis=1)
+        # Find the worst match for each image
+        minima = mi_restricted.min(axis=1)
+        # Find the "best of the worst"
         best = np.argmax(minima)
         self.exemplar = self.linked[best]
         
@@ -555,6 +576,13 @@ class Cluster:
 class CRPdd:
     '''
     Distance dependent Chinese Restaurant Process
+    
+    Attributes:
+        mi            Array holding mutual information of each pair of points
+        alpha
+        clusters      The current collection of Clusters
+        rng
+        allocations   Indicates which cluster eacg image belongs to (can be UNASSIGNED)
     '''
     UNASSIGNED = -1
     
@@ -565,13 +593,26 @@ class CRPdd:
         self.rng = rng
         m,n = mi.shape
         self.allocations = CRPdd.UNASSIGNED * np.ones((m),dtype=int)
+        self.changed_allocations = 0
         
     def __len__(self):
+        '''
+        Lenght of collection of clusters
+        '''
         return len(self.clusters)
     
     def gibbs(self,image_index):
+        '''
+        One step of Gibbs sampling for CRP
+        
+        Parameters:
+            image_index    Identified point being processed.
+        '''
         if self.allocations[image_index] == CRPdd.UNASSIGNED:
-            selected_cluster = self.rng.choice(len(self.clusters) + 1, p=self.get_p(image_index))
+            # The first time we see an image, we need to assign to
+            # either a new cluster of an existing one
+            selected_cluster = self.rng.choice(len(self.clusters) + 1, 
+                                               p=self.get_probability_per_cluster(image_index))
             if selected_cluster == len(self.clusters):
                 # Create new cluster
                 self.clusters.append(Cluster(exemplar=image_index,mi=self.mi))
@@ -580,11 +621,18 @@ class CRPdd:
                 self.clusters[selected_cluster].append(image_index)
             self.allocations[image_index] = selected_cluster
         else:
-            detached = self.break_link(image_index)
-            selected_cluster = self.rng.choice(len(self.clusters) + 1, p=self.get_p(image_index))
+            detached,allocated_cluster_number = self.break_link(image_index)
+            selected_cluster = self.rng.choice(len(self.clusters) + 1, 
+                                               p=self.get_probability_per_cluster(image_index))
             self.relink(detached,selected_cluster)
+            if allocated_cluster_number != selected_cluster:
+                self.changed_allocations += 1
+             
         
-    def get_p(self,image_index):
+    def get_probability_per_cluster(self,image_index):
+        '''
+        Calculate probability of joining each cluster in a distant dependent CRP process
+        '''
         p = np.array([cluster.get_distance(image_index) for cluster in self.clusters] + [self.alpha])
         return p/sum(p)
                 
@@ -600,7 +648,7 @@ class CRPdd:
         for i in unlinked:
             self.allocations[i] = CRPdd.UNASSIGNED
  
-        return unlinked
+        return unlinked,allocated_cluster_number
     
     def relink(self,chain,selected_cluster):
         if selected_cluster == len(self.clusters):
@@ -634,7 +682,8 @@ class EstablishStylesNew(Stage2):
         super().__init__('Establish Styles New','establish-styles-new',needs_output_file=True)
         self.R = 25
         self.C = 40        
-
+# TODO review code
+# TODO add f(MI)
     def _execute(self):
         mi_file =  (self.data_path / self.args.mi).with_suffix('.npz')  #DODO move
         mi_data = np.load(mi_file)
@@ -647,14 +696,22 @@ class EstablishStylesNew(Stage2):
         
         adapters = []
         for i in range(n_classes):
-            crp = CRPdd(mi[i,:,:],alpha=self.args.alpha,rng=self.rng)
-            for j in range(self.args.M*m):
-                crp.gibbs(self.rng.choice(m))
-            print (f'Class={i},clusters={len(crp)}')
+            crp = self.gibbs_step(mi[i,:,:],m)
             adapters.append(StyleAdapter(i,crp.clusters,self.indices[:,i]))
             
         self.plot(n_classes,adapters)
-            
+
+    def gibbs_step(self,mi,m):
+        crp = CRPdd(mi,alpha=self.args.alpha,rng=self.rng)
+
+        for j in range(self.args.M*m):
+            crp.gibbs(self.rng.choice(m))
+            if j % self.args.freq == self.args.freq - 1:
+                self.logger.log(f'{j} {crp.changed_allocations}')
+                crp.changed_allocations = 0
+  
+        return crp
+    
     def plot(self,n_classes,adapters):    
         for i in range(n_classes):  
             fig = figure(figsize=(12, 12))
@@ -1124,7 +1181,7 @@ def parse_args(names):
 
     group_gibbs = parser.add_argument_group('Options for Gibbs sampling')
     #group_gibbs.add_argument('--M', default=100, type=int, help='Number of iterations')
-    group_gibbs.add_argument('--freq', default=10, type=int, help='Indicated progress iterations')
+    group_gibbs.add_argument('--freq', default=100, type=int, help='Indicated progress iterations')
     group_gibbs.add_argument('--display', default=False, action='store_true', help='Controls whether Gibbs will create plots')
     
     return parser.parse_args()
