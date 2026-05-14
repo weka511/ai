@@ -28,6 +28,7 @@ from matplotlib.pyplot import figure, show
 from matplotlib import rc, cm
 from matplotlib.ticker import MaxNLocator
 import numpy as np
+from scipy.optimize import curve_fit
 from skimage.exposure import equalize_hist
 from skimage.transform import resize
 from sklearn.feature_selection import mutual_info_classif
@@ -728,6 +729,7 @@ class StyleAdapter:
 # TODO review code
 # TODO add f(MI)    
 
+
 class EstablishStylesNew(Stage2):
     '''
     Display representatives of all styles created by establish_styles.py
@@ -737,38 +739,55 @@ class EstablishStylesNew(Stage2):
         self.R = 25
         self.C = 40        
 
-    def _execute(self):
+    def load_supplementary_files(self):
+        super().load_supplementary_files()
         mi_file =  (self.data_path / self.args.mi).with_suffix('.npz')  #DODO move
         mi_data = np.load(mi_file)
-        mi = mi_data['mi']
-        self._plot_mi(mi)
-        n_classes0,m,n = mi.shape
-        assert m == n
+        self.mi = mi_data['mi'] 
         self.logger.log(f'Loaded {mi_file}')
+        
+    def _execute(self):
+        cut_points = self._plot_mi()
+          
+        n_classes0,m,n = self.mi.shape
+        assert m == n
+
         _, n_classes = self.indices.shape
         assert n_classes == n_classes0
         
         adapters = []
         for i in range(n_classes):
-            crp = self._gibbs_sample(mi[i,:,:],m)
+            mi = self.mi[i,:,:].copy()
+            mi[mi < cut_points[i]] = 0                  
+            crp = self._gibbs_sample(mi,m,alpha=cut_points[i])
             adapters.append(StyleAdapter(i,crp.clusters,self.indices[:,i]))
             
         self._plot(n_classes,adapters)
 
-    def _plot_mi(self,mi,bins=25):
+    def _plot_mi(self,bins=25):
+        def f(x,decay):
+            return decay*np.exp(-decay*x)
         fig = figure(figsize=(12,12))
         fig.suptitle('Mutual Information')
-        m,n,_ = mi.shape
+        m,_,_ = self.mi.shape
+        cut_points = np.zeros((m))
         for i in range(m):
             ax = fig.add_subplot(3,4,1+i)
-            M = np.copy(mi[i,:,:])
+            M = np.copy(self.mi[i,:,:])
             np.fill_diagonal(M,float('nan'))
-            ax.hist(M.ravel(),bins=bins,density=True)
+            n,bins,_ = ax.hist(M.ravel(),bins=bins,density=True)
+            mis = (bins[0:-1] + bins[1:])/2
+            ax.plot(mis,n)
+            popt,pcov = curve_fit(f,mis,n)
+            ax.plot(mis,f(mis,popt[0]),label=f'Mean={1/popt[0]:.3f}')
+            cut_points[i] = 1/popt[0]
             ax.set_title(f'Class={i}')
+            ax.legend()
         fig.tight_layout(pad=2,h_pad=2,w_pad=2)
-        fig.savefig((self.figs_path / self.args.out).with_suffix('.png'))            
+        fig.savefig((self.figs_path / self.args.out).with_suffix('.png')) 
+        return cut_points
         
-    def _gibbs_sample(self,mi,m):
+    def _gibbs_sample(self,mi,m,alpha=1.0):
         '''
         Perform Gibbs sampling
         
@@ -776,7 +795,7 @@ class EstablishStylesNew(Stage2):
             mi
             m
         '''
-        crp = CRPdd(mi,alpha=self.args.alpha,rng=self.rng)
+        crp = CRPdd(mi,alpha=alpha,rng=self.rng)
 
         for j in range(self.args.M*m):
             crp.gibbs(self.rng.choice(m))
