@@ -712,24 +712,64 @@ class CRPdd:
 class StyleAdapter:
     '''
     Used to prepare clusters for plotting
+    
+    Attributes:
+        iclass
+        clusters
+        indices
     '''
-    def __init__(self,iclass,clusters,indices):
+    def __init__(self,iclass,clusters=[],indices=[]):
         self.iclass = iclass
         self.clusters = clusters
         self.indices = indices
         
     def __len__(self):
+        '''
+        Number of clusters for digit class
+        '''
         return len(self.clusters)
     
-    def generate_images(self,i):
-        for j in self.clusters[i].linked:
-            yield self.indices[j]
+    def generate_images(self,icluster):
+        '''
+        This generator allows iteration through the images in the cluster, 
+        starting with the exemplar 
+        
+        Parameters:
+            icluster    
+        '''
+        def generate_positions():
+            '''
+            Another generator, iterates through index of links, starting at the exemplar
+            '''
+            pos_exemplar = cluster.linked.index(cluster.exemplar)
+            for j in range(len(cluster.linked)):
+                yield (j + pos_exemplar) % len(cluster.linked)
+                
+        cluster = self.clusters[icluster]    
+        for pos in generate_positions():
+            link = cluster.linked[pos]
+            yield self.indices[link]
         
     
 # TODO review code
 # TODO add f(MI)    
 
-
+class DecayFunction(ABC):
+    @abstractmethod
+    def __call__(self,mutual_information,iclass):
+        ...
+        
+class Window(DecayFunction):
+    def __init__(self,lambdas,cutoff=2,exponent=1):
+        self.lambdas = lambdas
+        self.exponent = exponent
+        self.cutoff = cutoff
+        
+    def __call__(self,mutual_information,iclass):
+        mutual_information[mutual_information < 1/self.lambdas[iclass]] = 0
+        mutual_information[mutual_information > self.cutoff/self.lambdas[iclass]] = self.cutoff/self.lambdas[iclass]
+        return mutual_information**self.exponent
+    
 class EstablishStylesNew(Stage2):
     '''
     Display representatives of all styles created by establish_styles.py
@@ -747,58 +787,62 @@ class EstablishStylesNew(Stage2):
         self.logger.log(f'Loaded {file}')
         
     def _execute(self):
-        cut_points = self._plot_mi()
-          
         n_classes0,m,n = self.mi.shape
-        assert m == n
-
+        assert m == n 
         _, n_classes = self.indices.shape
         assert n_classes == n_classes0
         
-        adapters = []
-        for i in range(n_classes):
-            mi = self.mi[i,:,:].copy()
-            mi[mi < cut_points[i]] = 0                  
-            crp = self._gibbs_sample(mi,m,alpha=cut_points[i])
-            adapters.append(StyleAdapter(i,crp.clusters,self.indices[:,i]))
+        lambdas,mis = self._fit_exponentials(n_classes)
+        f = Window(lambdas)
+        adapters = [
+            StyleAdapter(iclass,
+                         clusters=self._gibbs_sample(f(self.mi[iclass,:,:].copy(),iclass),m,
+                                                       alpha=1/lambdas[iclass]).clusters,
+                         indices=self.indices[:,iclass]) 
+            for iclass in range(n_classes)
+        ]
             
         self._plot(n_classes,adapters)
+        self._plot_mi(lambdas,mis)
         
     @staticmethod
     def get_off_diagonal(M):
         M = np.copy(M)
         np.fill_diagonal(M,np.nan)
         M = M.ravel()
-        M = M[~np.isnan(M)]
-        return M
+        return M[~np.isnan(M)]
     
     @staticmethod
     def exponential_distribution(x,decay):
         return decay*np.exp(-decay*x)
     
-    def _plot_mi(self,bins=25):
-        
-        fig = figure(figsize=(12,12))
-        fig.suptitle('Mutual Information')
-        m,_,_ = self.mi.shape
-        cut_points = np.zeros((m))
+    def _fit_exponentials(self,m,num=25):
+        bins = np.linspace(0,1,num=num,endpoint=True)
+        lambdas = np.zeros((m))
         for i in range(m):
-            ax = fig.add_subplot(3,4,1+i)
             M = EstablishStylesNew.get_off_diagonal(self.mi[i,:,:])
             n,bins = np.histogram(M,bins=bins,density=True)
             mis = (bins[0:-1] + bins[1:])/2
-            ax.hist(M,bins=bins,density=True)
             popt,pcov = curve_fit(EstablishStylesNew.exponential_distribution,mis,n)
-            ax.plot(mis,EstablishStylesNew.exponential_distribution(mis,popt[0]),
-                    label=r'$\lambda=$'+f'{popt[0]:.3f}')
-            ax.axvline(x=1/popt[0],label=f'Mean={1/popt[0]:.3f}',c='r',ls='dashed')
-            cut_points[i] = 1/popt[0]
+            lambdas[i] = popt[0]    
+        return lambdas,mis
+    
+    def _plot_mi(self,lambdas,mis,bins=25):
+        fig = figure(figsize=(12,12))
+        fig.suptitle('Mutual Information')
+        m,_,_ = self.mi.shape
+        for i in range(m):
+            ax = fig.add_subplot(3,4,1+i)
+            M = EstablishStylesNew.get_off_diagonal(self.mi[i,:,:])
+            ax.hist(M,bins=bins,density=True)
+            ax.plot(mis,EstablishStylesNew.exponential_distribution(mis,lambdas[i]),
+                    label=r'$\lambda=$'+f'{lambdas[i]:.3f}')
+            ax.axvline(x=1/lambdas[i],label=f'Mean={1/lambdas[i]:.3f}',c='r',ls='dashed')
             ax.set_title(f'Class={i}')
             ax.legend()
+            
         fig.tight_layout(pad=2,h_pad=2,w_pad=2)
         fig.savefig((self.figs_path / self.args.out).with_suffix('.png'))
-        show()
-        return cut_points
         
     def _gibbs_sample(self,mi,m,alpha=1.0):
         '''
