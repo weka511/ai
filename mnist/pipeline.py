@@ -155,7 +155,7 @@ class Command(ABC):
         self.figs_path = Path(self.args.figs).resolve()
 
         self.load_mnist_data()
-        self.load_supplementary_files()
+        self._load_supplementary_files()
 
         self._execute()   # Perform actual command
 
@@ -171,7 +171,7 @@ class Command(ABC):
             (self.x_train, self.y_train), (self.x_test, self.y_test), = dataloader.load_data()
         self.x = MnistDataloader.columnize(self.x_train)
 
-    def load_supplementary_files(self):
+    def _load_supplementary_files(self):
         '''
         Load additional files needed by some commands
         '''
@@ -216,11 +216,11 @@ class Stage1(Command):
         nimages            Number of images
         log                Logger
     '''
-    def load_supplementary_files(self):
+    def _load_supplementary_files(self):
         '''
         Load index files
         '''
-        super().load_supplementary_files()
+        super()._load_supplementary_files()
         file =  (self.data_path / self.args.indices).with_suffix('.npz')
         index_data = np.load(file)
         self.indices = index_data['indices']
@@ -242,11 +242,11 @@ class Stage2(Stage1):
         x                  Masked data
         log                Loggers
     '''
-    def load_supplementary_files(self):
+    def _load_supplementary_files(self):
         '''
         Load index files and mask
         '''        
-        super().load_supplementary_files()
+        super()._load_supplementary_files()
         self.mask, self.mask_text,self.bins = Mask.create(mask_file=self.args.mask,
                                                           data=self.args.data,
                                                           size=self.args.size,
@@ -272,11 +272,11 @@ class Stage3(Stage2):
         Allocation         Allocation of images to styles
         Threshold
     '''
-    def load_supplementary_files(self):
+    def _load_supplementary_files(self):
         '''
         Load index files, mask, and styles
         '''           
-        super().load_supplementary_files()
+        super()._load_supplementary_files()
         file =  (self.data_path / self.args.styles).with_suffix('.npz')
         style_data = np.load(file,allow_pickle=True)
         self.Allocations = style_data['Allocations']
@@ -302,11 +302,11 @@ class Stage4(Stage3):
         Threshold
         A                  Likelihoods
     '''
-    def load_supplementary_files(self):
+    def _load_supplementary_files(self):
         '''
         Load index files, mask, styles, and Likelihoods
         '''  
-        super().load_supplementary_files()
+        super()._load_supplementary_files()
         file =  (self.data_path / self.args.likelihoods).with_suffix('.npz')
         loaded_data = np.load(file,allow_pickle=True)
         self.class_styles = loaded_data['class_styles']
@@ -739,12 +739,12 @@ class EstablishStylesNew(Stage2):
         self.R = 25
         self.C = 40        
 
-    def load_supplementary_files(self):
-        super().load_supplementary_files()
-        mi_file =  (self.data_path / self.args.mi).with_suffix('.npz')  #DODO move
-        mi_data = np.load(mi_file)
-        self.mi = mi_data['mi'] 
-        self.logger.log(f'Loaded {mi_file}')
+    def _load_supplementary_files(self):
+        super()._load_supplementary_files()
+        file =  (self.data_path / self.args.mi).with_suffix('.npz')  #DODO move
+        data = np.load(file)
+        self.mi = data['mi'] 
+        self.logger.log(f'Loaded {file}')
         
     def _execute(self):
         cut_points = self._plot_mi()
@@ -763,28 +763,41 @@ class EstablishStylesNew(Stage2):
             adapters.append(StyleAdapter(i,crp.clusters,self.indices[:,i]))
             
         self._plot(n_classes,adapters)
-
+        
+    @staticmethod
+    def get_off_diagonal(M):
+        M = np.copy(M)
+        np.fill_diagonal(M,np.nan)
+        M = M.ravel()
+        M = M[~np.isnan(M)]
+        return M
+    
+    @staticmethod
+    def exponential_distribution(x,decay):
+        return decay*np.exp(-decay*x)
+    
     def _plot_mi(self,bins=25):
-        def f(x,decay):
-            return decay*np.exp(-decay*x)
+        
         fig = figure(figsize=(12,12))
         fig.suptitle('Mutual Information')
         m,_,_ = self.mi.shape
         cut_points = np.zeros((m))
         for i in range(m):
             ax = fig.add_subplot(3,4,1+i)
-            M = np.copy(self.mi[i,:,:])
-            np.fill_diagonal(M,float('nan'))
-            n,bins,_ = ax.hist(M.ravel(),bins=bins,density=True)
+            M = EstablishStylesNew.get_off_diagonal(self.mi[i,:,:])
+            n,bins = np.histogram(M,bins=bins,density=True)
             mis = (bins[0:-1] + bins[1:])/2
-            ax.plot(mis,n)
-            popt,pcov = curve_fit(f,mis,n)
-            ax.plot(mis,f(mis,popt[0]),label=f'Mean={1/popt[0]:.3f}')
+            ax.hist(M,bins=bins,density=True)
+            popt,pcov = curve_fit(EstablishStylesNew.exponential_distribution,mis,n)
+            ax.plot(mis,EstablishStylesNew.exponential_distribution(mis,popt[0]),
+                    label=r'$\lambda=$'+f'{popt[0]:.3f}')
+            ax.axvline(x=1/popt[0],label=f'Mean={1/popt[0]:.3f}',c='r',ls='dashed')
             cut_points[i] = 1/popt[0]
             ax.set_title(f'Class={i}')
             ax.legend()
         fig.tight_layout(pad=2,h_pad=2,w_pad=2)
-        fig.savefig((self.figs_path / self.args.out).with_suffix('.png')) 
+        fig.savefig((self.figs_path / self.args.out).with_suffix('.png'))
+        show()
         return cut_points
         
     def _gibbs_sample(self,mi,m,alpha=1.0):
