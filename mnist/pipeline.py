@@ -760,7 +760,14 @@ class DecayFunction(ABC):
         Apply decay function
         '''
         ...
-        
+
+class NoDecay(DecayFunction):
+    '''
+    Pass mutual information through unchanged
+    '''
+    def __call__(self,mutual_information,_):
+        return mutual_information    
+    
 class Window(DecayFunction):
     '''
     This decay function replaces values that are less than the mean by zero;
