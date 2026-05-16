@@ -105,9 +105,9 @@ class Command(ABC):
                 code = 1                
             finally:
                 elapsed = time() - start
-                minutes = int(elapsed / 60)
-                seconds = elapsed - 60 * minutes
-                logger.log(f'Elapsed Time {minutes} m {seconds:.2f} s')
+                mutual_informationnutes = int(elapsed / 60)
+                seconds = elapsed - 60 * mutual_informationnutes
+                logger.log(f'Elapsed Time {mutual_informationnutes} m {seconds:.2f} s')
                 if code > 0: exit(code)
 
             if args.show:
@@ -485,7 +485,7 @@ class MI_Calculator:
             result[i,i:] = mutual_info_classif(X, y) 
         for j in range(self.n):
             result[j:,j] = result[j,j:]
-        print (f'Calculate mutual information for class {i_class}')
+        print (f'Calculated mutual information for class {i_class}')
         return result
     
 class EstablishMI(Stage2):
@@ -493,19 +493,19 @@ class EstablishMI(Stage2):
     Calculate and save mutual information between pairs of images
     '''
     def __init__(self):
-        super().__init__('Establish Mutual Information','establish-mi',needs_output_file=True)
+        super().__init__('Establish Mutual Information','establish-mutual_information',needs_output_file=True)
         
     def _execute(self):
         n_examples, n_classes = self.indices.shape
-        mi = np.zeros((self.args.nimages,len(self.args.classes),len(self.args.classes)))
+        mutual_information = np.zeros((self.args.nimages,len(self.args.classes),len(self.args.classes)))
         calculator = MI_Calculator(n_examples,self.indices,self.x,self.mask)
         if self.args.mp:
             with Pool(processes=cpu_count()-1) as pool:
-                mi = np.array(pool.map(calculator.calculate,list(range(n_classes))))
+                mutual_information = np.array(pool.map(calculator.calculate,list(range(n_classes))))
         else:
-            mi = np.array(list(map(calculator.calculate,list(range(n_classes)))))
+            mutual_information = np.array(list(map(calculator.calculate,list(range(n_classes)))))
         file =  (self.data_path / self.args.out).with_suffix('.npz')
-        np.savez(file, mi=mi)
+        np.savez(file, mutual_information=mutual_information)
         self.log(f'Saved mutual information in {file.resolve()}')        
 
 
@@ -518,10 +518,10 @@ class Cluster:
         exemplar  One image chosen as the typical member of this cluster
         linked    All items in this class. An item is a pointer into the array of distances
     '''
-    def __init__(self,exemplar=None,mi=None):
+    def __init__(self,exemplar=None,mutual_information=None):
         self.exemplar = exemplar
         self.linked = [exemplar] if exemplar != None else []
-        self.mi = mi
+        self.mutual_information = mutual_information
         
     def __len__(self):
         '''
@@ -533,7 +533,7 @@ class Cluster:
         '''
         Determine distance of an image from exemplar
         '''
-        return self.mi[index,self.exemplar]
+        return self.mutual_information[index,self.exemplar]
     
     def append(self,index):
         '''
@@ -547,12 +547,12 @@ class Cluster:
     def update_exemplar(self):
         '''
         Establish which of the linked images best typifies the cluster, 
-        remembering that mi increases as distance decreases. Find the worst score
-        for each image, then select the image with the best worst-score.
+        remembering that mutual information increases as distance decreases.
+        Find the worst score for each image, then select the image with the best worst-score.
         '''
-        # Obtain matrix of scores by restricting the mi to the 
+        # Obtain matrix of scores by restricting the mutual information to the 
         # rows and columns that correspond to the linked list
-        scores = self.mi[self.linked,:][:,self.linked]
+        scores = self.mutual_information[self.linked,:][:,self.linked]
         worst_scores = scores.min(axis=1)
         location_best_of_worst = np.argmax(worst_scores)
         self.exemplar = self.linked[location_best_of_worst]
@@ -596,26 +596,26 @@ class CRPdd:
     Distance dependent Chinese Restaurant Process
     
     Attributes:
-        mi            Array holding mutual information of each pair of points
+        mutual_information  Array holding mutual information of each pair of points
         alpha
-        clusters      The current collection of Clusters
+        clusters            The current collection of Clusters
         rng
-        allocations   Indicates which cluster eacg image belongs to (can be UNASSIGNED)
+        allocations         Indicates which cluster eacg image belongs to (can be UNASSIGNED)
     '''
     UNASSIGNED = -1
     
-    def __init__(self,mi,alpha=2.0,rng=np.random.default_rng()):
-        self.mi = mi
+    def __init__(self,mutual_information,alpha=2.0,rng=np.random.default_rng()):
+        self.mutual_information = mutual_information
         self.alpha = alpha
         self.clusters = []
         self.rng = rng
-        m,n = mi.shape
+        m,n = mutual_information.shape
         self.allocations = CRPdd.UNASSIGNED * np.ones((m),dtype=int)
         self.changed_allocations = 0
         
     def __len__(self):
         '''
-        Lenght of collection of clusters
+        Length of collection of clusters
         '''
         return len(self.clusters)
     
@@ -633,7 +633,7 @@ class CRPdd:
                                                p=self.get_probability_per_cluster(image_index))
             if selected_cluster == len(self.clusters):
                 # Create new cluster
-                self.clusters.append(Cluster(exemplar=image_index,mi=self.mi))
+                self.clusters.append(Cluster(exemplar=image_index,mutual_information=self.mutual_information))
             else:
                 # Append to existing cluster
                 self.clusters[selected_cluster].append(image_index)
@@ -703,7 +703,7 @@ class CRPdd:
         '''
         if cluster_index == len(self.clusters):
             # Create new cluster
-            self.clusters.append(Cluster(mi=self.mi))        
+            self.clusters.append(Cluster(mutual_information=self.mutual_information))        
         cluster = self.clusters[cluster_index]
         cluster.relink(chain)
         for i in chain:
@@ -793,13 +793,13 @@ class EstablishStylesUsingCRP(Stage2):
 
     def _load_supplementary_files(self):
         super()._load_supplementary_files()
-        file =  (self.data_path / self.args.mi).with_suffix('.npz')  #DODO move
+        file =  (self.data_path / self.args.mutual_information).with_suffix('.npz')  #DODO move
         data = np.load(file)
-        self.mi = data['mi'] 
+        self.mutual_information = data['mi'] 
         self.logger.log(f'Loaded {file}')
         
     def _execute(self):
-        n_classes0,m,n = self.mi.shape
+        n_classes0,m,n = self.mutual_information.shape
         assert m == n 
         _, n_classes = self.indices.shape
         assert n_classes == n_classes0
@@ -808,7 +808,7 @@ class EstablishStylesUsingCRP(Stage2):
         f = Window(lambdas)
         adapters = [
             StyleAdapter(iclass,
-                         clusters=self._gibbs_sample(f(self.mi[iclass,:,:].copy(),iclass),m,
+                         clusters=self._gibbs_sample(f(self.mutual_information[iclass,:,:].copy(),iclass),m,
                                                        alpha=1/lambdas[iclass]).clusters,
                          indices=self.indices[:,iclass]) 
             for iclass in range(n_classes)
@@ -854,17 +854,17 @@ class EstablishStylesUsingCRP(Stage2):
             
         Returns:
             lambdas          Parametefs for mutual information, one per class
-            bin_mid_points   Mid points of bins generated by np.histogram
+            bin_mutual_informationd_points   Mid points of bins generated by np.histogram
         '''
         bins = np.linspace(0,1,num=num+1,endpoint=True)
         lambdas = np.zeros((n_classes))
         for i in range(n_classes):
-            M = EstablishStylesUsingCRP.get_off_diagonal(self.mi[i,:,:])
+            M = EstablishStylesUsingCRP.get_off_diagonal(self.mutual_information[i,:,:])
             n,bin_edges = np.histogram(M,bins=bins,density=True)
-            bin_mid_points = (bin_edges[0:-1] + bin_edges[1:])/2
-            popt,pcov = curve_fit(EstablishStylesUsingCRP._exponential_distribution,bin_mid_points,n)
+            bin_mutual_informationd_points = (bin_edges[0:-1] + bin_edges[1:])/2
+            popt,pcov = curve_fit(EstablishStylesUsingCRP._exponential_distribution,bin_mutual_informationd_points,n)
             lambdas[i] = popt[0]    
-        return lambdas,bin_mid_points
+        return lambdas,bin_mutual_informationd_points
     
     def _plot_mutual_information(self,lambdas,calculated_mutual_information,bins=25):
         '''
@@ -877,10 +877,10 @@ class EstablishStylesUsingCRP(Stage2):
         '''
         fig = figure(figsize=(12,12))
         fig.suptitle('Mutual Information')
-        n_classes,_,_ = self.mi.shape
+        n_classes,_,_ = self.mutual_information.shape
         for i in range(n_classes):
             ax = fig.add_subplot(3,4,1+i)
-            ax.hist(EstablishStylesUsingCRP.get_off_diagonal(self.mi[i,:,:]),
+            ax.hist(EstablishStylesUsingCRP.get_off_diagonal(self.mutual_information[i,:,:]),
                     bins=bins,density=True)
             ax.plot(calculated_mutual_information,EstablishStylesUsingCRP._exponential_distribution(calculated_mutual_information,lambdas[i]),
                     label=r'$\lambda=$'+f'{lambdas[i]:.3f}')
@@ -891,15 +891,15 @@ class EstablishStylesUsingCRP(Stage2):
         fig.tight_layout(pad=2,h_pad=2,w_pad=2)
         fig.savefig((self.figs_path / self.args.out).with_suffix('.png'))
         
-    def _gibbs_sample(self,mi,m,alpha=1.0):
+    def _gibbs_sample(self,mutual_information,m,alpha=1.0):
         '''
         Perform Gibbs sampling
         
         Parameters:
-            mi
+            mutual_information
             m
         '''
-        crp = CRPdd(mi,alpha=alpha,rng=self.rng)
+        crp = CRPdd(mutual_information,alpha=alpha,rng=self.rng)
 
         for j in range(self.args.M*m):
             crp.gibbs(self.rng.choice(m))
@@ -954,7 +954,7 @@ class EstablishStyles(Stage2):
             try:
                 style_list,steps = StyleList.build(self.x, self.indices,
                                                    i_class=i_class,
-                                                   nimages=min(n_examples,self.args.nimages),
+                                                   nimages=mutual_informationn(n_examples,self.args.nimages),
                                                    threshold=self.args.threshold,mask=self.mask)
 
                 Allocations[i_class] = style_list.create_allocations()
@@ -1138,7 +1138,7 @@ class Gibbs(Stage2):
         n = self.args.nimages
         for j in range(m):
             run = runs[j]
-            for k in range(min(len(run),n)):
+            for k in range(mutual_informationn(len(run),n)):
                 ax = fig.add_subplot(m,n,n*j+k+1)
                 ax.imshow(images[run[k],:].reshape(28,28), cmap=self.args.cmap)
                 ax.axis('off')
@@ -1249,22 +1249,22 @@ class RecognizeDigits(Stage4):
         '''
         self.logA = np.log(self.A)
 
-        N,accuracy,mismatches = self.get_accuracy(self.x_test,self.y_test)
+        N,accuracy,mutual_informationsmatches = self.get_accuracy(self.x_test,self.y_test)
         self.log (f'{N} images, threshold ={self.threshold}, accuracy={accuracy}')
-        self.plot_mismatches(min(N,self.args.max_images),accuracy,mismatches)
+        self.plot_mutual_informationsmatches(mutual_informationn(N,self.args.max_images),accuracy,mutual_informationsmatches)
 
-    def plot_mismatches(self,N,accuracy,mismatches):
+    def plot_mutual_informationsmatches(self,N,accuracy,mutual_informationsmatches):
         '''
-        Plot mismatched images, using mask as background (so we can be sure we aren't losing important information)
+        Plot mutual_informationsmatched images, using mask as background (so we can be sure we aren't losing important information)
 
         Parameters:
             N           Number of images that we used for prediction
             accuracy    Overall accuracy
-            mismatches  Array of indices of mismatched predictions
+            mutual_informationsmatches  Array of indices of mutual_informationsmatched predictions
         '''
         fig = figure(figsize=(8,8))
-        m,n = get_subplot_shape(len(mismatches) if len(mismatches) < N else N)
-        for k,(img,y,prediction) in enumerate(mismatches):
+        m,n = get_subplot_shape(len(mutual_informationsmatches) if len(mutual_informationsmatches) < N else N)
+        for k,(img,y,prediction) in enumerate(mutual_informationsmatches):
             if k >= N: break
             ax = fig.add_subplot(m,n,k+1)
             ax.imshow(self.mask.pixels,cmap='Reds')
@@ -1307,21 +1307,21 @@ class RecognizeDigits(Stage4):
             y        Array of expected labels
         '''
         matches = 0
-        mismatches = []
+        mutual_informationsmatches = []
         N = len(y)
         if self.args.N != None:
-            N = min(N,self.args.N)
+            N = mutual_informationn(N,self.args.N)
         Selection = self.rng.choice(len(y),N,replace=False) if N < len(y) else range(N)
         for i in Selection:
             prediction,index,log_posterior_for_styles = self.predict(np.array(x[i]))
             if y[i] == prediction:
                 matches += 1
             else:
-                mismatches.append((x[i],y[i],prediction))
+                mutual_informationsmatches.append((x[i],y[i],prediction))
                 self.log(f'y={y[i]}, prediction={prediction}, index={index}',level=Logger.DEBUG)
                 self.log(str(log_posterior_for_styles),level=Logger.DEBUG)
 
-        return N,matches/N,mismatches
+        return N,matches/N,mutual_informationsmatches
 
 
 def get_subplot_shape(N):
@@ -1353,7 +1353,7 @@ def parse_args(names):
     parser.add_argument('--data', default='./data', help='Location for storing data files')
     parser.add_argument('--indices', default=None, help='Location where index files have been saved')
     parser.add_argument('--nimages', default=2000, type=int, help='Maximum number of images for each class')
-    parser.add_argument('--mask', default=None, help='Name of mask file (omit for no mask)')
+    parser.add_argument('--mask', default=None, help='Name of mask file (omutual_informationt for no mask)')
     parser.add_argument('--size', default=28, type=int, help='Number of row/cols in each image: shape will be will be mxm')
     parser.add_argument('--classes', default=list(range(10)), type=int, nargs='+', help='List of digit classes')
     parser.add_argument('--seed', default=None, type=int, help='For initializing random number generator')
@@ -1367,7 +1367,7 @@ def parse_args(names):
                         help='Include pixel if entropy exceeds mean - fraction*sd')
     parser.add_argument('--bins', default='doane', type=get_bins, help='Number of bins for histograms')
 
-    parser.add_argument('--mi',default=None,help='Name of Mutual Information file')
+    parser.add_argument('--mutual_information',default=None,help='Name of Mutual Information file')
     parser.add_argument('--M',type=int,default=32,help='Number of iterations for Gibbs')
     parser.add_argument('--alpha',type=float,default=2.0,help='alpha for CRP')
     group_establish_styles = parser.add_argument_group('Options for establish-styles')
