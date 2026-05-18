@@ -21,10 +21,9 @@
 from abc import ABC,abstractmethod
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 from pathlib import Path
-from time import time, strftime,localtime
 from shutil import copyfile
 from multiprocessing import cpu_count, Process, Pool
-from matplotlib.pyplot import figure, show
+from matplotlib.pyplot import figure
 from matplotlib import rc, cm
 from matplotlib.ticker import MaxNLocator
 import numpy as np
@@ -32,293 +31,19 @@ from scipy.optimize import curve_fit
 from skimage.exposure import equalize_hist
 from skimage.transform import resize
 from sklearn.feature_selection import mutual_info_classif
-from mnist import MnistDataloader, MnistException
+from mnist import MnistDataloader
 from mask import Mask
 from node import Node, NodeSet,Tower
 from style import StyleList,StylesStoppedBuilding
+from command import Command,Stage1,Stage2,Stage3,Stage4
 from shared.utils import Logger,user_has_requested_stop,create_xkcd_colours,get_bins
-
-class CommandException(RuntimeError):
-    '''
-    Allows Command to raise exceptions
-    '''
-    def __init__(self,message):
-        super().__init__(message)
-
-class Command(ABC):
-    '''
-    Parent class for procesing requests. Each command exports a string that can
-    be used by the user to execute the functionality of the command.
-    
-    Attributes:
-        description        Used for documntation only
-        name               Name used to schedule command
-        needs_output_file  Indicates that the user needs to provide an output file
-        colours            Each digit class has its own colour
-        log                Logger
-    '''
-    commands = {}
-
-    @staticmethod
-    def build(command_list):
-        '''
-        Load a list of commands that will be available for execution
-        '''
-        for command in command_list:
-            Command.commands[command.name] = command
-
-    @staticmethod
-    def get_names():
-        '''
-        Used to construct command line argument
-        '''
-        return [name for name in Command.commands.keys()]
-
-    @staticmethod
-    def execute_one(args):
-        '''
-        Execute one command that has been selected by user. This
-        encapsulates code that is shared with visualize.py
-
-        Parameters:
-            args      Comand line arguments
-        '''
-        start = time()
-        with Logger(Path(__file__).stem,path=args.logs) as logger:
-            command = Command.commands[args.command]
-            command.set_args(args)
-            command.set_logger(logger)
-            code = 0
-            try:
-                command.execute()
-            except FileNotFoundError as e:
-                command.log(f'Error: {e.filename} not found.',level=Logger.ERROR)
-                code = 1
-            except MnistException as e:
-                command.log(f'Mnist Exception {e}',level=Logger.ERROR)
-                code = 1
-            except CommandException as e:
-                command.log(f'Command Exception {e}',level=Logger.ERROR)
-                code = 1
-            except RuntimeError as e:
-                command.log(f'RuntimeError {e}',level=Logger.ERROR)
-                code = 1                
-            finally:
-                elapsed = time() - start
-                mutual_informationnutes = int(elapsed / 60)
-                seconds = elapsed - 60 * mutual_informationnutes
-                logger.log(f'Elapsed Time {mutual_informationnutes} m {seconds:.2f} s')
-                if code > 0: exit(code)
-
-            if args.show:
-                show()
-
-    def __init__(self,description,name,
-                 needs_output_file=False,n=10):
-        '''
-        Parameters:
-            description        Used for documntation only
-            name               Name used to schedule command
-            needs_output_file  Indicates that the user needs to provide an output file
-            n                  Number of colours that will be needed, one for each digit class
-        '''
-        self.description = description
-        self.name = name
-        self.needs_output_file = needs_output_file
-        self.colours = create_xkcd_colours(n)
-
-    def get_description(self):
-        '''
-        Used for documentation only
-        '''
-        return self.description
-
-    def set_args(self,args):
-        '''
-        Store command line arguments
-        '''
-        self.args = args
-        self.rng = np.random.default_rng(args.seed)
-
-    def execute(self):
-        '''
-        Shared code for executing command:
-        - Load mnist images and other data used by commands
-        - apply mask
-        '''
-        self.log (f'{self.get_description()} {strftime("%a, %d %b %Y %H:%M:%S +0000", localtime())}')
-
-        if self.needs_output_file and self.args.out == None:
-            raise CommandException ('Output file must be specified')
-
-        self.data_path = Path(self.args.data).resolve()
-        self.figs_path = Path(self.args.figs).resolve()
-
-        self.load_mnist_data()
-        self._load_supplementary_files()
-
-        self._execute()   # Perform actual command
-
-    def load_mnist_data(self):
-        '''
-        Load training and test data. Download data if it is not present.
-        '''
-        dataloader = MnistDataloader.create(data=self.args.data,report = lambda x:self.log(x))
-        try:
-            (self.x_train, self.y_train), (self.x_test, self.y_test), = dataloader.load_data()
-        except MnistException:
-            dataloader.download_data(data=self.args.data)
-            (self.x_train, self.y_train), (self.x_test, self.y_test), = dataloader.load_data()
-        self.x = MnistDataloader.columnize(self.x_train)
-
-    def _load_supplementary_files(self):
-        '''
-        Load additional files needed by some commands
-        '''
-        pass
-
-    @abstractmethod
-    def _execute(self):
-        '''
-        Execute command: must be implemented for each class
-        '''
-        ...
-
-    def set_logger(self,logger):
-        '''
-        Attach a logger to Command
-        '''
-        self.logger = logger
-
-    def log(self,message,level=Logger.INFO):
-        '''
-        Log messages
-        '''
-        self.logger.log(message,level=level)
-
-    def digitize_images(self,imgs,equalize=False):
-        '''
-        Used by EstablishLikelihoods and RecognizeDigits to prepare images
-        '''
-        equalized_images = equalize_hist(imgs) if equalize else imgs
-        return np.digitize(equalized_images,self.bins)
-
-class Stage1(Command):
-    '''
-    This is the parent class for commands that depend on an index file
-    
-    Attributes:
-        description        Used for documntation only
-        name               Name used to schedule command
-        needs_output_file  Indicates that the user needs to provide an output file
-        colours            Each digit class has its own colour
-        indices            Each entry is the index of one image in data
-        nimages            Number of images
-        log                Logger
-    '''
-    def _load_supplementary_files(self):
-        '''
-        Load index files
-        '''
-        super()._load_supplementary_files()
-        file =  (self.data_path / self.args.indices).with_suffix('.npz')
-        index_data = np.load(file)
-        self.indices = index_data['indices']
-        self.nimages = index_data['nimages']
-        self.log (f'Loaded indices from {file} for {self.nimages} images')
-
-class Stage2(Stage1):
-    '''
-    This is the parent class for commands that depend on an index file and a mask
-    
-    Attributes:
-        description        Used for documntation only
-        name               Name used to schedule command
-        needs_output_file  Indicates that the user needs to provide an output file
-        colours            Each digit class has its own colour
-        indices            Each entry is the index of one image in data
-        nimages            Number of images
-        mask               Mask used to exclude pixels that contribute little information
-        x                  Masked data
-        log                Loggers
-    '''
-    def _load_supplementary_files(self):
-        '''
-        Load index files and mask
-        '''        
-        super()._load_supplementary_files()
-        self.mask, self.mask_text,self.bins = Mask.create(mask_file=self.args.mask,
-                                                          data=self.args.data,
-                                                          size=self.args.size,
-                                                          report = lambda x:self.log(x))
-        self.log('Bins: ' +str(self.bins),level=Logger.DEBUG)
-        self.x = self.mask.apply(self.x)
-
-
-class Stage3(Stage2):
-    '''
-    This is the parent class for commands that depend on an index file, a mask,  and a style file
-    
-    Attributes:
-        description        Used for documntation only
-        name               Name used to schedule command
-        needs_output_file  Indicates that the user needs to provide an output file
-        colours            Each digit class has its own colour
-        indices            Each entry is the index of one image in data
-        nimages            Number of images
-        mask               Mask used to exclude pixels that contribute little information
-        x                  Masked data
-        log                Loggers
-        Allocation         Allocation of images to styles
-        Threshold
-    '''
-    def _load_supplementary_files(self):
-        '''
-        Load index files, mask, and styles
-        '''           
-        super()._load_supplementary_files()
-        file =  (self.data_path / self.args.styles).with_suffix('.npz')
-        style_data = np.load(file,allow_pickle=True)
-        self.Allocations = style_data['Allocations']
-        self.threshold = style_data['threshold']
-        self.log (f'Loaded Allocations from {file}')
-
-class Stage4(Stage3):
-    '''
-    This is the parent class for commands that depend on an
-    index file, mask, style file, and a likelihoods file
-    
-    Attributes:
-        description        Used for documntation only
-        name               Name used to schedule command
-        needs_output_file  Indicates that the user needs to provide an output file
-        colours            Each digit class has its own colour
-        indices            Each entry is the index of one image in data
-        nimages            Number of images
-        mask               Mask used to exclude pixels that contribute little information
-        x                  Masked data
-        log                Loggers
-        Allocation
-        Threshold
-        A                  Likelihoods
-    '''
-    def _load_supplementary_files(self):
-        '''
-        Load index files, mask, styles, and Likelihoods
-        '''  
-        super()._load_supplementary_files()
-        file =  (self.data_path / self.args.likelihoods).with_suffix('.npz')
-        loaded_data = np.load(file,allow_pickle=True)
-        self.class_styles = loaded_data['class_styles']
-        self.A = loaded_data['A']
-        self.log (f'Loaded Likelihoods from {file}')
 
 class EstablishSubsets(Command):
     '''
     Extract subsets of MNIST to facilitate replication
     
     Attributes:
-        description        Used for documntation only
+        description        Used for documentation only
         name               Name used to schedule command
         needs_output_file  Indicates that the user needs to provide an output file
         colours            Each digit class has its own colour
@@ -345,7 +70,7 @@ class EstablishMask(Stage1):
     Determine which pixels are most relevant to classifying images
     
     Attributes:
-        description        Used for documntation only
+        description        Used for documentation only
         name               Name used to schedule command
         needs_output_file  Indicates that the user needs to provide an output file
         colours            Each digit class has its own colour
@@ -383,7 +108,7 @@ class EstablishMask(Stage1):
         ax2.imshow(mask.get_img()*mask.pixels,cmap=self.args.cmap)
         ax2.set_title('Culled pixels')
 
-        bins = self.show_pixels(mask.pixels,ax=fig.add_subplot(2,3,3),bins=self.args.bins)
+        bins = self._show_pixels(mask.pixels,ax=fig.add_subplot(2,3,3),bins=self.args.bins)
 
         ax4 = fig.add_subplot(2,3,4)
         ax4.imshow(mask.pixels,cmap=self.args.cmap)
@@ -408,7 +133,7 @@ class EstablishMask(Stage1):
 
         return bins
 
-    def show_pixels(self,mask,ax=None,bins=10):
+    def _show_pixels(self,mask,ax=None,bins=10):
         '''
         Show histogram of pixel intensity
 
@@ -463,9 +188,18 @@ class EstablishMask(Stage1):
 class MI_Calculator:
     '''
     This class is responsible for calculating mutual information between pairs of images
+    
+    Attributes:
+        n_examples     Number of images
+        indices
+        x
+        mask
+        
+    Returns:
+       A matrix containing mutual information
     '''
-    def __init__(self,n,indices,x,mask):
-        self.n = n
+    def __init__(self,n_examplesindices,x,mask):
+        self.n_examples = n_examples
         self.indices = indices
         self.x = x
         self.mask = mask
@@ -478,12 +212,15 @@ class MI_Calculator:
             i_class    The class that we are processing
         '''
         MaskedImages = self.mask.shorten(self.x[self.indices[:,i_class,],:])
-        result = np.zeros((self.n,self.n))
-        for i in range(self.n-1):
+        result = np.zeros((self.n_examples,self.n_examples))
+        
+        # Calculate to upper diagonal
+        for i in range(self.n_examples - 1):
             y = MaskedImages[i,:]
             X = MaskedImages[i:,:].T
-            result[i,i:] = mutual_info_classif(X, y) 
-        for j in range(self.n):
+            result[i,i:] = mutual_info_classif(X, y)
+        # Copy to lower diagonal
+        for j in range(self.n_examples):
             result[j:,j] = result[j,j:]
         print (f'Calculated mutual information for class {i_class}')
         return result
@@ -491,25 +228,44 @@ class MI_Calculator:
 class EstablishMI(Stage2):
     '''
     Calculate and save mutual information between pairs of images
+    
+    Attributes:
+        description        Used for documentation only
+        name               Name used to schedule command
+        needs_output_file  Indicates that the user needs to provide an output file
+        indices            Each entry is the index of one image in data
+        mask               Mask used to exclude pixels that contribute little information
+        x                  Masked data
+        log                Loggers
     '''
     def __init__(self):
         super().__init__('Establish Mutual Information','establish-mutual_information',needs_output_file=True)
         
     def _execute(self):
+        '''
+        Calculate Mutuual information between images within each class
+        '''
         n_examples, n_classes = self.indices.shape
-        mutual_information = np.zeros((self.args.nimages,len(self.args.classes),len(self.args.classes)))
-        calculator = MI_Calculator(n_examples,self.indices,self.x,self.mask)
-        if self.args.mp:
-            with Pool(processes=cpu_count()-1) as pool:
-                mutual_information = np.array(pool.map(calculator.calculate,list(range(n_classes))))
-        else:
-            mutual_information = np.array(list(map(calculator.calculate,list(range(n_classes)))))
+        
+        mutual_information = self._create_mutual_information(
+            MI_Calculator(n_examples,self.indices,self.x,self.mask),
+            n_classes
+        )
         file =  (self.data_path / self.args.out).with_suffix('.npz')
         np.savez(file, mutual_information=mutual_information)
-        self.log(f'Saved mutual information in {file.resolve()}')        
+        self.log(f'Saved mutual information in {file.resolve()}')  
+        
+    def _create_mutual_information(self,calculator,n_classes):
+        '''
+        Actually calculate the mutual information. This function can optionally
+        perform the calculation across multiple processors.
+        '''
+        if self.args.mp:
+            with Pool(processes=cpu_count()-1) as pool:
+                return np.array(pool.map(calculator.calculate,list(range(n_classes))))
+        else:
+            return np.array(list(map(calculator.calculate,list(range(n_classes)))))    
 
-
-    
 class Cluster:
     '''
     This class represesents a collection of related images
@@ -610,7 +366,7 @@ class CRPdd:
         self.clusters = []
         self.rng = rng
         m,n = mutual_information.shape
-        self.allocations = CRPdd.UNASSIGNED * np.ones((m),dtype=int)
+        self.allocations = np.full((m),CRPdd.UNASSIGNED, dtype=int)
         self.changed_allocations = 0
         
     def __len__(self):
@@ -1256,22 +1012,22 @@ class RecognizeDigits(Stage4):
         '''
         self.logA = np.log(self.A)
 
-        N,accuracy,mutual_informationsmatches = self.get_accuracy(self.x_test,self.y_test)
+        N,accuracy,mismatches = self.get_accuracy(self.x_test,self.y_test)
         self.log (f'{N} images, threshold ={self.threshold}, accuracy={accuracy}')
-        self.plot_mutual_informationsmatches(mutual_informationn(N,self.args.max_images),accuracy,mutual_informationsmatches)
+        self._plot_mismatches(mutual_informationn(N,self.args.max_images),accuracy,mismatches)
 
-    def plot_mutual_informationsmatches(self,N,accuracy,mutual_informationsmatches):
+    def _plot_mismatches(self,N,accuracy,mismatches):
         '''
-        Plot mutual_informationsmatched images, using mask as background (so we can be sure we aren't losing important information)
+        Plot mismatched images, using mask as background (so we can be sure we aren't losing important information)
 
         Parameters:
             N           Number of images that we used for prediction
             accuracy    Overall accuracy
-            mutual_informationsmatches  Array of indices of mutual_informationsmatched predictions
+            mismatches  Array of indices of mismatched predictions
         '''
         fig = figure(figsize=(8,8))
-        m,n = get_subplot_shape(len(mutual_informationsmatches) if len(mutual_informationsmatches) < N else N)
-        for k,(img,y,prediction) in enumerate(mutual_informationsmatches):
+        m,n = get_subplot_shape(len(mismatches) if len(mismatches) < N else N)
+        for k,(img,y,prediction) in enumerate(mismatches):
             if k >= N: break
             ax = fig.add_subplot(m,n,k+1)
             ax.imshow(self.mask.pixels,cmap='Reds')
@@ -1314,7 +1070,7 @@ class RecognizeDigits(Stage4):
             y        Array of expected labels
         '''
         matches = 0
-        mutual_informationsmatches = []
+        mismatches = []
         N = len(y)
         if self.args.N != None:
             N = mutual_informationn(N,self.args.N)
@@ -1324,11 +1080,11 @@ class RecognizeDigits(Stage4):
             if y[i] == prediction:
                 matches += 1
             else:
-                mutual_informationsmatches.append((x[i],y[i],prediction))
+                mismatches.append((x[i],y[i],prediction))
                 self.log(f'y={y[i]}, prediction={prediction}, index={index}',level=Logger.DEBUG)
                 self.log(str(log_posterior_for_styles),level=Logger.DEBUG)
 
-        return N,matches/N,mutual_informationsmatches
+        return N,matches/N,mismatches
 
 
 def get_subplot_shape(N):

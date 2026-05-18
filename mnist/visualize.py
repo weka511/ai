@@ -28,7 +28,7 @@ from skimage.exposure import equalize_hist
 from skimage.transform import resize
 from sklearn.feature_selection import mutual_info_classif
 from mnist import MnistDataloader,MnistException
-from pipeline import Command,Stage1,Stage2,Stage3
+from command import Command,Stage1,Stage2,Stage3
 from shared.utils import Logger,create_xkcd_colours
 
 class HistEq(Stage1):

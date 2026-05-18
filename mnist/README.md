@@ -9,6 +9,7 @@ The inspiration comes from the following papers by Friston et al:
 File|Description
 -------------------------------------|-----------------------------------------------------------------------------------------
 build.sh|Shell script to build files in pipeline
+command.py|Command interpreter shared by pipeline.py and visualize.py
 mask.py|Mask out pixels that carry little information
 mnist.py|Functions for accessing MNIST data
 node.py|Allow digit classes to be linked togther to support Gibbs sampling--see Blei & Frazier [Distance Dependent Chinese Restaurant Processes](https://www.jmlr.org/papers/volume12/blei11a/blei11a.pdf)
