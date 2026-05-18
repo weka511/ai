@@ -1013,9 +1013,9 @@ def parse_args(names):
     group_recognize.add_argument('--N', default=None,type=int, help='Number of images for calculating accuracy')
     group_recognize.add_argument('--max_images', default=100,type=int, help='Maximum number of images')
 
-    #group_gibbs = parser.add_argument_group('Options for Gibbs sampling')
+    group_gibbs = parser.add_argument_group('Options for Gibbs sampling')
     #group_gibbs.add_argument('--M', default=100, type=int, help='Number of iterations')
-    #group_gibbs.add_argument('--freq', default=100, type=int, help='Indicated progress iterations')
+    group_gibbs.add_argument('--freq', default=100, type=int, help='Indicated progress iterations')
     #group_gibbs.add_argument('--display', default=False, action='store_true', help='Controls whether Gibbs will create plots')
     
     return parser.parse_args()
