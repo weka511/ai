@@ -39,8 +39,31 @@ class NoDecay(DecayFunction):
     def __call__(self,mutual_information):
         return mutual_information    
     
+class Table:
+    seq = -1
+    tables = []
     
+    def __init__(self):
+        self.indices = []
+        Table.seq += 1
+        self.seq = Table.seq
+        Table.tables.append(self)
+     
+    def __len__(self):
+        return len(self.indices)
+    
+    def __str__(self):
+        return f'Table {self.seq}: {self.indices}'
+    
+    def append(self,index):
+        self.indices.append(index)
+    
+
 class ChineseRestaurantProcess:
+    '''
+    This class represents a distance dependent Chinese Restaurant Process. The
+    distance is a monotonically decreasing funtion of mutual information
+    '''
     
     UNASSIGNED = -1
     
@@ -53,11 +76,21 @@ class ChineseRestaurantProcess:
         self.rng = rng
         self.alpha = alpha
         self.links = np.full((self.m),ChineseRestaurantProcess.UNASSIGNED, dtype=int)
+        self.tables = np.empty((self.m),dtype=Table)
         
     def build(self):
         indices = self.rng.permutation(self.m)
         for i in range(self.m):
-            self.links[indices[i]] = self.rng.choice(indices[:i+1],p=self._get_p_init(i))
+            current = indices[i]
+            p = self._get_p_init(i)
+            link_to = self.rng.choice(indices[:i+1],p=p)
+            self.links[current] = link_to
+            table = Table() if current == link_to else self.tables[link_to]
+            self.tables[current] = table
+            table.append(current)
+        for table in Table.tables:
+            print (table)
+   
     
     def gibbs(self):
         for i in range(self.m):
@@ -73,6 +106,9 @@ class ChineseRestaurantProcess:
         p = 1/self.fd[i,:]
         p[i] = self.alpha
         return p/p.sum() 
+    
+        
+    
     
 def main():
     crp = ChineseRestaurantProcess(np.ones((12,12)))
