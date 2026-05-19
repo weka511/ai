@@ -10,6 +10,7 @@ File|Description
 -------------------------------------|-----------------------------------------------------------------------------------------
 build.sh|Shell script to build files in pipeline
 command.py|Command interpreter shared by pipeline.py and visualize.py
+crp.dd|Chinese Restaurant Process
 holding-pen.py|This module will be used to hold code temprararily, if I don't think is will be needed.
 mask.py|Mask out pixels that carry little information
 mnist.py|Functions for accessing MNIST data
